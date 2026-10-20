@@ -280,8 +280,13 @@
 
 
   /* ---------- subscribe box (sends to /api/subscribe in worker.js) ---------- */
+  // Set to true once MAILERLITE_TOKEN is added in Cloudflare (needs a sender address in MailerLite first).
+  // Preview anytime with remotegigrai.com/?preview
+  const SUBSCRIBE_ON = false;
+
   (function(){
     const box = document.getElementById('subBox');
+    if (!SUBSCRIBE_ON && !new URLSearchParams(location.search).has('preview')) return;
     box.hidden = false;
     const form = document.getElementById('subForm');
     const btn = form.querySelector('button');
