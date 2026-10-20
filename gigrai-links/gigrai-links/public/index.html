@@ -167,6 +167,21 @@
   .sub-box.done .sub-form,.sub-box.done .consent{display:none}
   .sub-box.done .sub-ok{display:block}
   .hp{position:absolute;left:-9999px}
+
+  /* ---------- whatsapp channel ---------- */
+  .wa{display:flex;align-items:center;gap:14px;margin-top:26px;padding:18px 16px;border-radius:20px;text-decoration:none;color:inherit;
+    background:linear-gradient(135deg,rgba(37,211,102,.16),rgba(37,211,102,.05));border:1px solid rgba(37,211,102,.45);
+    transition:transform .18s,box-shadow .18s,border-color .18s}
+  .wa:hover,.wa:focus-visible{transform:translateY(-2px);border-color:#25d366;box-shadow:0 12px 30px -14px rgba(37,211,102,.7);outline:none}
+  .wa:active{transform:scale(.985)}
+  .wa-ico{flex:0 0 50px;height:50px;border-radius:50%;background:#25d366;display:grid;place-items:center;position:relative}
+  .wa-ico svg{width:28px;height:28px;color:#fff}
+  .wa-ico::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid rgba(37,211,102,.6);animation:ping 2.4s ease-out infinite}
+  @keyframes ping{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.35);opacity:0}}
+  .wa-t{flex:1;min-width:0}
+  .wa-t b{display:block;font-size:16.5px;font-weight:800}
+  .wa-t span{display:block;color:#a9d9bd;font-size:13.5px;margin-top:2px}
+  .wa-btn{flex:0 0 auto;font-size:13px;font-weight:800;padding:9px 14px;border-radius:999px;background:#25d366;color:#05210f}
 </style>
 </head>
 <body>
@@ -197,6 +212,13 @@
     <span><b>Never pay to get a job.</b> Legit platforms are always free to join. If anyone asks you for money upfront, it's a scam.</span>
   </div>
 
+
+
+  <a class="wa" href="https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u" target="_blank" rel="noopener">
+    <span class="wa-ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.8-1.2.2-.6.2-1.1.1-1.2l-.5-.3z"/></svg></span>
+    <span class="wa-t"><b>Get new roles on WhatsApp</b><span>Join the GigrAI Jobs channel. Instant pings, no spam.</span></span>
+    <span class="wa-btn">Join</span>
+  </a>
 
   <section class="sub-box" id="subBox" hidden>
     <h2>📬 Get new roles first</h2>
@@ -271,6 +293,7 @@
     </a>`).join('');
 
   const ICONS = {
+    whatsapp: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>',
     instagram: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>',
     tiktok: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 5.8A4.3 4.3 0 0 1 15.5 3h-3.1v12.4a2.6 2.6 0 1 1-2.6-2.6c.3 0 .5 0 .8.1V9.7a5.7 5.7 0 1 0 4.9 5.7V9a7.3 7.3 0 0 0 4.3 1.4V7.3a4.3 4.3 0 0 1-3.2-1.5z"/></svg>',
     email: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>'
