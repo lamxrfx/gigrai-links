@@ -279,34 +279,39 @@
     `<a href="${k === 'email' ? 'mailto:' + esc(v) : esc(v)}" target="_blank" rel="noopener" aria-label="${k}">${ICONS[k]}</a>`).join('');
 
 
-  /* =========================================================
-     SUBSCRIBE BOX
-     Paste the MailerLite form "action" URL here to switch it on.
-     (Box stays hidden while this is empty, so no emails get lost.)
-     ========================================================= */
-  const SUBSCRIBE_URL = "https://assets.mailerlite.com/jsonp/2727719/forms/201853482762766168/subscribe";
-
+  /* ---------- subscribe box (sends to /api/subscribe in worker.js) ---------- */
   (function(){
     const box = document.getElementById('subBox');
-    const preview = new URLSearchParams(location.search).has('preview');
-    if (!SUBSCRIBE_URL && !preview) return;
     box.hidden = false;
     const form = document.getElementById('subForm');
+    const btn = form.querySelector('button');
+    const email = form.querySelector('[type=email]');
+    let msg = document.createElement('p');
+    msg.className = 'consent'; msg.style.color = '#f87171'; msg.hidden = true;
+    form.after(msg);
+    const fail = t => { msg.textContent = t; msg.hidden = false; btn.disabled = false; btn.textContent = 'Send me jobs →'; };
+
     form.addEventListener('submit', async e => {
       e.preventDefault();
-      const email = form.querySelector('[type=email]');
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) { email.focus(); email.style.borderColor = '#f87171'; return; }
-      if (form.website.value) return;           // bot trap
-      const btn = form.querySelector('button'); btn.disabled = true; btn.textContent = 'Signing you up…';
+      msg.hidden = true;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.value.trim())) { email.focus(); email.style.borderColor = '#f87171'; return fail('Please enter a valid email.'); }
+      email.style.borderColor = '';
+      btn.disabled = true; btn.textContent = 'Signing you up…';
       try {
-        if (SUBSCRIBE_URL) {
-          const data = new FormData(form); data.delete('website');
-          data.append('ml-submit', '1'); data.append('anticsrf', 'true');
-          await fetch(SUBSCRIBE_URL, { method: 'POST', body: data, mode: 'no-cors' });
-        }
-        box.classList.add('done');
+        const res = await fetch('/api/subscribe', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            email: email.value.trim(),
+            name: form.querySelector('[autocomplete=given-name]').value.trim(),
+            website: form.website.value
+          })
+        });
+        const out = await res.json().catch(() => ({}));
+        if (res.ok && out.ok) box.classList.add('done');
+        else fail(out.error || 'Something went wrong. Please try again.');
       } catch (err) {
-        btn.disabled = false; btn.textContent = 'Try again →';
+        fail('Connection problem. Please try again.');
       }
     });
   })();

@@ -1,7 +1,13 @@
 {
   "name": "gigrai-links",
+  "main": "worker.js",
   "compatibility_date": "2025-01-01",
   "assets": {
-    "directory": "./"
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "MAILERLITE_GROUP_ID": "201853461247034816"
   }
+  // MAILERLITE_TOKEN is a secret set in the Cloudflare dashboard (not stored here)
 }
