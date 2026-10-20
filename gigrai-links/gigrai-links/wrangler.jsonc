@@ -6,6 +6,9 @@
     "directory": "./public",
     "binding": "ASSETS"
   },
+  "observability": {
+    "enabled": true
+  },
   "vars": {
     "MAILERLITE_GROUP_ID": "201853461247034816"
   }

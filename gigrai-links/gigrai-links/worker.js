@@ -64,6 +64,17 @@ export default {
       return json({ ok: false, error: "Something went wrong. Please try again." }, 502);
     }
 
+    // Link-tap counter: shows up in Cloudflare > gigrai-links > Observability (search "link_click")
+    if (url.pathname === "/api/click" && request.method === "POST") {
+      let link = "unknown";
+      try {
+        const body = JSON.parse(await request.text());
+        link = String(body.link || "unknown").replace(/[^\w\- .:/]/g, "").slice(0, 60);
+      } catch {}
+      console.log(JSON.stringify({ event: "link_click", link, country: request.cf?.country || "??" }));
+      return new Response(null, { status: 204 });
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
