@@ -144,6 +144,29 @@
   footer b{color:#8d96bd;font-weight:600}
 
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+  /* ---------- subscribe box ---------- */
+  .sub-box{margin-top:26px;padding:22px 18px;border-radius:20px;border:1px solid transparent;
+    background:linear-gradient(var(--card-hi),var(--card-hi)) padding-box,var(--grad) border-box;text-align:center}
+  .sub-box h2{font-size:20px;font-weight:800;letter-spacing:-.01em}
+  .sub-box p.lead{color:var(--muted);font-size:13.5px;margin:6px auto 16px;max-width:320px}
+  .sub-form{display:flex;flex-direction:column;gap:10px}
+  .sub-form input[type=email],.sub-form input[type=text]{
+    width:100%;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:#080a16;color:var(--text);
+    font:inherit;font-size:16px;outline:none;transition:border-color .18s}
+  .sub-form input:focus{border-color:var(--cyan)}
+  .sub-form input::placeholder{color:#6a7398}
+  .sub-form button{padding:14px;border:0;border-radius:14px;background:var(--grad);color:#fff;font:inherit;font-weight:800;font-size:16px;cursor:pointer;transition:transform .15s,filter .15s}
+  .sub-form button:hover{filter:brightness(1.1)}
+  .sub-form button:active{transform:scale(.98)}
+  .sub-form button[disabled]{opacity:.6;cursor:wait}
+  .consent{font-size:11.5px;color:#6a7398;margin-top:10px;line-height:1.5}
+  .sub-ok{display:none;padding:10px 0 4px}
+  .sub-ok b{display:block;font-size:18px;margin-bottom:4px}
+  .sub-ok span{color:var(--muted);font-size:13.5px}
+  .sub-box.done .sub-form,.sub-box.done .consent{display:none}
+  .sub-box.done .sub-ok{display:block}
+  .hp{position:absolute;left:-9999px}
 </style>
 </head>
 <body>
@@ -173,6 +196,20 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
     <span><b>Never pay to get a job.</b> Legit platforms are always free to join. If anyone asks you for money upfront, it's a scam.</span>
   </div>
+
+
+  <section class="sub-box" id="subBox" hidden>
+    <h2>📬 Get new roles first</h2>
+    <p class="lead">The best remote AI jobs, straight to your inbox. No spam, just roles that pay.</p>
+    <form class="sub-form" id="subForm" novalidate>
+      <input type="text" name="fields[name]" placeholder="First name" autocomplete="given-name">
+      <input type="email" name="fields[email]" placeholder="Your email" autocomplete="email" required>
+      <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button type="submit">Send me jobs →</button>
+    </form>
+    <p class="consent">By signing up you agree to get job emails from GigrAI. Unsubscribe anytime.</p>
+    <div class="sub-ok"><b>You're in 🎉</b><span>Check your inbox to confirm your email.</span></div>
+  </section>
 
   <div class="socials" id="socials"></div>
 
@@ -214,7 +251,7 @@
   ];
 
   const SOCIALS = {
-    instagram: "",      // ← e.g. https://instagram.com/yourhandle
+    instagram: "https://www.instagram.com/gigr.ai/",
     tiktok: "",
     email: ""           // ← e.g. hello@remotegigrai.com
   };
@@ -240,6 +277,39 @@
   };
   document.getElementById('socials').innerHTML = Object.entries(SOCIALS).filter(([,v]) => v).map(([k,v]) =>
     `<a href="${k === 'email' ? 'mailto:' + esc(v) : esc(v)}" target="_blank" rel="noopener" aria-label="${k}">${ICONS[k]}</a>`).join('');
+
+
+  /* =========================================================
+     SUBSCRIBE BOX
+     Paste the MailerLite form "action" URL here to switch it on.
+     (Box stays hidden while this is empty, so no emails get lost.)
+     ========================================================= */
+  const SUBSCRIBE_URL = "";
+
+  (function(){
+    const box = document.getElementById('subBox');
+    const preview = new URLSearchParams(location.search).has('preview');
+    if (!SUBSCRIBE_URL && !preview) return;
+    box.hidden = false;
+    const form = document.getElementById('subForm');
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const email = form.querySelector('[type=email]');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) { email.focus(); email.style.borderColor = '#f87171'; return; }
+      if (form.website.value) return;           // bot trap
+      const btn = form.querySelector('button'); btn.disabled = true; btn.textContent = 'Signing you up…';
+      try {
+        if (SUBSCRIBE_URL) {
+          const data = new FormData(form); data.delete('website');
+          data.append('ml-submit', '1'); data.append('anticsrf', 'true');
+          await fetch(SUBSCRIBE_URL, { method: 'POST', body: data, mode: 'no-cors' });
+        }
+        box.classList.add('done');
+      } catch (err) {
+        btn.disabled = false; btn.textContent = 'Try again →';
+      }
+    });
+  })();
 
   document.getElementById('yr').textContent = new Date().getFullYear();
 </script>
