@@ -34,11 +34,13 @@ jobs:
       - name: Publish with Wrangler
         working-directory: gigrai-links/gigrai-links
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          RAW_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ebe9e1de0a84e5d863eabdd716f316df
           WRANGLER_SEND_METRICS: "false"
         run: |
           set -o pipefail
+          # strip stray spaces/line breaks from a pasted key
+          export CLOUDFLARE_API_TOKEN="$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')"
           if npx --yes wrangler@4.42.0 deploy 2>&1 | tee ../../deploy.log; then
             echo "Published."
           else
