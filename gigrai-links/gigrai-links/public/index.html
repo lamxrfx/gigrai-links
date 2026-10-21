@@ -290,6 +290,16 @@
   .calc-out .big{border:1px solid transparent;background:linear-gradient(#121633,#121633) padding-box,var(--grad) border-box}
   .calc-out .big b{font-size:21px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
   .calc-note{font-size:11.5px;color:#6a7398;margin-top:12px;line-height:1.5}
+
+  /* ---------- compact platform rows ---------- */
+  .links.compact{gap:8px}
+  .links.compact .card{padding:10px 12px;gap:12px;border-radius:15px}
+  .links.compact .brand{flex:0 0 72px;height:36px;border-radius:10px}
+  .links.compact .ico{flex:0 0 36px;height:36px;border-radius:10px;font-size:14px}
+  .links.compact .name{font-size:14.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .links.compact .desc{font-size:12.5px;margin-top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .links.compact .txt{overflow:hidden}
+  .join{flex:0 0 auto;font-size:12px;font-weight:800;padding:7px 12px;border-radius:999px;background:var(--grad);color:#fff}
 </style>
 </head>
 <body>
@@ -348,8 +358,8 @@
     </div>
   </section>
 
-  <p class="label">Top platforms 👇</p>
-  <div class="links" id="links"></div>
+  <p class="label">Not sure what to search? Join a platform 👇</p>
+  <div class="links compact" id="links"></div>
 
   <div class="steps">
     <div class="step"><div class="num">1</div><p>Pick a platform</p></div>
@@ -427,18 +437,15 @@
      ========================================================= */
   const LINKS = [
     {
-      name: "AI Expert & Training Roles",
-      desc: "Apply once, get matched to paid remote projects.",
+      name: "AI training roles",
+      desc: "One sign-up, many paid roles",
       logo: "micro1.png",   // shows this image instead of a letter icon
-      shake: true,          // little wiggle every few seconds
       url: "https://refer.micro1.ai/referral/jobs?referralCode=e9ff2278-2563-4f64-bed8-214a3dfd996c&utm_source=referral&utm_medium=share&utm_campaign=job_referral",
       icon: "m1",
-      featured: true,
-      badge: "Top pick"
     },
     {
       name: "Ethos",
-      desc: "Paid expert work. Get matched to AI & research projects in your field.",
+      desc: "Paid expert & research projects",
       url: "https://agent.askethos.com/refer/rxwo24mzj5ab",
       iconImg: "ethos.png",   // square logo
       icon: "E"
@@ -470,7 +477,7 @@
           ? `<span class="ico ico-img"><img src="${esc(l.iconImg)}" alt="${esc(l.name)}"></span>`
           : `<span class="ico">${esc(l.icon || l.name[0])}</span>`}
       <span class="txt"><span class="name">${esc(l.name)}</span><span class="desc" style="display:block">${esc(l.desc)}</span></span>
-      ${arrow}
+      <span class="join">Sign up</span>
     </a>`).join('');
 
   const ICONS = {
