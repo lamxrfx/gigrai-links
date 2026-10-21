@@ -34,7 +34,10 @@
       "signupUrl": "https://t.mercor.com/icoA3",
       "logo": "",
       "logoShape": "square",
-      "feed": null,
+      "feed": {
+        "type": "mercor",
+        "referralCode": "e2c09b89-7c5c-ebec-8070-b2dacd94c7a3"
+      },
       "active": true,
       "referralCode": "e2c09b89-7c5c-ebec-8070-b2dacd94c7a3"
     },

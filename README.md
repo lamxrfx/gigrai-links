@@ -2,8 +2,9 @@
 
 A search engine for remote AI jobs. Live roles are pulled from AI work platforms and every apply link carries a GigrAI referral code.
 
-Hosted on **Cloudflare Workers** (project `gigrai-links`). Every push to `main` deploys automatically in about a minute.
-Cloudflare's build setting **Root directory** must stay `gigrai-links/gigrai-links`.
+Hosted on **Cloudflare Workers** (project `gigrai-links`). Every push to `main` is published by GitHub Actions
+(`.github/workflows/deploy.yml`) in about a minute. It needs the repo secret `CLOUDFLARE_API_TOKEN`
+(a Cloudflare "Edit Cloudflare Workers" token).
 
 ## Where things live
 
@@ -35,6 +36,7 @@ Cloudflare's build setting **Root directory** must stay `gigrai-links/gigrai-lin
 ### Feed types
 
 - `{ "type": "micro1", "referralCode": "..." }`: micro1's public referral job feed. Apply links carry the code.
+- `{ "type": "mercor", "referralCode": "..." }`: Mercor's public explore feed. Links go to each job with the code; country limits shown as tags.
 - `{ "type": "greenhouse", "board": "alignerr", "applyVia": "signup" }`: any public Greenhouse job board.
   `applyVia: "signup"` sends applicants through your referral `signupUrl` (so you get credit);
   `"listing"` sends them to the job's own Greenhouse page (no referral credit).

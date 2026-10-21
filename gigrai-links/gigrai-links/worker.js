@@ -81,20 +81,6 @@ export default {
       return handleJobs(url, env, ctx);
     }
 
-    // TEMPORARY diagnostic (remove after checking Mercor's job list)
-    if (url.pathname === "/api/probe-mc-9q2w") {
-      try {
-        const r = await fetch("https://aws.api.mercor.com/work/listings-explore-page", { headers: { accept: "application/json" } });
-        const body = await r.json();
-        const L = body.listings || [];
-        const topKeys = Object.keys(body);
-        const keys = {};
-        for (const l of L) for (const k of Object.keys(l)) keys[k] = (keys[k] || 0) + 1;
-        const slim = l => { const o = {}; for (const [k, v] of Object.entries(l)) { if (k === "description") continue; o[k] = typeof v === "string" ? v.slice(0, 120) : (JSON.stringify(v) || "").length > 300 ? JSON.stringify(v).slice(0, 300) : v; } return o; };
-        return json({ status: r.status, topKeys, count: L.length, total: body.total ?? body.count ?? null, keys, sample: L.slice(0, 3).map(slim) });
-      } catch (e) { return json({ error: String(e) }, 500); }
-    }
-
     return env.ASSETS.fetch(request);
   },
 };
@@ -139,6 +125,44 @@ const ADAPTERS = {
     });
   },
 
+  // Mercor public explore feed: one call returns every live listing
+  async mercor(p, env) {
+    const base = env.MERCOR_API || "https://aws.api.mercor.com/work";
+    const code = p.feed.referralCode;
+    const r = await fetch(`${base}/listings-explore-page`, { headers: { accept: "application/json" } });
+    if (!r.ok) throw new Error(`mercor feed ${r.status}`);
+    const body = await r.json();
+    const slug = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 45).replace(/-+$/, "");
+    return (body.listings || []).map(j => {
+      if (!j || !j.listingId || !j.title) return null;
+      if (j.status !== "active" || j.deletedAt || j.disableApplications || j.isPrivate) return null;
+      if (!/^[A-Za-z0-9_-]+$/.test(j.listingId)) return null;
+      const url = `https://work.mercor.com/jobs/${j.listingId}/${slug(j.title)}?referralCode=${encodeURIComponent(code)}&utm_source=referral`;
+      const hourly = (j.payRateFrequency || "hourly") === "hourly";
+      const lo = +j.rateMin > 0 ? +j.rateMin : null, hi = +j.rateMax > 0 ? +j.rateMax : null;
+      const tags = [];
+      const only = Array.isArray(j.eligibleLocation) ? j.eligibleLocation.filter(Boolean) : [];
+      if (only.length) tags.push(only.length > 2
+        ? `📍 ${only.slice(0, 2).map(countryName).join(", ")} +${only.length - 2} more`
+        : `📍 ${only.map(countryName).join(", ")} only`);
+      else tags.push("🌍 Most countries");
+      if (+j.hoursPerWeek > 0) tags.push(`⏱ ${+j.hoursPerWeek} hrs/wk`);
+      if (!hourly && (lo || hi)) tags.push(`💵 $${lo || hi}${hi && lo && hi !== lo ? `–$${hi}` : ""}/${String(j.payRateFrequency).replace(/ly$/, "").replace(/^dai$/, "day")}`);
+      return {
+        id: `mercor-${j.listingId}`,
+        title: String(j.title).replace(/\s+/g, " ").trim(),
+        min: hourly ? lo : null,
+        max: hourly ? hi : null,
+        skills: tags,
+        domain: j.listingDomain ? String(j.listingDomain) : "",
+        posted: (j.postedAt || j.createdAt || "").replace("T", " ").slice(0, 19) || null,
+        hot: false,
+        countries: only,
+        url,
+      };
+    });
+  },
+
   // Greenhouse public job boards (e.g. Alignerr). No pay data in this feed.
   async greenhouse(p, env) {
     const base = env.GREENHOUSE_API || "https://boards-api.greenhouse.io/v1";
@@ -163,6 +187,10 @@ const ADAPTERS = {
     });
   },
 };
+
+// ISO 3166 alpha-3 -> short name for the common ones; others shown as the code
+const COUNTRY = { USA: "US", GBR: "UK", CAN: "Canada", AUS: "Australia", IND: "India", DEU: "Germany", FRA: "France", ESP: "Spain", ITA: "Italy", NLD: "Netherlands", IRL: "Ireland", NZL: "New Zealand", BRA: "Brazil", MEX: "Mexico", PHL: "Philippines", NGA: "Nigeria", ZAF: "South Africa", KEN: "Kenya", JPN: "Japan", KOR: "South Korea", CHN: "China", SGP: "Singapore", ARE: "UAE", PAK: "Pakistan", EGY: "Egypt", POL: "Poland", PRT: "Portugal", SWE: "Sweden", ARG: "Argentina", COL: "Colombia" };
+const countryName = c => COUNTRY[String(c).toUpperCase()] || String(c).toUpperCase();
 
 // Only allow https links on the platform's own domain, then apply the referral rule.
 function withReferral(raw, hostRe, addCode) {
