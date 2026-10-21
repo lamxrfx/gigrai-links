@@ -15,7 +15,7 @@
     "MAILERLITE_GROUP_ID": "201853461247034816",
     // Google AdSense publisher ID, e.g. "ca-pub-1234567890123456". Leave empty for no ads.
     // When set, the AdSense code and /ads.txt switch on automatically.
-    "ADSENSE_CLIENT": "",
+    "ADSENSE_CLIENT": "ca-pub-9842961043523844",
     // Google Search Console "HTML tag" code (just the content="..." value). Optional.
     "GOOGLE_SITE_VERIFICATION": ""
   }
