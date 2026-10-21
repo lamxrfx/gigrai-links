@@ -1,0 +1,75 @@
+{
+  "_help": "ONE list for every platform. To add one: copy a block, fill it in, set active to true. See README.md in the repo for each field.",
+  "platforms": [
+    {
+      "id": "micro1",
+      "name": "micro1",
+      "rowTitle": "AI training roles",
+      "tagline": "One sign-up, many roles",
+      "signupUrl": "https://refer.micro1.ai/referral/jobs?referralCode=e9ff2278-2563-4f64-bed8-214a3dfd996c&utm_source=referral&utm_medium=share&utm_campaign=job_referral",
+      "logo": "micro1.png",
+      "logoShape": "wide",
+      "feed": { "type": "micro1", "referralCode": "e9ff2278-2563-4f64-bed8-214a3dfd996c" },
+      "active": true
+    },
+    {
+      "id": "ethos",
+      "name": "Ethos",
+      "rowTitle": "Ethos",
+      "tagline": "Paid expert & research projects",
+      "signupUrl": "https://agent.askethos.com/refer/rxwo24mzj5ab",
+      "logo": "ethos.png",
+      "logoShape": "square",
+      "feed": null,
+      "active": true
+    },
+    {
+      "id": "mercor",
+      "name": "Mercor",
+      "rowTitle": "Mercor",
+      "tagline": "Expert AI projects, high hourly rates",
+      "signupUrl": "",
+      "logo": "",
+      "logoShape": "square",
+      "feed": null,
+      "active": false,
+      "_todo": "Sign up, then send Claude your referral code. Feed needs checking before it's switched on."
+    },
+    {
+      "id": "alignerr",
+      "name": "Alignerr",
+      "rowTitle": "Alignerr",
+      "tagline": "AI training contracts",
+      "signupUrl": "",
+      "logo": "",
+      "logoShape": "square",
+      "feed": { "type": "greenhouse", "board": "alignerr", "applyVia": "signup" },
+      "active": false,
+      "_todo": "Sign up, then paste your referral link into signupUrl and set active to true."
+    },
+    {
+      "id": "outlier",
+      "name": "Outlier",
+      "rowTitle": "Outlier",
+      "tagline": "Train AI in your field",
+      "signupUrl": "",
+      "logo": "",
+      "logoShape": "square",
+      "feed": null,
+      "active": false,
+      "_todo": "Sign up, then paste your referral link into signupUrl and set active to true."
+    },
+    {
+      "id": "dataannotation",
+      "name": "DataAnnotation",
+      "rowTitle": "DataAnnotation",
+      "tagline": "Flexible AI training tasks",
+      "signupUrl": "",
+      "logo": "",
+      "logoShape": "square",
+      "feed": null,
+      "active": false,
+      "_todo": "Re-joining in a few days. Paste referral link when available."
+    }
+  ]
+}

@@ -336,6 +336,7 @@
         <option value="0">💰 Any pay</option><option value="30">💰 Top rate $30+</option><option value="50">💰 Top rate $50+</option><option value="80">💰 Top rate $80+</option><option value="120">💰 Top rate $120+</option>
       </select></label>
       <label class="f-sel"><span class="sr">Field</span><select id="fField"><option value="">📂 All fields</option></select></label>
+      <label class="f-sel" id="fViaWrap" hidden><span class="sr">Platform</span><select id="fVia"><option value="">🏢 All platforms</option></select></label>
       <label class="f-sel"><span class="sr">Sort</span><select id="fSort"><option value="new">🕒 Newest</option><option value="pay">💸 Top pay</option></select></label>
     </div>
     <p class="s-meta" id="sMeta"></p>
@@ -447,33 +448,7 @@
 </main>
 
 <script>
-  /* =========================================================
-     EDIT YOUR LINKS HERE
-     - Leave url as "" to hide a link until you have it.
-     - featured: true gives it the glowing border + badge.
-     ========================================================= */
-  const LINKS = [
-    {
-      name: "AI training roles",
-      desc: "One sign-up, many roles",
-      logo: "micro1.png",   // shows this image instead of a letter icon
-      url: "https://refer.micro1.ai/referral/jobs?referralCode=e9ff2278-2563-4f64-bed8-214a3dfd996c&utm_source=referral&utm_medium=share&utm_campaign=job_referral",
-      icon: "m1",
-    },
-    {
-      name: "Ethos",
-      desc: "Paid expert & research projects",
-      url: "https://agent.askethos.com/refer/rxwo24mzj5ab",
-      iconImg: "ethos.png",   // square logo
-      icon: "E"
-    },
-    {
-      name: "DataAnnotation",
-      desc: "ADD DESCRIPTION",
-      url: "",          // ← paste your DataAnnotation link
-      icon: "DA"
-    }
-  ];
+
 
   const SOCIALS = {
     instagram: "https://www.instagram.com/gigr.ai/",
@@ -485,17 +460,18 @@
   const arrow = '<svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
   const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-  document.getElementById('links').innerHTML = LINKS.filter(l => l.url).map(l => `
-    <a class="card${l.featured ? ' featured' : ''}${l.shake ? ' shake' : ''}" data-track="platform-${esc((l.via || l.logo || l.iconImg || l.name).split('.')[0].toLowerCase())}" href="${esc(l.url)}" target="_blank" rel="noopener sponsored">
-      ${l.badge ? `<span class="badge">${esc(l.badge)}</span>` : ''}
-      ${l.logo
-        ? `<span class="brand"><img src="${esc(l.logo)}" alt="${esc(l.name)}"></span>`
-        : l.iconImg
-          ? `<span class="ico ico-img"><img src="${esc(l.iconImg)}" alt="${esc(l.name)}"></span>`
-          : `<span class="ico">${esc(l.icon || l.name[0])}</span>`}
-      <span class="txt"><span class="name">${esc(l.name)}</span><span class="desc" style="display:block">${esc(l.desc)}</span></span>
+  /* ---------- platform rows: edit public/platforms.json, not this ---------- */
+  fetch('/platforms.json').then(r => r.json()).then(cfg => {
+    const rows = (cfg.platforms || []).filter(p => p.active && p.signupUrl);
+    document.getElementById('links').innerHTML = rows.map(p => `
+    <a class="card" data-track="platform-${esc(p.id)}" href="${esc(p.signupUrl)}" target="_blank" rel="noopener sponsored">
+      ${!p.logo ? `<span class="ico">${esc(p.name.slice(0, 2))}</span>`
+        : p.logoShape === 'wide' ? `<span class="brand"><img src="${esc(p.logo)}" alt="${esc(p.name)}"></span>`
+        : `<span class="ico ico-img"><img src="${esc(p.logo)}" alt="${esc(p.name)}"></span>`}
+      <span class="txt"><span class="name">${esc(p.rowTitle || p.name)}</span><span class="desc" style="display:block">${esc(p.tagline || '')}</span></span>
       <span class="join">Sign up</span>
     </a>`).join('');
+  }).catch(() => {});
 
   const ICONS = {
     whatsapp: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>',
@@ -561,7 +537,7 @@
   (function(){
     const $ = id => document.getElementById(id);
     const input = $('sInput'), box = $('sBox'), list = $('sJobs'), meta = $('sMeta'), more = $('sMore'), chips = $('sChips');
-    const fHot = $('fHot'), fPay = $('fPay'), fField = $('fField'), fSort = $('fSort');
+    const fHot = $('fHot'), fPay = $('fPay'), fField = $('fField'), fSort = $('fSort'), fVia = $('fVia');
     const WA = 'https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u';
     let q = '', page = 1, timer, seq = 0, expanded = false, showSaved = false;
     const shown = new Map();   // id -> job, for saving
@@ -589,19 +565,20 @@
         <a class="job-link" href="${esc(j.url)}" target="_blank" rel="noopener sponsored" data-track="live-${esc(slug(j.title))}">
           <div class="job-h"><b>${esc(j.title)}</b>${pay(j) ? `<span class="job-pay" data-rate="${esc(j.max || j.min)}" title="Use this rate in the calculator">${esc(pay(j))}</span>` : ''}</div>
           <div class="job-sub">${j.hot ? '<span class="hot">🔥 High demand</span>' : ''}${j.domain ? `<span>${esc(j.domain)}</span>` : ''}${(j.skills || []).slice(0,2).map(t => `<span>${esc(t)}</span>`).join('')}</div>
-          <div class="job-foot"><span>via micro1 · ${esc(ago(j.posted))}</span><em>Apply free →</em></div>
+          <div class="job-foot"><span>via ${esc(j.via || 'partner')}${j.posted ? ' · ' + esc(ago(j.posted)) : ''}</span><em>Apply free →</em></div>
         </a>
         <button class="heart${on ? ' on' : ''}" type="button" data-id="${esc(j.id)}" aria-pressed="${on}" aria-label="${on ? 'Remove from saved' : 'Save role'}">${on ? '♥' : '♡'}</button>
       </article>`;
     };
 
-    const filtersOn = () => fHot.getAttribute('aria-pressed') === 'true' || fPay.value !== '0' || fField.value !== '';
+    const filtersOn = () => fHot.getAttribute('aria-pressed') === 'true' || fPay.value !== '0' || fField.value !== '' || fVia.value !== '';
     function params() {
       const p = new URLSearchParams({ q, page });
       if (fHot.getAttribute('aria-pressed') === 'true') p.set('hot', '1');
       if (fPay.value !== '0') p.set('minpay', fPay.value);
       if (fField.value) p.set('field', fField.value);
       if (fSort.value !== 'new') p.set('sort', fSort.value);
+      if (fVia.value) p.set('via', fVia.value);
       return p.toString();
     }
     function fillFields(fields) {
@@ -614,6 +591,7 @@
       fPay.classList.toggle('on', fPay.value !== '0');
       fField.classList.toggle('on', fField.value !== '');
       fSort.classList.toggle('on', fSort.value !== 'new');
+      fVia.classList.toggle('on', fVia.value !== '');
     }
 
     function renderSaved() {
@@ -635,6 +613,13 @@
         $('sLabel').textContent = `🔎 Search ${d.all || d.total}+ live roles`;
         if (d.all) $('heroN').textContent = `${Math.floor(d.all / 10) * 10}+`;
         fillFields(d.fields || []);
+        const src = (d.sources || []).filter(x => x.n);
+        $('fViaWrap').hidden = src.length < 2;
+        if (src.length >= 2 && fVia.options.length !== src.length + 1) {
+          const cur = fVia.value;
+          fVia.innerHTML = '<option value="">🏢 All platforms</option>' + src.map(x => `<option value="${esc(x.id)}">${esc(x.name)} (${x.n})</option>`).join('');
+          fVia.value = cur;
+        }
         const browsing = !q && !filtersOn();
         const preview = browsing && !expanded;
         const items = preview ? d.items.slice(0, 3) : d.items;
@@ -680,10 +665,10 @@
       input.value = b.classList.contains('on') ? '' : b.textContent; search(input.value);
     });
     fHot.addEventListener('click', () => { fHot.setAttribute('aria-pressed', fHot.getAttribute('aria-pressed') !== 'true'); refilter(); });
-    [fPay, fField, fSort].forEach(el => el.addEventListener('change', refilter));
+    [fPay, fField, fSort, fVia].forEach(el => el.addEventListener('change', refilter));
     meta.addEventListener('click', e => {
       if (e.target.id !== 'sReset') return;
-      fHot.setAttribute('aria-pressed', 'false'); fPay.value = '0'; fField.value = ''; refilter();
+      fHot.setAttribute('aria-pressed', 'false'); fPay.value = '0'; fField.value = ''; fVia.value = ''; refilter();
     });
     more.addEventListener('click', () => {
       if (!q && !filtersOn() && !expanded) { expanded = true; page = 1; run(false); }
