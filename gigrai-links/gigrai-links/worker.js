@@ -75,6 +75,26 @@ export default {
       return new Response(null, { status: 204 });
     }
 
+    // TEMPORARY diagnostic (remove after checking micro1 structure)
+    if (url.pathname === "/api/probe-m1-7f3k") {
+      const target = "https://refer.micro1.ai/referral/jobs/?referralCode=e9ff2278-2563-4f64-bed8-214a3dfd996c";
+      try {
+        const r = await fetch(target, { headers: { "user-agent": "Mozilla/5.0 (compatible; GigrAI-probe)", accept: "text/html" } });
+        const html = await r.text();
+        const pick = (re) => [...html.matchAll(re)].map(m => m[1]).slice(0, 40);
+        const nd = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+        return json({
+          status: r.status, type: r.headers.get("content-type"), length: html.length,
+          title: (html.match(/<title>([^<]*)/) || [])[1] || null,
+          scripts: pick(/<script[^>]+src="([^"]+)"/g),
+          jobLinks: pick(/href="([^"]*job[^"]*)"/gi),
+          apiHints: [...new Set(pick(/(https?:\/\/[a-z0-9.-]*micro1[a-z0-9.-]*\/[^"'\s]{0,80})/gi))].slice(0, 30),
+          nextData: nd ? nd[1].slice(0, 3000) : null,
+          bodyText: html.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 1500)
+        });
+      } catch (e) { return json({ error: String(e) }, 500); }
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
