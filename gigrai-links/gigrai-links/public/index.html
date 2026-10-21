@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>GigrAI | Remote AI Jobs</title>
-<meta name="description" content="Hand-picked remote AI jobs that pay. Free to join, work from anywhere.">
+<title>GigrAI: Search remote AI jobs</title>
+<meta name="description" content="Search 280+ live remote AI jobs from top AI platforms in one place. Real pay rates, free to apply.">
 <meta name="theme-color" content="#05060b">
 
 <!-- Link preview (Instagram DMs, WhatsApp, iMessage) -->
-<meta property="og:title" content="GigrAI | Remote AI Jobs">
-<meta property="og:description" content="Hand-picked remote AI jobs that pay. Free to join, work from anywhere.">
+<meta property="og:title" content="GigrAI: Search remote AI jobs">
+<meta property="og:description" content="Search 280+ live remote AI jobs from top AI platforms in one place. Real pay rates, free to apply.">
 <meta property="og:image" content="https://remotegigrai.com/logo.jpg">
 <meta property="og:url" content="https://remotegigrai.com">
 <meta name="twitter:card" content="summary">
@@ -307,13 +307,13 @@
 
   <img class="logo" src="logo.jpg" alt="GigrAI logo" width="132" height="132">
 
-  <h1>Remote AI jobs<br><span>that actually pay</span></h1>
-  <p class="sub">Hand-picked platforms with real pay rates. Pick one, apply free, work from home.</p>
+  <h1>Every remote AI job.<br><span>One search.</span></h1>
+  <p class="sub">Search <span id="heroN">280+</span> live roles from top AI platforms. Real pay rates, free to apply.</p>
 
   <div class="pills">
-    <span class="pill">✓ Free to join</span>
-    <span class="pill">🌍 Fully remote</span>
-    <span class="pill">💷 Paid hourly</span>
+    <span class="pill">✓ Free to apply</span>
+    <span class="pill">🔄 Live updates</span>
+    <span class="pill">🌍 Remote</span>
   </div>
 
   <section class="search" id="search" aria-label="Search live roles">
@@ -616,6 +616,7 @@
         if (my !== seq) return;
         if (!d.ok) throw new Error(d.error);
         $('sLabel').textContent = `🔎 Search ${d.all || d.total}+ live roles`;
+        if (d.all) $('heroN').textContent = `${Math.floor(d.all / 10) * 10}+`;
         fillFields(d.fields || []);
         const browsing = !q && !filtersOn();
         const preview = browsing && !expanded;
