@@ -119,9 +119,117 @@ export default {
       return handleJobs(url, env, ctx);
     }
 
-    return env.ASSETS.fetch(request);
+    // ---- Google: ads.txt, robots.txt, sitemap.xml ----
+    if (url.pathname === "/ads.txt") {
+      const pub = adsensePub(env);
+      if (!pub) return new Response("Not found", { status: 404 });
+      return text(`google.com, ${pub}, DIRECT, f08c47fec0942fa0\n`, 3600);
+    }
+    if (url.pathname === "/robots.txt") {
+      return text(`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /go/\nDisallow: /picks\n\nSitemap: ${url.origin}/sitemap.xml\n`, 3600);
+    }
+    if (url.pathname === "/sitemap.xml") return sitemap(url, env, ctx);
+
+    const res = await env.ASSETS.fetch(request);
+    // Pages listed in wrangler.jsonc "run_worker_first" get Google tags and link previews added here
+    const page = url.pathname.replace(/\/index\.html$/, "/").replace(/\.html$/, "");
+    if (request.method === "GET" && (page === "/" || page === "/privacy") &&
+        (res.headers.get("content-type") || "").includes("text/html")) {
+      return decorate(res, url, env, ctx, page);
+    }
+    return res;
   },
 };
+
+// ---------------- Google AdSense, Search Console and link previews ----------------
+const text = (body, maxAge = 300) => new Response(body, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": `public, max-age=${maxAge}` } });
+
+// ADSENSE_CLIENT in wrangler.jsonc, e.g. "ca-pub-1234567890123456". Empty = no ads.
+function adsenseClient(env) {
+  const c = String(env.ADSENSE_CLIENT || "").trim();
+  return /^ca-pub-\d{10,20}$/.test(c) ? c : "";
+}
+const adsensePub = (env) => adsenseClient(env).replace(/^ca-/, "");
+
+const money = (j) => {
+  const lo = j.min, hi = j.max;
+  if (!lo && !hi) return "";
+  return lo && hi && lo !== hi ? `$${lo}–${hi}/hr` : `$${lo || hi}/hr`;
+};
+
+async function decorate(res, url, env, ctx, page) {
+  const client = adsenseClient(env);
+  const verify = String(env.GOOGLE_SITE_VERIFICATION || "").trim().replace(/[^A-Za-z0-9_-]/g, "");
+
+  // A shared role link (/?role=<id>) gets its own title and description in previews and on Google
+  let meta = null;
+  const roleId = page === "/" ? (url.searchParams.get("role") || "") : "";
+  const q = page === "/" ? (url.searchParams.get("q") || "").trim().slice(0, 40) : "";
+  if (/^[a-z0-9]{1,30}-[A-Za-z0-9_-]{1,80}$/.test(roleId)) {
+    try {
+      const j = (await loadFeed(env, ctx)).find(x => x.id === roleId);
+      if (j) {
+        const pay = money(j);
+        meta = {
+          title: `${j.title}${pay ? ` · ${pay}` : ""} · GigrAI`,
+          desc: `${pay ? pay + " · " : ""}Remote · via ${j.via}. See the full details and apply free on GigrAI.`,
+          canonical: `${url.origin}/?role=${encodeURIComponent(j.id)}`,
+        };
+      }
+    } catch {}
+  } else if (q && /^[\p{L}\p{N} .+#&'-]+$/u.test(q)) {
+    const nice = q.replace(/\s+/g, " ");
+    meta = {
+      title: `Remote ${nice} AI jobs · GigrAI`,
+      desc: `Live remote AI jobs for "${nice}", with real pay rates. Search free and apply on the platform's own site.`,
+      canonical: `${url.origin}/?q=${encodeURIComponent(nice.toLowerCase())}`,
+    };
+  }
+
+  let rw = new HTMLRewriter().on("head", {
+    element(el) {
+      if (verify) el.append(`<meta name="google-site-verification" content="${verify}">`, { html: true });
+      if (client) {
+        el.append(`<meta name="google-adsense-account" content="${client}">`, { html: true });
+        el.append(`<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${client}" crossorigin="anonymous"></script>`, { html: true });
+      }
+    },
+  });
+  if (meta) {
+    rw = rw
+      .on("title", { element(el) { el.setInnerContent(meta.title); } })
+      .on('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"]', { element(el) { el.setAttribute("content", meta.desc); } })
+      .on('meta[property="og:title"], meta[name="twitter:title"]', { element(el) { el.setAttribute("content", meta.title); } })
+      .on('meta[property="og:url"]', { element(el) { el.setAttribute("content", meta.canonical); } })
+      .on('link[rel="canonical"]', { element(el) { el.setAttribute("href", meta.canonical); } });
+  }
+  const out = rw.transform(res);
+  const headers = new Headers(out.headers);
+  if (meta) headers.set("cache-control", "public, max-age=300");
+  return new Response(out.body, { status: out.status, headers });
+}
+
+// Sitemap: homepage, privacy, popular searches and every live role
+const SITEMAP_SEARCHES = ["writing", "coding", "research", "medical", "finance", "legal", "language", "maths", "photographer", "designer", "voice", "python"];
+async function sitemap(url, env, ctx) {
+  const o = url.origin;
+  const today = new Date().toISOString().slice(0, 10);
+  const urls = [
+    { loc: `${o}/`, freq: "hourly", pri: "1.0" },
+    { loc: `${o}/privacy`, freq: "monthly", pri: "0.3" },
+    ...SITEMAP_SEARCHES.map(s => ({ loc: `${o}/?q=${encodeURIComponent(s)}`, freq: "daily", pri: "0.7" })),
+  ];
+  try {
+    for (const j of await loadFeed(env, ctx)) {
+      urls.push({ loc: `${o}/?role=${encodeURIComponent(j.id)}`, freq: "daily", pri: "0.5", mod: (j.posted || "").slice(0, 10) });
+    }
+  } catch {}
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    urls.map(u => `<url><loc>${esc(u.loc)}</loc><lastmod>${/^\d{4}-\d{2}-\d{2}$/.test(u.mod || "") ? u.mod : today}</lastmod><changefreq>${u.freq}</changefreq><priority>${u.pri}</priority></url>`).join("\n") +
+    `\n</urlset>\n`;
+  return new Response(body, { headers: { "content-type": "application/xml; charset=utf-8", "cache-control": "public, max-age=1800" } });
+}
 
 // ---------------- live jobs from every platform in public/platforms.json ----------------
 const FEED_TTL = 30 * 60; // seconds: refresh the job list at most every 30 mins
