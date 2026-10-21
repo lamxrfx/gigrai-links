@@ -11,7 +11,7 @@ const json = (body, status = 200) =>
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/subscribe") {
@@ -75,32 +75,119 @@ export default {
       return new Response(null, { status: 204 });
     }
 
-    // TEMPORARY diagnostic (remove after checking micro1 structure)
-    if (url.pathname === "/api/probe-m1-7f3k") {
-      const code = "e9ff2278-2563-4f64-bed8-214a3dfd996c";
-      const out = {};
-      try {
-        const js = await (await fetch("https://refer.micro1.ai/assets/index.js")).text();
-        const ctx = (needle, n = 3, w = 220) => { const r = []; let i = -1; while (r.length < n && (i = js.indexOf(needle, i + 1)) !== -1) r.push(js.slice(Math.max(0, i - w), i + w)); return r; };
-        out.clientCtx = ctx("publicApiClient=", 2, 300);
-        out.prodApiCtx = ctx("prod-api.micro1.ai", 2, 200);
-        out.jobLinkCtx = ctx("/referral/jobs/", 3, 200);
-      } catch (e) { out.jsErr = String(e); }
-      const tries = [
-        `https://prod-api.micro1.ai/job/portal/referral/${code}/jobs?page=1&limit=3`,
-        `https://prod-api.micro1.ai/api/v1/job/portal/referral/${code}/jobs?page=1&limit=3`,
-        `https://prod-api.micro1.ai/api/job/portal/referral/${code}/jobs?page=1&limit=3`,
-        `https://prod-api.micro1.ai/job/portal/referral/${code}/jobs?page=1&limit=3&keyword=photographer`
-      ];
-      out.tries = [];
-      for (const t of tries) {
-        try { const r = await fetch(t, { headers: { accept: "application/json", origin: "https://refer.micro1.ai", referer: "https://refer.micro1.ai/" } });
-          out.tries.push({ url: t.replace(code, "CODE"), status: r.status, body: (await r.text()).slice(0, 1800) });
-        } catch (e) { out.tries.push({ url: t, err: String(e) }); }
-      }
-      return json(out);
+    // Live micro1 roles: GET /api/jobs?q=photography&page=1
+    if (url.pathname === "/api/jobs" && request.method === "GET") {
+      return handleJobs(url, env, ctx);
     }
 
     return env.ASSETS.fetch(request);
   },
 };
+
+// ---------------- micro1 live jobs ----------------
+const REFERRAL_CODE = "e9ff2278-2563-4f64-bed8-214a3dfd996c";
+const FEED_TTL = 30 * 60; // seconds: refresh the job list at most every 30 mins
+const PAGE_SIZE = 8;
+
+async function loadFeed(env, ctx) {
+  const base = env.MICRO1_API || "https://prod-api.micro1.ai/api/v1";
+  const cacheKey = new Request("https://cache.remotegigrai.internal/micro1-feed-v1");
+  const cache = typeof caches !== "undefined" ? caches.default : null;
+  if (cache) {
+    const hit = await cache.match(cacheKey);
+    if (hit) return hit.json();
+  }
+  const all = [];
+  for (let page = 1; page <= 6; page++) {
+    const r = await fetch(`${base}/job/portal/referral/${REFERRAL_CODE}/jobs?page=${page}&limit=100`, {
+      headers: { accept: "application/json", "x-custom-lang": "en" },
+    });
+    if (!r.ok) throw new Error(`micro1 feed ${r.status}`);
+    const body = await r.json();
+    const rows = Array.isArray(body.data) ? body.data : [];
+    all.push(...rows);
+    if (rows.length < 100 || all.length >= (body.total || 0)) break;
+  }
+  const jobs = all.map(cleanJob).filter(Boolean);
+  if (cache) {
+    const res = new Response(JSON.stringify(jobs), { headers: { "content-type": "application/json", "cache-control": `max-age=${FEED_TTL}` } });
+    ctx?.waitUntil ? ctx.waitUntil(cache.put(cacheKey, res)) : await cache.put(cacheKey, res);
+  }
+  return jobs;
+}
+
+function safeApplyUrl(raw) {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:" || !/(^|\.)micro1\.ai$/.test(u.hostname)) return null;
+    u.searchParams.set("referralCode", REFERRAL_CODE); // always credit GigrAI
+    if (!u.searchParams.get("utm_source")) u.searchParams.set("utm_source", "referral");
+    return u.toString();
+  } catch { return null; }
+}
+
+const pretty = (slug) => String(slug || "").split("-").filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
+
+function cleanJob(j) {
+  const url = safeApplyUrl(j.apply_url);
+  if (!url || !j.job_name) return null;
+  const hr = j.ideal_hourly_rate || {};
+  return {
+    id: String(j.job_id || ""),
+    title: String(j.job_name).trim(),
+    min: Number.isFinite(+hr.min) ? +hr.min : null,
+    max: Number.isFinite(+hr.max) ? +hr.max : null,
+    skills: Array.isArray(j.skills) ? j.skills.slice(0, 8).map(String) : [],
+    domain: pretty(j.domain_slug),
+    posted: j.date_posted || null,
+    hot: String(j.is_high_demand_job) === "1",
+    openings: +j.no_of_openings || null,
+    url,
+  };
+}
+
+// Related words, so "coding" finds Developer roles and "medical" finds Doctor/Nurse roles
+const SYNONYMS = [
+  ["code", "coding", "coder", "developer", "develop", "software", "engineer", "programm", "python", "javascript", "java"],
+  ["medic", "doctor", "nurs", "health", "clinic", "physician", "pharma", "dentist"],
+  ["legal", "law", "lawyer", "attorney", "paralegal"],
+  ["language", "translat", "linguist", "bilingual", "spanish", "french", "german", "arabic", "portuguese", "japanese", "chinese", "hindi", "italian"],
+  ["financ", "account", "bank", "invest", "econom"],
+  ["math", "statistic", "quant"],
+  ["writ", "editor", "copywrit", "content"],
+  ["photo", "camera"],
+  ["research", "scien", "phd", "academ"],
+];
+const stem = (t) => t.length > 5 && t.endsWith("ing") ? t.slice(0, -3) : t.length > 3 && t.endsWith("s") ? t.slice(0, -1) : t;
+function expand(term) {
+  const t = stem(term);
+  const hit = (x) => (w) => x.startsWith(w) || (x.length >= 4 && w.startsWith(x));
+  const group = SYNONYMS.find(g => g.some(hit(term)) || g.some(hit(t)));
+  return group ? [t, ...group] : [t];
+}
+
+function matches(job, groups) {
+  const hay = `${job.title} ${job.domain} ${job.skills.join(" ")}`.toLowerCase();
+  return groups.every(alts => alts.some(a => hay.includes(a)));
+}
+
+async function handleJobs(url, env, ctx) {
+  const q = (url.searchParams.get("q") || "").trim().toLowerCase().slice(0, 60);
+  const page = Math.max(1, Math.min(50, parseInt(url.searchParams.get("page") || "1", 10) || 1));
+  let feed;
+  try {
+    feed = await loadFeed(env, ctx);
+  } catch (e) {
+    console.error("micro1 feed failed", String(e));
+    return json({ ok: false, error: "Live roles are unavailable right now." }, 502);
+  }
+  const groups = q.split(/\s+/).filter(t => t.length > 1).map(expand);
+  let list = groups.length ? feed.filter(j => matches(j, groups)) : feed;
+  list = list.slice().sort((a, b) => (b.posted || "").localeCompare(a.posted || ""));
+  const total = list.length;
+  const items = list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  if (q && page === 1) console.log(JSON.stringify({ event: "job_search", q, results: total }));
+  return new Response(JSON.stringify({ ok: true, q, total, page, pages: Math.ceil(total / PAGE_SIZE), items }), {
+    headers: { "content-type": "application/json", "cache-control": "public, max-age=120" },
+  });
+}

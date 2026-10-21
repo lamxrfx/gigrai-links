@@ -215,6 +215,43 @@
   .faq details[open] summary::after{transform:rotate(45deg)}
   .faq details p{padding:0 16px 16px;color:var(--muted);font-size:14px;line-height:1.55}
   .faq details p a{color:var(--cyan)}
+
+  /* ---------- live search ---------- */
+  .search{margin-bottom:30px}
+  .s-box{position:relative}
+  .s-box svg{position:absolute;left:15px;top:50%;transform:translateY(-50%);width:19px;height:19px;color:#7f8bc0;pointer-events:none}
+  .s-box input{width:100%;padding:15px 44px 15px 44px;border-radius:16px;border:1px solid transparent;color:var(--text);font:inherit;font-size:16px;outline:none;
+    background:linear-gradient(#0b0e1d,#0b0e1d) padding-box,linear-gradient(120deg,rgba(34,211,238,.5),rgba(47,107,255,.5),rgba(139,61,255,.5)) border-box}
+  .s-box input:focus{background:linear-gradient(#0b0e1d,#0b0e1d) padding-box,var(--grad) border-box;box-shadow:0 0 0 4px rgba(47,107,255,.15)}
+  .s-box input::placeholder{color:#6a7398}
+  .s-box input::-webkit-search-cancel-button,.s-box input::-webkit-search-decoration{-webkit-appearance:none;display:none}
+  .s-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:0;border-radius:50%;background:transparent;color:#7f8bc0;font-size:20px;cursor:pointer;display:none}
+  .s-box.has .s-clear{display:block}
+  .chips-row{display:flex;gap:8px;overflow-x:auto;padding:12px 2px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .chips-row::-webkit-scrollbar{display:none}
+  .chips-row button{flex:0 0 auto;font:inherit;font-size:13px;font-weight:700;color:#cfd6ff;padding:8px 13px;border-radius:999px;background:var(--card);border:1px solid var(--line);cursor:pointer;transition:.15s}
+  .chips-row button:hover{border-color:rgba(120,140,255,.45)}
+  .chips-row button.on{background:var(--grad);border-color:transparent;color:#fff}
+  .s-meta{font-size:12.5px;color:var(--muted);margin:12px 4px 10px;min-height:18px}
+  .s-meta b{color:var(--text)}
+  .jobs{display:flex;flex-direction:column;gap:10px}
+  .job{display:block;padding:14px 15px;border-radius:16px;background:var(--card);border:1px solid var(--line);color:inherit;text-decoration:none;transition:transform .15s,border-color .15s}
+  .job:hover,.job:focus-visible{transform:translateY(-2px);border-color:rgba(120,140,255,.45);outline:none}
+  .job-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .job-h b{font-size:15px;font-weight:800;line-height:1.3}
+  .job-pay{flex:0 0 auto;font-size:14px;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap}
+  .job-sub{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;align-items:center}
+  .job-sub span{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;background:rgba(47,107,255,.10);border:1px solid var(--line);color:#c3cbef}
+  .job-sub .hot{background:rgba(251,113,133,.14);border-color:rgba(251,113,133,.4);color:#fecdd3}
+  .job-foot{display:flex;justify-content:space-between;align-items:center;margin-top:11px;font-size:12px;color:#7f8bc0}
+  .job-foot em{font-style:normal;font-weight:800;color:var(--cyan)}
+  .s-more{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--text);font:inherit;font-weight:700;cursor:pointer}
+  .s-more:hover{border-color:rgba(120,140,255,.45)}
+  .s-empty{padding:18px 16px;border-radius:16px;background:var(--card);border:1px dashed rgba(120,140,255,.3);text-align:center;font-size:14px;color:var(--muted)}
+  .s-empty b{display:block;color:var(--text);font-size:15px;margin-bottom:4px}
+  .s-empty a{display:inline-block;margin-top:12px;padding:10px 16px;border-radius:999px;background:#25d366;color:#05210f;font-weight:800;text-decoration:none}
+  .skel{height:92px;border-radius:16px;background:linear-gradient(90deg,var(--card) 0%,#151a33 50%,var(--card) 100%);background-size:200% 100%;animation:sk 1.2s linear infinite}
+  @keyframes sk{to{background-position:-200% 0}}
 </style>
 </head>
 <body>
@@ -235,6 +272,23 @@
     <div class="hot-head"><p class="label">🔥 Hiring now</p><span class="live"><i></i>Live roles</span></div>
     <div class="roles" id="roles"></div>
   </div>
+
+  <section class="search" id="search" aria-label="Search live roles">
+    <p class="label" id="sLabel">🔎 Search live roles</p>
+    <div class="s-box" id="sBox">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="sInput" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" placeholder="Try writing, coding, finance…" aria-label="Search roles">
+      <button class="s-clear" id="sClear" type="button" aria-label="Clear search">×</button>
+    </div>
+    <div class="chips-row" id="sChips">
+      <button type="button">Writing</button><button type="button">Coding</button><button type="button">Research</button>
+      <button type="button">Finance</button><button type="button">Medical</button><button type="button">Legal</button>
+      <button type="button">Language</button><button type="button">Photography</button><button type="button">Math</button>
+    </div>
+    <p class="s-meta" id="sMeta"></p>
+    <div class="jobs" id="sJobs"></div>
+    <button class="s-more" id="sMore" type="button" hidden>Show more roles</button>
+  </section>
 
   <p class="label">Top platforms 👇</p>
   <div class="links" id="links"></div>
@@ -457,6 +511,76 @@
     const id = a.dataset.track || a.getAttribute('aria-label') || a.querySelector('.name')?.textContent || a.href;
     try { navigator.sendBeacon('/api/click', JSON.stringify({ link: String(id).slice(0, 60) })); } catch (_) {}
   });
+
+  /* ---------- live role search (data from /api/jobs in worker.js) ---------- */
+  (function(){
+    const $ = id => document.getElementById(id);
+    const input = $('sInput'), box = $('sBox'), list = $('sJobs'), meta = $('sMeta'), more = $('sMore'), chips = $('sChips');
+    const WA = 'https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u';
+    let q = '', page = 1, timer, seq = 0, expanded = false;
+
+    const ago = d => {
+      if (!d) return '';
+      const days = Math.floor((Date.now() - new Date(d.replace(' ', 'T') + 'Z')) / 864e5);
+      return days <= 0 ? 'Posted today' : days === 1 ? 'Posted yesterday' : days < 30 ? `Posted ${days}d ago` : 'Posted 30d+ ago';
+    };
+    const pay = j => j.min && j.max ? `$${j.min}–$${j.max}/hr` : j.max ? `Up to $${j.max}/hr` : j.min ? `From $${j.min}/hr` : '';
+    const card = j => `<a class="job" href="${esc(j.url)}" target="_blank" rel="noopener sponsored" data-track="live-${esc(j.title.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40))}">
+        <div class="job-h"><b>${esc(j.title)}</b>${pay(j) ? `<span class="job-pay">${esc(pay(j))}</span>` : ''}</div>
+        <div class="job-sub">${j.hot ? '<span class="hot">🔥 High demand</span>' : ''}${j.domain ? `<span>${esc(j.domain)}</span>` : ''}${j.skills.slice(0,2).map(t => `<span>${esc(t)}</span>`).join('')}</div>
+        <div class="job-foot"><span>via micro1 · ${esc(ago(j.posted))}</span><em>Apply free →</em></div>
+      </a>`;
+
+    async function run(append) {
+      const my = ++seq;
+      if (!append) { list.innerHTML = '<div class="skel"></div><div class="skel"></div>'; more.hidden = true; }
+      try {
+        const res = await fetch(`/api/jobs?q=${encodeURIComponent(q)}&page=${page}`);
+        const d = await res.json();
+        if (my !== seq) return;
+        if (!d.ok) throw new Error(d.error);
+        if (!q && !append) $('sLabel').textContent = `🔎 Search ${d.total}+ live roles`;
+        const preview = !q && !expanded;
+        const shown = preview ? d.items.slice(0, 3) : d.items;
+        if (!d.total) {
+          meta.innerHTML = '';
+          list.innerHTML = `<div class="s-empty"><b>No live roles for “${esc(q)}” yet</b>New roles drop every week. Get them first on WhatsApp.<br><a href="${WA}" target="_blank" rel="noopener" data-track="search-empty-whatsapp">🔔 Get notified</a></div>`;
+          return;
+        }
+        meta.innerHTML = q ? `<b>${d.total}</b> role${d.total === 1 ? '' : 's'} for “${esc(q)}”` : 'Newest roles';
+        if (append) list.insertAdjacentHTML('beforeend', shown.map(card).join(''));
+        else list.innerHTML = shown.map(card).join('');
+        more.hidden = preview ? false : page >= d.pages;
+        more.textContent = preview ? 'Show more new roles' : 'Show more roles';
+      } catch (e) {
+        if (my !== seq) return;
+        meta.textContent = '';
+        list.innerHTML = `<div class="s-empty"><b>Live roles are taking a break</b>Try again in a minute, or browse the platforms below.</div>`;
+      }
+    }
+
+    function search(v) {
+      q = v.trim(); page = 1; expanded = false;
+      box.classList.toggle('has', !!q);
+      chips.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.textContent.toLowerCase() === q.toLowerCase()));
+      run(false);
+    }
+    input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => search(input.value), 350); });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(timer); search(input.value); input.blur(); } });
+    $('sClear').addEventListener('click', () => { input.value = ''; search(''); input.focus(); });
+    chips.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      input.value = b.classList.contains('on') ? '' : b.textContent; search(input.value);
+    });
+    more.addEventListener('click', () => {
+      if (!q && !expanded) { expanded = true; page = 1; run(false); }
+      else { page++; run(true); }
+    });
+    // ?q=coding in the link pre-fills the search (handy for Stories/WhatsApp)
+    const pre = new URLSearchParams(location.search).get('q');
+    if (pre) input.value = pre.slice(0, 60);
+    search(input.value);
+  })();
 
   document.getElementById('yr').textContent = new Date().getFullYear();
 </script>
