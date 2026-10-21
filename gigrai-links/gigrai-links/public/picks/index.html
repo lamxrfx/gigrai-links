@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GigrAI WhatsApp Picks</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#070914;--glass:rgba(255,255,255,.06);--line:rgba(255,255,255,.12);--text:#f2f4ff;--muted:#b8bfdc;--ok:#25d366;--grad:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Plus Jakarta Sans",system-ui,sans-serif;font-size:15px;line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding:28px max(18px,env(safe-area-inset-left)) 48px max(18px,env(safe-area-inset-right));display:flex;flex-direction:column;gap:18px}
+h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em}
+p.sub{margin:4px 0 0;color:var(--muted)}
+.box{background:var(--glass);border:1px solid var(--line);border-radius:20px;padding:16px}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700;color:var(--muted)}
+select,input{height:46px;border-radius:12px;border:1px solid var(--line);background:#10132a;color:var(--text);font:inherit;font-size:15px;padding:0 12px;width:100%}
+.chk{flex-direction:row;align-items:center;gap:10px;color:var(--text);font-weight:600;font-size:14.5px}
+.chk input{width:20px;height:20px;accent-color:#5b8cff}
+button{font:inherit;cursor:pointer}
+.go{height:48px;border:0;border-radius:999px;background:var(--grad);color:#fff;font-weight:700;font-size:15px}
+.copy{height:52px;border:0;border-radius:999px;background:var(--ok);color:#04210f;font-weight:800;font-size:16px;width:100%}
+textarea{width:100%;min-height:340px;border-radius:16px;border:1px solid var(--line);background:#0d1024;color:var(--text);font:inherit;font-size:14.5px;line-height:1.55;padding:14px;resize:vertical}
+.msg{font-size:13.5px;color:var(--muted);min-height:20px}
+.msg.ok{color:#9ff0c5}
+.tips{font-size:13.5px;color:var(--muted)}
+.tips li{margin:4px 0}
+@media (max-width:560px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>WhatsApp picks</h1>
+    <p class="sub">Builds a ready-to-paste post from the live roles. Links are tagged so you can see clicks from WhatsApp.</p>
+  </header>
+
+  <form class="box" id="f" style="display:flex;flex-direction:column;gap:12px">
+    <div class="row">
+      <label for="mode">Pick
+        <select id="mode"><option value="pay">Top paying</option><option value="new">Newest</option></select></label>
+      <label for="country">Open to
+        <select id="country"><option value="GBR">United Kingdom</option><option value="">Anywhere</option><option value="USA">United States</option><option value="CAN">Canada</option><option value="IRL">Ireland</option><option value="AUS">Australia</option><option value="IND">India</option><option value="NGA">Nigeria</option><option value="ZAF">South Africa</option></select></label>
+      <label for="q">Topic (optional)
+        <input id="q" type="search" placeholder="e.g. medical, coding, writing"></label>
+      <label for="n">How many
+        <select id="n"><option>3</option><option selected>5</option><option>7</option></select></label>
+    </div>
+    <label class="chk" for="today"><input type="checkbox" id="today"> Only roles posted in the last 48 hours</label>
+    <label class="chk" for="known"><input type="checkbox" id="known" checked> Only roles confirmed open to that country</label>
+    <button class="go" type="submit">Build post</button>
+  </form>
+
+  <label for="out">Your post
+    <textarea id="out" spellcheck="false" placeholder="Tap Build post"></textarea></label>
+  <button class="copy" type="button" id="copy">Copy post</button>
+  <p class="msg" id="msg" aria-live="polite"></p>
+
+  <ul class="tips">
+    <li>Post on WhatsApp first, then schedule the Instagram post an hour or two later.</li>
+    <li>Topic posts work well: try "medical" or "coding" with "Anywhere".</li>
+    <li>Clicks show in Cloudflare › Observability as <b>apply_click</b> with <b>src: wa</b>.</li>
+  </ul>
+</div>
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const ORIGIN = "https://remotegigrai.com";
+  const NAMES = { GBR: "the UK", USA: "the US", CAN: "Canada", IRL: "Ireland", AUS: "Australia", IND: "India", NGA: "Nigeria", ZAF: "South Africa" };
+  const pay = j => j.min && j.max ? (j.min === j.max ? `$${j.min}/hr` : `$${j.min}–${j.max}/hr`) : j.max ? `up to $${j.max}/hr` : j.min ? `from $${j.min}/hr` : "";
+  const fresh = j => j.posted && (Date.now() - new Date(j.posted.replace(" ", "T") + "Z")) < 2 * 864e5;
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  async function build(e) {
+    if (e) e.preventDefault();
+    const mode = $("mode").value, country = $("country").value, q = $("q").value.trim(), n = +$("n").value;
+    $("msg").className = "msg"; $("msg").textContent = "Fetching live roles…";
+    const p = new URLSearchParams({ sort: mode, limit: "24", src: "picks" });
+    if (country) p.set("country", country);
+    if (q) p.set("q", q);
+    try {
+      const d = await (await fetch("/api/jobs?" + p)).json();
+      if (!d.ok) throw new Error(d.error);
+      let list = d.items;
+      if ($("known").checked && country) list = list.filter(j => j.elig === "yes");
+      if ($("today").checked) list = list.filter(fresh);
+      list = list.slice(0, n);
+      if (!list.length) { $("out").value = ""; $("msg").textContent = "No roles match. Try untick a box, pick Anywhere, or clear the topic."; return; }
+      const where = country ? ` open to ${NAMES[country] || "you"}` : "";
+      const what = q ? `${cap(q)} roles` : "remote AI roles";
+      const head = mode === "pay" ? `🔥 *Top ${list.length} paying ${what}${where}*` : `🆕 *${list.length} new ${what}${where}*`;
+      const lines = list.map((j, i) => {
+        const bits = [pay(j), j.hours ? `${j.hours} hrs/wk` : "", j.hot ? "high demand" : ""].filter(Boolean).join(" · ");
+        return `${i + 1}. *${j.title}* (${j.via})\n${bits ? "💸 " + bits + "\n" : ""}👉 ${ORIGIN}/go/${encodeURIComponent(j.id)}?src=wa`;
+      });
+      const search = q ? `${ORIGIN}/?q=${encodeURIComponent(q)}&src=wa` : `${ORIGIN}/?src=wa`;
+      $("out").value = `${head}\n\n${lines.join("\n\n")}\n\n🔎 Search all ${Math.floor((d.all || 0) / 10) * 10}+ live roles: ${search}\n\nFree to apply. You're seeing these before Instagram 👀\n_Some links are referral links._`;
+      $("msg").textContent = `${list.length} roles picked from ${d.total} matches.`;
+    } catch (err) {
+      $("msg").textContent = "Couldn't load live roles. Try again in a minute.";
+    }
+  }
+  $("f").addEventListener("submit", build);
+  $("copy").addEventListener("click", async () => {
+    const t = $("out").value; if (!t) return build();
+    try { await navigator.clipboard.writeText(t); $("msg").className = "msg ok"; $("msg").textContent = "Copied. Paste it into your WhatsApp channel."; }
+    catch (_) { $("out").select(); $("msg").textContent = "Select all and copy the text above."; }
+  });
+  build();
+})();
+</script>
+</body>
+</html>

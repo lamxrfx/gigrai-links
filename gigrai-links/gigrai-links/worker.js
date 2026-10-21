@@ -67,13 +67,25 @@ export default {
 
     // Link-tap counter: shows up in Cloudflare > gigrai-links > Observability (search "link_click")
     if (url.pathname === "/api/click" && request.method === "POST") {
-      let link = "unknown";
+      let link = "unknown", src = "";
       try {
         const body = JSON.parse(await request.text());
         link = String(body.link || "unknown").replace(/[^\w\- .:/]/g, "").slice(0, 60);
+        src = String(body.src || "");
       } catch {}
-      console.log(JSON.stringify({ event: "link_click", link, country: request.cf?.country || "??" }));
+      console.log(JSON.stringify({ event: "link_click", link, src: cleanSrc(src), country: request.cf?.country || "??" }));
       return new Response(null, { status: 204 });
+    }
+
+    // Tracked apply link: /go/<jobId>?src=wa -> 302 to the job's referral link
+    if (url.pathname.startsWith("/go/") && request.method === "GET") {
+      const id = decodeURIComponent(url.pathname.slice(4));
+      if (!/^[a-z0-9]{1,30}-[A-Za-z0-9_-]{1,80}$/.test(id)) return Response.redirect(new URL("/", url).toString(), 302);
+      let feed = [];
+      try { feed = await loadFeed(env, ctx); } catch {}
+      const job = feed.find(j => j.id === id);
+      console.log(JSON.stringify({ event: "apply_click", id, platform: job ? job.platform : "?", found: !!job, src: cleanSrc(url.searchParams.get("src")), country: request.cf?.country || "??" }));
+      return Response.redirect(job ? job.url : new URL("/", url).toString(), 302);
     }
 
     // Live roles from all platforms: GET /api/jobs?q=photography&page=1
@@ -141,13 +153,16 @@ const ADAPTERS = {
       const hourly = (j.payRateFrequency || "hourly") === "hourly";
       const lo = +j.rateMin > 0 ? +j.rateMin : null, hi = +j.rateMax > 0 ? +j.rateMax : null;
       const tags = [];
-      const only = Array.isArray(j.eligibleLocation) ? j.eligibleLocation.filter(Boolean) : [];
+      const list = v => Array.isArray(v) ? v.filter(Boolean).map(c => String(c).toUpperCase()) : [];
+      const where = list(j.eligibleLocation), res = list(j.eligibleResidenceLocation);
+      const only = where.length ? where : res;
+      const deny = [...new Set([...list(j.ineligibleLocation), ...list(j.ineligibleResidenceLocation)])];
       if (only.length) tags.push(only.length > 2
-        ? `📍 ${only.slice(0, 2).map(countryName).join(", ")} +${only.length - 2} more`
-        : `📍 ${only.map(countryName).join(", ")} only`);
-      else tags.push("🌍 Most countries");
-      if (+j.hoursPerWeek > 0) tags.push(`⏱ ${+j.hoursPerWeek} hrs/wk`);
-      if (!hourly && (lo || hi)) tags.push(`💵 $${lo || hi}${hi && lo && hi !== lo ? `–$${hi}` : ""}/${String(j.payRateFrequency).replace(/ly$/, "").replace(/^dai$/, "day")}`);
+        ? `${only.slice(0, 2).map(countryName).join(", ")} +${only.length - 2} more`
+        : `${only.map(countryName).join(", ")} only`);
+      else tags.push("Most countries");
+      if (+j.hoursPerWeek > 0) tags.push(`${+j.hoursPerWeek} hrs/wk`);
+      if (!hourly && (lo || hi)) tags.push(`$${lo || hi}${hi && lo && hi !== lo ? `–$${hi}` : ""}/${String(j.payRateFrequency).replace(/ly$/, "").replace(/^dai$/, "day")}`);
       return {
         id: `mercor-${j.listingId}`,
         title: String(j.title).replace(/\s+/g, " ").trim(),
@@ -157,7 +172,9 @@ const ADAPTERS = {
         domain: j.listingDomain ? String(j.listingDomain) : "",
         posted: (j.postedAt || j.createdAt || "").replace("T", " ").slice(0, 19) || null,
         hot: false,
-        countries: only,
+        known: true, allow: only, deny,
+        hours: +j.hoursPerWeek > 0 ? +j.hoursPerWeek : null,
+        kind: hourly ? "Hourly" : "Contract",
         url,
       };
     });
@@ -178,7 +195,7 @@ const ADAPTERS = {
         id: `${p.id}-${j.id}`,
         title: String(j.title).trim(),
         min: null, max: null,
-        skills: loc ? [`📍 ${loc}`] : [],
+        skills: loc ? [loc] : [],
         domain: "",
         posted: (j.first_published || j.updated_at || "").replace("T", " ").slice(0, 19) || null,
         hot: false,
@@ -191,6 +208,15 @@ const ADAPTERS = {
 // ISO 3166 alpha-3 -> short name for the common ones; others shown as the code
 const COUNTRY = { USA: "US", GBR: "UK", CAN: "Canada", AUS: "Australia", IND: "India", DEU: "Germany", FRA: "France", ESP: "Spain", ITA: "Italy", NLD: "Netherlands", IRL: "Ireland", NZL: "New Zealand", BRA: "Brazil", MEX: "Mexico", PHL: "Philippines", NGA: "Nigeria", ZAF: "South Africa", KEN: "Kenya", JPN: "Japan", KOR: "South Korea", CHN: "China", SGP: "Singapore", ARE: "UAE", PAK: "Pakistan", EGY: "Egypt", POL: "Poland", PRT: "Portugal", SWE: "Sweden", ARG: "Argentina", COL: "Colombia" };
 const countryName = c => COUNTRY[String(c).toUpperCase()] || String(c).toUpperCase();
+
+// Is this job open to someone in `country` (ISO alpha-3)? "unknown" when the platform doesn't say.
+function eligibility(j, country) {
+  if (!j.known) return "unknown";
+  if ((j.deny || []).includes(country)) return "no";
+  if ((j.allow || []).length && !j.allow.includes(country)) return "no";
+  return "yes";
+}
+const cleanSrc = v => String(v || "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 20);
 
 // Only allow https links on the platform's own domain, then apply the referral rule.
 function withReferral(raw, hostRe, addCode) {
@@ -272,13 +298,16 @@ async function handleJobs(url, env, ctx) {
   const field = (url.searchParams.get("field") || "").slice(0, 60);
   const sort = url.searchParams.get("sort") === "pay" ? "pay" : "new";
   const via = (url.searchParams.get("via") || "").slice(0, 40);
+  const country = /^[A-Z]{3}$/.test(url.searchParams.get("country") || "") ? url.searchParams.get("country") : "";
+  const size = Math.max(1, Math.min(24, parseInt(url.searchParams.get("limit") || PAGE_SIZE, 10) || PAGE_SIZE));
 
   const groups = q.split(/\s+/).filter(t => t.length > 1).map(expand);
   let list = feed.filter(j =>
     (!groups.length || matches(j, groups)) &&
     (!hot || j.hot) &&
     (!minpay || (j.max || j.min || 0) >= minpay) &&
-    (!via || j.platform === via));
+    (!via || j.platform === via) &&
+    (!country || eligibility(j, country) !== "no"));
   // field counts for the dropdown (before the field filter is applied)
   const counts = {};
   for (const j of list) if (j.domain) counts[j.domain] = (counts[j.domain] || 0) + 1;
@@ -290,9 +319,12 @@ async function handleJobs(url, env, ctx) {
     ? (a, b) => (b.max || b.min || 0) - (a.max || a.min || 0) || (b.posted || "").localeCompare(a.posted || "")
     : (a, b) => (b.posted || "").localeCompare(a.posted || ""));
   const total = list.length;
-  const items = list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  if (q && page === 1) console.log(JSON.stringify({ event: "job_search", q, results: total }));
-  return new Response(JSON.stringify({ ok: true, q, total, all: feed.length, page, pages: Math.ceil(total / PAGE_SIZE), fields, sources, items }), {
+  const items = list.slice((page - 1) * size, page * size).map(j => {
+    const { allow, deny, known, ...rest } = j;
+    return country ? { ...rest, elig: eligibility(j, country) } : rest;
+  });
+  if (q && page === 1) console.log(JSON.stringify({ event: "job_search", q, results: total, src: cleanSrc(url.searchParams.get("src")) }));
+  return new Response(JSON.stringify({ ok: true, q, total, all: feed.length, page, pages: Math.ceil(total / size), fields, sources, items }), {
     headers: { "content-type": "application/json", "cache-control": "public, max-age=120" },
   });
 }

@@ -448,6 +448,9 @@
 </main>
 
 <script>
+  /* where the visitor came from (?src=wa etc.), kept for this visit */
+  let SRC = 'web';
+  try { const s = new URLSearchParams(location.search).get('src'); if (s) sessionStorage.setItem('gg_src', s.slice(0, 20)); SRC = sessionStorage.getItem('gg_src') || 'web'; } catch (_) {}
 
 
   const SOCIALS = {
@@ -530,7 +533,7 @@
     const a = e.target.closest('a[href]');
     if (!a || e.defaultPrevented) return;
     const id = a.dataset.track || a.getAttribute('aria-label') || a.querySelector('.name')?.textContent || a.href;
-    try { navigator.sendBeacon('/api/click', JSON.stringify({ link: String(id).slice(0, 60) })); } catch (_) {}
+    try { navigator.sendBeacon('/api/click', JSON.stringify({ link: String(id).slice(0, 60), src: SRC })); } catch (_) {}
   });
 
   /* ---------- live role search (data from /api/jobs in worker.js) ---------- */
@@ -562,7 +565,7 @@
       shown.set(j.id, j);
       const on = isSaved(j.id);
       return `<article class="job">
-        <a class="job-link" href="${esc(j.url)}" target="_blank" rel="noopener sponsored" data-track="live-${esc(slug(j.title))}">
+        <a class="job-link" href="/go/${encodeURIComponent(j.id)}?src=${encodeURIComponent(SRC)}" target="_blank" rel="noopener sponsored" data-track="live-${esc(slug(j.title))}">
           <div class="job-h"><b>${esc(j.title)}</b>${pay(j) ? `<span class="job-pay" data-rate="${esc(j.max || j.min)}" title="Use this rate in the calculator">${esc(pay(j))}</span>` : ''}</div>
           <div class="job-sub">${j.hot ? '<span class="hot">🔥 High demand</span>' : ''}${j.domain ? `<span>${esc(j.domain)}</span>` : ''}${(j.skills || []).slice(0,2).map(t => `<span>${esc(t)}</span>`).join('')}</div>
           <div class="job-foot"><span>via ${esc(j.via || 'partner')}${j.posted ? ' · ' + esc(ago(j.posted)) : ''}</span><em>Apply free →</em></div>
@@ -573,7 +576,7 @@
 
     const filtersOn = () => fHot.getAttribute('aria-pressed') === 'true' || fPay.value !== '0' || fField.value !== '' || fVia.value !== '';
     function params() {
-      const p = new URLSearchParams({ q, page });
+      const p = new URLSearchParams({ q, page, src: SRC });
       if (fHot.getAttribute('aria-pressed') === 'true') p.set('hot', '1');
       if (fPay.value !== '0') p.set('minpay', fPay.value);
       if (fField.value) p.set('field', fField.value);
