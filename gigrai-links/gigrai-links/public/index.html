@@ -268,11 +268,6 @@
     <span class="pill">💷 Paid hourly</span>
   </div>
 
-  <div id="hotWrap" hidden>
-    <div class="hot-head"><p class="label">🔥 Hiring now</p><span class="live"><i></i>Live roles</span></div>
-    <div class="roles" id="roles"></div>
-  </div>
-
   <section class="search" id="search" aria-label="Search live roles">
     <p class="label" id="sLabel">🔎 Search live roles</p>
     <div class="s-box" id="sBox">
@@ -367,24 +362,6 @@
      - Leave url as "" to hide a link until you have it.
      - featured: true gives it the glowing border + badge.
      ========================================================= */
-  /* =========================================================
-     HIRING NOW: newest role first.
-     "added" (YYYY-MM-DD) shows a NEW badge for 7 days.
-     Remove a role when it closes.
-     ========================================================= */
-  const ROLES = [
-    {
-      title: "Photographer",
-      via: "micro1",
-      emoji: "📸",
-      pay: "$35–$105",
-      per: "/ hour",
-      tags: ["🌍 Remote", "📝 Contract", "🤖 No AI experience"],
-      url: "https://refer.micro1.ai/referral/jobs?referralCode=e9ff2278-2563-4f64-bed8-214a3dfd996c&utm_source=referral&utm_medium=share&utm_campaign=job_referral",
-      added: "2026-10-20"
-    }
-  ];
-
   const LINKS = [
     {
       name: "AI Expert & Training Roles",
@@ -483,25 +460,6 @@
         fail('Connection problem. Please try again.');
       }
     });
-  })();
-
-  /* ---------- render hiring now ---------- */
-  (function(){
-    const live = ROLES.filter(r => r.url);
-    if (!live.length) return;
-    const week = 7 * 864e5;
-    document.getElementById('roles').innerHTML = live.map(r => {
-      const fresh = r.added && (Date.now() - new Date(r.added + 'T00:00:00')) < week;
-      return `<a class="role" href="${esc(r.url)}" target="_blank" rel="noopener sponsored" data-track="role-${esc(r.title.toLowerCase().replace(/[^a-z0-9]+/g,'-'))}">
-        ${fresh ? '<span class="new">NEW</span>' : ''}
-        <span class="role-top"><span class="role-emoji">${esc(r.emoji || '💼')}</span>
-          <span class="role-t"><b>${esc(r.title)}</b><small>via ${esc(r.via)}</small></span></span>
-        <div class="role-pay">${esc(r.pay)} <span>${esc(r.per || '')}</span></div>
-        <div class="role-tags">${(r.tags || []).map(t => `<span>${esc(t)}</span>`).join('')}</div>
-        <span class="role-cta">Apply free →</span>
-      </a>`;
-    }).join('');
-    document.getElementById('hotWrap').hidden = false;
   })();
 
   /* ---------- click tracking (counts taps, no cookies, no personal data) ---------- */
