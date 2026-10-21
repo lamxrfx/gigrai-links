@@ -1,0 +1,37 @@
+# Publishes the site to Cloudflare on every push to main (about 1 minute).
+# Needs one repo secret: CLOUDFLARE_API_TOKEN (Settings > Secrets and variables > Actions).
+name: Deploy to Cloudflare
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true   # only the newest push gets published
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the Cloudflare key is set
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Add the CLOUDFLARE_API_TOKEN secret in GitHub > Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+
+      - name: Publish with Wrangler
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ebe9e1de0a84e5d863eabdd716f316df
+          workingDirectory: gigrai-links/gigrai-links
+          wranglerVersion: "4.42.0"
+          command: deploy
