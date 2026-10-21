@@ -77,17 +77,28 @@ export default {
 
     // TEMPORARY diagnostic (remove after checking micro1 structure)
     if (url.pathname === "/api/probe-m1-7f3k") {
+      const code = "e9ff2278-2563-4f64-bed8-214a3dfd996c";
+      const out = {};
       try {
-        const r = await fetch("https://refer.micro1.ai/assets/index.js", { headers: { "user-agent": "Mozilla/5.0" } });
-        const js = await r.text();
-        const uniq = (arr) => [...new Set(arr)];
-        const urls = uniq([...js.matchAll(/["'`](https?:\/\/[^"'`\s]{4,120})["'`]/g)].map(m => m[1]))
-          .filter(u => !/w3\.org|reactjs|github|mozilla|googleapis\.com\/css|fonts\./i.test(u)).slice(0, 60);
-        const paths = uniq([...js.matchAll(/["'`](\/[a-zA-Z0-9_\-/{}:$.]*(?:job|referr|opening|position|role|portal|candidate)[a-zA-Z0-9_\-/{}:$.?=&]*)["'`]/gi)].map(m => m[1])).slice(0, 60);
-        const ctx = [];
-        for (const m of js.matchAll(/referralCode/g)) { if (ctx.length >= 6) break; ctx.push(js.slice(Math.max(0, m.index - 160), m.index + 160)); }
-        return json({ status: r.status, length: js.length, urls, paths, referralCodeContext: ctx });
-      } catch (e) { return json({ error: String(e) }, 500); }
+        const js = await (await fetch("https://refer.micro1.ai/assets/index.js")).text();
+        const ctx = (needle, n = 3, w = 220) => { const r = []; let i = -1; while (r.length < n && (i = js.indexOf(needle, i + 1)) !== -1) r.push(js.slice(Math.max(0, i - w), i + w)); return r; };
+        out.clientCtx = ctx("publicApiClient=", 2, 300);
+        out.prodApiCtx = ctx("prod-api.micro1.ai", 2, 200);
+        out.jobLinkCtx = ctx("/referral/jobs/", 3, 200);
+      } catch (e) { out.jsErr = String(e); }
+      const tries = [
+        `https://prod-api.micro1.ai/job/portal/referral/${code}/jobs?page=1&limit=3`,
+        `https://prod-api.micro1.ai/api/v1/job/portal/referral/${code}/jobs?page=1&limit=3`,
+        `https://prod-api.micro1.ai/api/job/portal/referral/${code}/jobs?page=1&limit=3`,
+        `https://prod-api.micro1.ai/job/portal/referral/${code}/jobs?page=1&limit=3&keyword=photographer`
+      ];
+      out.tries = [];
+      for (const t of tries) {
+        try { const r = await fetch(t, { headers: { accept: "application/json", origin: "https://refer.micro1.ai", referer: "https://refer.micro1.ai/" } });
+          out.tries.push({ url: t.replace(code, "CODE"), status: r.status, body: (await r.text()).slice(0, 1800) });
+        } catch (e) { out.tries.push({ url: t, err: String(e) }); }
+      }
+      return json(out);
     }
 
     return env.ASSETS.fetch(request);
