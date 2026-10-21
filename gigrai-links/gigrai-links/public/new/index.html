@@ -182,7 +182,19 @@ input[type=range]{width:100%;accent-color:#5b8cff;height:28px;margin:0}
 .faq details[open] summary::after{transform:rotate(45deg)}
 .faq details p{margin:0;padding:0 18px 18px;color:var(--muted);font-size:14.5px}
 footer.foot{margin-top:56px;border-top:1px solid rgba(255,255,255,.08)}
-footer.foot .wrap{padding-top:22px;padding-bottom:calc(28px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;font-size:13px;color:#8f97b8}
+footer.foot .wrap{padding-top:32px;padding-bottom:calc(28px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:26px}
+.f-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:20px}
+.f-brand{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.f-brand p{margin:0;color:var(--muted);font-size:14px}
+.f-social{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.f-label{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8f97b8}
+.ig{display:flex;align-items:center;gap:12px;padding:6px 18px 6px 6px;border-radius:999px;background:var(--glass);border:1px solid var(--line);color:var(--text);text-decoration:none;transition:border-color .15s,background .15s}
+.ig:hover{background:var(--glass-2);border-color:var(--line-2);color:var(--text)}
+.ig-ic{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#f9a03f,#e1306c 45%,#833ab4)}
+.ig-t{display:flex;flex-direction:column;line-height:1.25}
+.ig-t b{font-size:15px}
+.ig-t span{font-size:12.5px;color:var(--muted)}
+.f-bottom{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 20px;padding-top:18px;border-top:1px solid rgba(255,255,255,.06);font-size:13px;color:#8f97b8}
 
 /* ---------- role sheet ---------- */
 dialog.role{width:min(560px,100%);max-height:min(88vh,820px);margin:auto;padding:0;border:1px solid var(--line-2);border-radius:28px;background:#0d1024;color:var(--text);overflow:auto}
@@ -385,8 +397,23 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
 </main>
 
 <footer class="foot"><div class="wrap">
-  <span>© <span id="yr">2026</span> GigrAI · remotegigrai.com · <a href="https://www.instagram.com/gigr.ai/" target="_blank" rel="noopener" data-track="footer-instagram">Instagram</a></span>
-  <span>Some links are referral links. It costs you nothing and doesn't change your pay.</span>
+  <div class="f-top">
+    <div class="f-brand">
+      <a class="brand" href="/new/"><img src="/icon.png" alt="" width="36" height="36">GigrAI</a>
+      <p>Every remote AI job. One search.</p>
+    </div>
+    <div class="f-social">
+      <span class="f-label">Follow for new roles</span>
+      <a class="ig" href="https://www.instagram.com/gigr.ai/" target="_blank" rel="noopener" data-track="footer-instagram">
+        <span class="ig-ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></span>
+        <span class="ig-t"><b>@gigr.ai</b><span>on Instagram</span></span>
+      </a>
+    </div>
+  </div>
+  <div class="f-bottom">
+    <span>© <span id="yr">2026</span> GigrAI · remotegigrai.com</span>
+    <span>Some links are referral links. It costs you nothing and doesn't change your pay.</span>
+  </div>
 </div></footer>
 
 <nav class="mnav" aria-label="Quick links">
