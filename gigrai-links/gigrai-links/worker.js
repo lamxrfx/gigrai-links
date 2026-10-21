@@ -94,6 +94,12 @@ export default {
     }
 
     // One role with its description: GET /api/job?id=mercor-list_xxx&country=GBR
+    // Visitor's country from Cloudflare (no location prompt): GET /api/where
+    if (url.pathname === "/api/where" && request.method === "GET") {
+      const iso2 = String(request.cf?.country || "").toUpperCase();
+      return new Response(JSON.stringify({ ok: true, iso2, iso3: ISO3[iso2] || "" }), { headers: { "content-type": "application/json", "cache-control": "private, no-store" } });
+    }
+
     if (url.pathname === "/api/job" && request.method === "GET") {
       const id = url.searchParams.get("id") || "";
       if (!/^[a-z0-9]{1,30}-[A-Za-z0-9_-]{1,80}$/.test(id)) return json({ ok: false, error: "Not found" }, 404);
@@ -228,6 +234,7 @@ const ADAPTERS = {
 };
 
 // ISO 3166 alpha-3 -> short name for the common ones; others shown as the code
+const ISO3 = { GB:"GBR", US:"USA", CA:"CAN", IE:"IRL", AU:"AUS", NZ:"NZL", IN:"IND", NG:"NGA", ZA:"ZAF", KE:"KEN", GH:"GHA", UG:"UGA", ET:"ETH", EG:"EGY", MA:"MAR", DE:"DEU", FR:"FRA", ES:"ESP", IT:"ITA", PT:"PRT", NL:"NLD", BE:"BEL", LU:"LUX", CH:"CHE", AT:"AUT", SE:"SWE", NO:"NOR", DK:"DNK", FI:"FIN", IS:"ISL", PL:"POL", CZ:"CZE", SK:"SVK", HU:"HUN", RO:"ROU", BG:"BGR", GR:"GRC", HR:"HRV", SI:"SVN", RS:"SRB", EE:"EST", LV:"LVA", LT:"LTU", UA:"UKR", TR:"TUR", CY:"CYP", MT:"MLT", AE:"ARE", SA:"SAU", QA:"QAT", IL:"ISR", PK:"PAK", BD:"BGD", LK:"LKA", NP:"NPL", PH:"PHL", SG:"SGP", MY:"MYS", ID:"IDN", TH:"THA", VN:"VNM", JP:"JPN", KR:"KOR", CN:"CHN", HK:"HKG", TW:"TWN", BR:"BRA", MX:"MEX", AR:"ARG", CO:"COL", CL:"CHL", PE:"PER", JM:"JAM", TT:"TTO", BB:"BRB" };
 const COUNTRY = { USA: "US", GBR: "UK", CAN: "Canada", AUS: "Australia", IND: "India", DEU: "Germany", FRA: "France", ESP: "Spain", ITA: "Italy", NLD: "Netherlands", IRL: "Ireland", NZL: "New Zealand", BRA: "Brazil", MEX: "Mexico", PHL: "Philippines", NGA: "Nigeria", ZAF: "South Africa", KEN: "Kenya", JPN: "Japan", KOR: "South Korea", CHN: "China", SGP: "Singapore", ARE: "UAE", PAK: "Pakistan", EGY: "Egypt", POL: "Poland", PRT: "Portugal", SWE: "Sweden", ARG: "Argentina", COL: "Colombia" };
 const countryName = c => COUNTRY[String(c).toUpperCase()] || String(c).toUpperCase();
 

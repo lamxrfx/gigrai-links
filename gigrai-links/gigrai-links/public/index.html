@@ -464,9 +464,19 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
   const short = code => code === "GBR" ? "UK" : code === "USA" ? "US" : cname(code);
   const opts = COUNTRIES.map(([v,n]) => `<option value="${v}">${v ? "Open to: " + n : "Anywhere"}</option>`).join("");
   $("where").innerHTML = opts; $("whereM").innerHTML = opts;
+  const addCountry = (v, n) => { if (!v || COUNTRIES.some(c => c[0] === v)) return; COUNTRIES.push([v, n]); const o = `<option value="${v}">Open to: ${n}</option>`; $("where").insertAdjacentHTML("beforeend", o); $("whereM").insertAdjacentHTML("beforeend", o); };
 
-  const S = { q: "", country: store.get("gg_country", "GBR"), pay: 0, field: "", via: [], hot: false, sort: "new", page: 1, pages: 1, total: 0 };
+  const S = { q: "", country: store.get("gg_country", null), pay: 0, field: "", via: [], hot: false, sort: "new", page: 1, pages: 1, total: 0 };
+  if (S.country === null) S.country = "";
   $("where").value = $("whereM").value = S.country;
+  // No saved choice yet: default to the visitor's own country, or Anywhere if we can't tell
+  const chosen = store.get("gg_country", null) !== null;
+  const whereReady = chosen ? Promise.resolve() : fetch("/api/where").then(r => r.json()).then(w => {
+    if (!w.iso3) return;
+    let n = w.iso2; try { n = new Intl.DisplayNames(["en"], { type: "region" }).of(w.iso2) || n; } catch (_) {}
+    addCountry(w.iso3, n);
+    S.country = w.iso3; $("where").value = $("whereM").value = w.iso3;
+  }).catch(() => {});
 
   const PLATFORM = {};
   let saved = store.get("gigrai_saved_v1", []);
@@ -737,7 +747,7 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
   if (pre) { S.q = pre.slice(0, 60); $("q").value = S.q; }
   const roleId = new URLSearchParams(location.search).get("role");
   // wait (briefly) for platform logos so cards render with them
-  Promise.race([platformsReady, new Promise(r => setTimeout(r, 1500))]).finally(() => {
+  Promise.race([Promise.all([platformsReady, whereReady]), new Promise(r => setTimeout(r, 1500))]).finally(() => {
     search();
     if (roleId && /^[a-z0-9]{1,30}-[A-Za-z0-9_-]{1,80}$/.test(roleId)) openRole(roleId, true);
   });
