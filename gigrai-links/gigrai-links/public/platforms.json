@@ -9,7 +9,10 @@
       "signupUrl": "https://refer.micro1.ai/referral/jobs?referralCode=e9ff2278-2563-4f64-bed8-214a3dfd996c&utm_source=referral&utm_medium=share&utm_campaign=job_referral",
       "logo": "micro1.png",
       "logoShape": "wide",
-      "feed": { "type": "micro1", "referralCode": "e9ff2278-2563-4f64-bed8-214a3dfd996c" },
+      "feed": {
+        "type": "micro1",
+        "referralCode": "e9ff2278-2563-4f64-bed8-214a3dfd996c"
+      },
       "active": true
     },
     {
@@ -28,12 +31,12 @@
       "name": "Mercor",
       "rowTitle": "Mercor",
       "tagline": "Expert AI projects, high hourly rates",
-      "signupUrl": "",
+      "signupUrl": "https://t.mercor.com/icoA3",
       "logo": "",
       "logoShape": "square",
       "feed": null,
-      "active": false,
-      "_todo": "Sign up, then send Claude your referral code. Feed needs checking before it's switched on."
+      "active": true,
+      "referralCode": "e2c09b89-7c5c-ebec-8070-b2dacd94c7a3"
     },
     {
       "id": "alignerr",
@@ -43,7 +46,11 @@
       "signupUrl": "",
       "logo": "",
       "logoShape": "square",
-      "feed": { "type": "greenhouse", "board": "alignerr", "applyVia": "signup" },
+      "feed": {
+        "type": "greenhouse",
+        "board": "alignerr",
+        "applyVia": "signup"
+      },
       "active": false,
       "_todo": "Sign up, then paste your referral link into signupUrl and set active to true."
     },

@@ -81,6 +81,38 @@ export default {
       return handleJobs(url, env, ctx);
     }
 
+    // TEMPORARY diagnostic (remove after checking Mercor's job list)
+    if (url.pathname === "/api/probe-mc-9q2w") {
+      const out = { tries: [] };
+      const H = { accept: "application/json, text/html", "user-agent": "Mozilla/5.0" };
+      try {
+        const html = await (await fetch("https://work.mercor.com/explore", { headers: H })).text();
+        out.htmlLen = html.length;
+        out.scripts = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(m => m[1]).slice(0, 25);
+        out.apiInHtml = [...new Set([...html.matchAll(/https?:\/\/[a-z0-9.-]*mercor[a-z0-9.-]*\.com\/[^"'\s\\]{0,80}/gi)].map(m => m[0]))].slice(0, 25);
+        const nd = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+        out.nextData = nd ? nd[1].slice(0, 1500) : null;
+        // scan first few JS chunks for listing endpoints
+        out.jsHits = [];
+        for (const src of out.scripts.slice(0, 25)) {
+          const u = new URL(src, "https://work.mercor.com/").toString();
+          const js = await (await fetch(u, { headers: H })).text();
+          for (const m of js.matchAll(/["'`]([^"'`]{0,60}(?:listings?-explore|explore-page|\/listings?)[^"'`]{0,60})["'`]/gi)) out.jsHits.push(m[1]);
+          if (out.jsHits.length > 30) break;
+        }
+        out.jsHits = [...new Set(out.jsHits)].slice(0, 30);
+      } catch (e) { out.htmlErr = String(e); }
+      for (const t of [
+        "https://aws.api.mercor.com/work/listings-explore-page",
+        "https://aws.api.mercor.com/listings-explore-page",
+        "https://aws.api.mercor.com/work/listings-explore-page?page=1",
+      ]) {
+        try { const r = await fetch(t, { headers: { accept: "application/json" } }); out.tries.push({ t, status: r.status, body: (await r.text()).slice(0, 1200) }); }
+        catch (e) { out.tries.push({ t, err: String(e) }); }
+      }
+      return json(out);
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
