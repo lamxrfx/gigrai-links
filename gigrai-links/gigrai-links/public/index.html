@@ -113,8 +113,9 @@ header.top .wrap{height:68px;display:flex;align-items:center;gap:36px}
 .seg button{height:36px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-weight:600;font-size:13.5px;cursor:pointer}
 .seg button[aria-pressed=true]{background:rgba(255,255,255,.14);color:var(--text)}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.card{position:relative;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:var(--r-lg);background:var(--glass);border:1px solid var(--line);transition:border-color .2s,transform .2s}
+.card{cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:var(--r-lg);background:var(--glass);border:1px solid var(--line);transition:border-color .2s,transform .2s}
 .card:hover{border-color:var(--line-2);transform:translateY(-2px)}
+.card:active{transform:scale(.99)}
 .card.feat{background:linear-gradient(160deg,rgba(91,140,255,.24),rgba(139,61,255,.10) 60%,rgba(255,255,255,.04))}
 .c-top{display:flex;align-items:center;gap:14px}
 .av{flex:0 0 50px;height:50px;border-radius:16px;display:grid;place-items:center;font-weight:800;font-size:16px;overflow:hidden}
@@ -512,7 +513,7 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
     shown.set(j.id, j);
     const tags = [...(isNew(j) ? ['<span class="tag new">New</span>'] : []), ...(j.slots ? [`<span class="tag few">Only ${j.slots} spot${j.slots === 1 ? "" : "s"} left</span>`] : []), ...(j.hot ? ['<span class="tag hot">High demand</span>'] : []), ...(j.domain ? [`<span class="tag">${esc(j.domain)}</span>`] : []), ...skillsOf(j).slice(0, 2).map(t => `<span class="tag">${esc(t)}</span>`)];
     const facts = [j.kind, j.hours ? `${j.hours} hrs/wk` : ""].filter(Boolean).join(" · ");
-    return `<article class="card${i === 0 && S.page === 1 && S.sort !== "saved" ? " feat" : ""}">
+    return `<article class="card${i === 0 && S.page === 1 && S.sort !== "saved" ? " feat" : ""}" data-card="${esc(j.id)}">
       <div class="c-top">${avatar(j)}
         <div class="c-title"><button type="button" data-open="${esc(j.id)}">${esc(j.title)}</button><span class="via">${esc(j.via || "")}</span></div>
       </div>
@@ -693,6 +694,7 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
     const s = e.target.closest("[data-save]"); if (s) { toggleSave(s.dataset.save); return; }
     const o = e.target.closest("[data-open]"); if (o) { openRole(o.dataset.open); return; }
     const sh = e.target.closest("[data-share]"); if (sh) { shareRole(sh.dataset.share); return; }
+    const cd = e.target.closest("[data-card]"); if (cd && !e.target.closest("a,button,input,select,label")) { openRole(cd.dataset.card); return; }
     const mo = e.target.closest("[data-more]"); if (mo) { const box = $("rDesc"); box.innerHTML = descHtml(box._full || ""); return; }
     if (e.target.closest("[data-close]")) $("role").close();
   });
