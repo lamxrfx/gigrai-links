@@ -88,6 +88,26 @@ export default {
       return Response.redirect(job ? job.url : new URL("/", url).toString(), 302);
     }
 
+    // The redesign was tested at /new: send old links to the homepage
+    if (url.pathname === "/new" || url.pathname.startsWith("/new/")) {
+      return Response.redirect(new URL("/" + url.search, url).toString(), 301);
+    }
+
+    // One role with its description: GET /api/job?id=mercor-list_xxx&country=GBR
+    if (url.pathname === "/api/job" && request.method === "GET") {
+      const id = url.searchParams.get("id") || "";
+      if (!/^[a-z0-9]{1,30}-[A-Za-z0-9_-]{1,80}$/.test(id)) return json({ ok: false, error: "Not found" }, 404);
+      let feed;
+      try { feed = await loadFeed(env, ctx); } catch { return json({ ok: false, error: "Live roles are unavailable right now." }, 502); }
+      const j = feed.find(x => x.id === id);
+      if (!j) return json({ ok: false, error: "This role has closed or moved." }, 404);
+      const country = /^[A-Z]{3}$/.test(url.searchParams.get("country") || "") ? url.searchParams.get("country") : "";
+      const { allow, deny, known, ...rest } = j;
+      return new Response(JSON.stringify({ ok: true, job: country ? { ...rest, elig: eligibility(j, country) } : rest }), {
+        headers: { "content-type": "application/json", "cache-control": "public, max-age=300" },
+      });
+    }
+
     // Live roles from all platforms: GET /api/jobs?q=photography&page=1
     if (url.pathname === "/api/jobs" && request.method === "GET") {
       return handleJobs(url, env, ctx);
@@ -175,6 +195,8 @@ const ADAPTERS = {
         known: true, allow: only, deny,
         hours: +j.hoursPerWeek > 0 ? +j.hoursPerWeek : null,
         kind: hourly ? "Hourly" : "Contract",
+        slots: +j.remainingSlots > 0 && +j.remainingSlots <= 5 ? +j.remainingSlots : null,
+        desc: plainText(j.description),
         url,
       };
     });
@@ -218,6 +240,23 @@ function eligibility(j, country) {
 }
 const cleanSrc = v => String(v || "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 20);
 
+// Markdown-ish job description -> tidy plain text (headings "## ", bullets "- " kept), capped for size
+function plainText(md) {
+  if (!md) return "";
+  return String(md)
+    .replace(/\r/g, "")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")            // images
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")          // links -> text
+    .replace(/<[^>]+>/g, "")                            // html tags
+    .replace(/^\s*#{1,6}\s*/gm, "## ")                 // headings
+    .replace(/^\s*[*\u2022]\s+/gm, "- ")              // bullets
+    .replace(/\*\*|__|`/g, "")                        // bold / code marks
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, 4000);
+}
+
 // Only allow https links on the platform's own domain, then apply the referral rule.
 function withReferral(raw, hostRe, addCode) {
   try {
@@ -231,7 +270,7 @@ function withReferral(raw, hostRe, addCode) {
 
 async function loadFeed(env, ctx) {
   const sources = livePlatforms();
-  const cacheKey = new Request(`https://cache.remotegigrai.internal/feed-v2/${sources.map(p => p.id).join(",")}`);
+  const cacheKey = new Request(`https://cache.remotegigrai.internal/feed-v3/${sources.map(p => p.id).join(",")}`);
   const cache = typeof caches !== "undefined" ? caches.default : null;
   if (cache) {
     const hit = await cache.match(cacheKey);
@@ -320,11 +359,13 @@ async function handleJobs(url, env, ctx) {
     : (a, b) => (b.posted || "").localeCompare(a.posted || ""));
   const total = list.length;
   const items = list.slice((page - 1) * size, page * size).map(j => {
-    const { allow, deny, known, ...rest } = j;
+    const { allow, deny, known, desc, ...rest } = j;
     return country ? { ...rest, elig: eligibility(j, country) } : rest;
   });
   if (q && page === 1) console.log(JSON.stringify({ event: "job_search", q, results: total, src: cleanSrc(url.searchParams.get("src")) }));
-  return new Response(JSON.stringify({ ok: true, q, total, all: feed.length, page, pages: Math.ceil(total / size), fields, sources, items }), {
+  const dayAgo = new Date(Date.now() - 864e5).toISOString().replace("T", " ").slice(0, 19);
+  const newToday = feed.filter(j => (j.posted || "") >= dayAgo).length;
+  return new Response(JSON.stringify({ ok: true, q, total, all: feed.length, newToday, page, pages: Math.ceil(total / size), fields, sources, items }), {
     headers: { "content-type": "application/json", "cache-control": "public, max-age=120" },
   });
 }

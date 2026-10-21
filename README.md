@@ -11,8 +11,9 @@ Hosted on **Cloudflare Workers** (project `gigrai-links`). Every push to `main` 
 | File | What it does |
 |---|---|
 | `gigrai-links/gigrai-links/public/platforms.json` | **The one list of platforms.** Platform rows on the page and job feeds both come from here. |
-| `gigrai-links/gigrai-links/public/index.html` | The page (search, filters, calculator, FAQ, WhatsApp card). |
-| `gigrai-links/gigrai-links/worker.js` | Server code: `/api/jobs` (live search), `/api/click` (tap counter), `/api/subscribe` (email signup, currently switched off). |
+| `gigrai-links/gigrai-links/public/index.html` | The homepage: search, filters, role details (`?role=<id>`), saved, calculator, platforms, FAQ. |
+| `gigrai-links/gigrai-links/public/picks/index.html` | `/picks`: builds ready-to-paste WhatsApp posts (not linked anywhere). |
+| `gigrai-links/gigrai-links/worker.js` | Server code: `/api/jobs` (live search), `/api/job` (one role + description), `/go/<id>` (tracked apply redirect), `/api/click` (tap counter), `/api/subscribe` (email signup, switched off). |
 | `gigrai-links/gigrai-links/wrangler.jsonc` | Cloudflare settings. |
 
 ## Add a new platform

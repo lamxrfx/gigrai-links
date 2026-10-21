@@ -63,7 +63,7 @@ textarea{width:100%;min-height:340px;border-radius:16px;border:1px solid var(--l
   <ul class="tips">
     <li>Post on WhatsApp first, then schedule the Instagram post an hour or two later.</li>
     <li>Topic posts work well: try "medical" or "coding" with "Anywhere".</li>
-    <li>Clicks show in Cloudflare › Observability as <b>apply_click</b> with <b>src: wa</b>.</li>
+    <li>Each link opens the role's details on your site first. Applies show in Cloudflare › Observability as <b>apply_click</b> with <b>src: wa</b>.</li>
   </ul>
 </div>
 <script>
@@ -95,7 +95,7 @@ textarea{width:100%;min-height:340px;border-radius:16px;border:1px solid var(--l
       const head = mode === "pay" ? `🔥 *Top ${list.length} paying ${what}${where}*` : `🆕 *${list.length} new ${what}${where}*`;
       const lines = list.map((j, i) => {
         const bits = [pay(j), j.hours ? `${j.hours} hrs/wk` : "", j.hot ? "high demand" : ""].filter(Boolean).join(" · ");
-        return `${i + 1}. *${j.title}* (${j.via})\n${bits ? "💸 " + bits + "\n" : ""}👉 ${ORIGIN}/go/${encodeURIComponent(j.id)}?src=wa`;
+        return `${i + 1}. *${j.title}* (${j.via})\n${bits ? "💸 " + bits + "\n" : ""}👉 ${ORIGIN}/?role=${encodeURIComponent(j.id)}&src=wa`;
       });
       const search = q ? `${ORIGIN}/?q=${encodeURIComponent(q)}&src=wa` : `${ORIGIN}/?src=wa`;
       $("out").value = `${head}\n\n${lines.join("\n\n")}\n\n🔎 Search all ${Math.floor((d.all || 0) / 10) * 10}+ live roles: ${search}\n\nFree to apply. You're seeing these before Instagram 👀\n_Some links are referral links._`;
