@@ -13,7 +13,8 @@
         "type": "micro1",
         "referralCode": "e9ff2278-2563-4f64-bed8-214a3dfd996c"
       },
-      "active": true
+      "active": true,
+      "icon": "micro1-icon.png"
     },
     {
       "id": "ethos",
@@ -24,7 +25,8 @@
       "logo": "ethos.png",
       "logoShape": "square",
       "feed": null,
-      "active": true
+      "active": true,
+      "icon": "ethos.png"
     },
     {
       "id": "mercor",
@@ -39,7 +41,8 @@
         "referralCode": "e2c09b89-7c5c-ebec-8070-b2dacd94c7a3"
       },
       "active": true,
-      "referralCode": "e2c09b89-7c5c-ebec-8070-b2dacd94c7a3"
+      "referralCode": "e2c09b89-7c5c-ebec-8070-b2dacd94c7a3",
+      "icon": "mercor-icon.png"
     },
     {
       "id": "alignerr",
