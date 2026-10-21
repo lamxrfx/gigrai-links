@@ -252,6 +252,44 @@
   .s-empty a{display:inline-block;margin-top:12px;padding:10px 16px;border-radius:999px;background:#25d366;color:#05210f;font-weight:800;text-decoration:none}
   .skel{height:92px;border-radius:16px;background:linear-gradient(90deg,var(--card) 0%,#151a33 50%,var(--card) 100%);background-size:200% 100%;animation:sk 1.2s linear infinite}
   @keyframes sk{to{background-position:-200% 0}}
+
+  /* ---------- filters ---------- */
+  .filters{display:flex;gap:8px;overflow-x:auto;padding:6px 2px 2px;scrollbar-width:none}
+  .filters::-webkit-scrollbar{display:none}
+  .f-hot{flex:0 0 auto;font:inherit;font-size:12.5px;font-weight:700;color:#cfd6ff;padding:8px 12px;border-radius:12px;background:var(--card);border:1px solid var(--line);cursor:pointer}
+  .f-hot[aria-pressed=true]{background:rgba(251,113,133,.18);border-color:rgba(251,113,133,.55);color:#fecdd3}
+  .f-sel{flex:0 0 auto;position:relative}
+  .f-sel select{appearance:none;-webkit-appearance:none;font:inherit;font-size:12.5px;font-weight:700;color:#cfd6ff;padding:8px 28px 8px 12px;border-radius:12px;background:var(--card);border:1px solid var(--line);cursor:pointer;max-width:190px}
+  .f-sel::after{content:"▾";position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:11px;color:#7f8bc0;pointer-events:none}
+  .f-sel select.on{border-color:var(--blue);color:#fff}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .saved-chip span{opacity:.75;margin-left:2px}
+  .s-reset{background:none;border:0;color:var(--cyan);font:inherit;font-weight:700;font-size:12.5px;cursor:pointer;padding:0;margin-left:6px}
+
+  /* ---------- job card with save ---------- */
+  .job{position:relative;padding:0}
+  .job-link{display:block;padding:14px 15px 13px;color:inherit;text-decoration:none}
+  .job-foot{padding-left:34px}
+  .heart{position:absolute;left:9px;bottom:6px;width:34px;height:34px;border:0;background:none;cursor:pointer;font-size:17px;line-height:1;color:#7f8bc0;display:grid;place-items:center;border-radius:50%}
+  .heart:hover{background:rgba(255,255,255,.05)}
+  .heart.on{color:#fb7185}
+  .heart.pop{animation:pop .35s ease}
+  @keyframes pop{50%{transform:scale(1.35)}}
+  .job-pay{cursor:pointer}
+
+  /* ---------- calculator ---------- */
+  .calc{margin-bottom:30px}
+  .calc-card{padding:18px 16px;border-radius:20px;background:var(--card);border:1px solid var(--line)}
+  .calc-row{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);margin:2px 0 8px}
+  .calc-row b{color:var(--text);font-size:15px}
+  .calc input[type=range]{width:100%;margin:0 0 16px;accent-color:#2f6bff;height:28px}
+  .calc-out{display:grid;grid-template-columns:1fr 1.25fr 1fr;gap:8px;text-align:center}
+  .calc-out div{padding:12px 6px;border-radius:14px;background:#0a0d1c;border:1px solid var(--line)}
+  .calc-out small{display:block;font-size:11px;color:var(--muted);font-weight:600}
+  .calc-out b{display:block;font-size:17px;font-weight:800;margin-top:2px}
+  .calc-out .big{border:1px solid transparent;background:linear-gradient(#121633,#121633) padding-box,var(--grad) border-box}
+  .calc-out .big b{font-size:21px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .calc-note{font-size:11.5px;color:#6a7398;margin-top:12px;line-height:1.5}
 </style>
 </head>
 <body>
@@ -276,13 +314,38 @@
       <button class="s-clear" id="sClear" type="button" aria-label="Clear search">×</button>
     </div>
     <div class="chips-row" id="sChips">
+      <button type="button" class="saved-chip" data-saved>❤️ Saved <span id="savedN">0</span></button>
       <button type="button">Writing</button><button type="button">Coding</button><button type="button">Research</button>
       <button type="button">Finance</button><button type="button">Medical</button><button type="button">Legal</button>
       <button type="button">Language</button><button type="button">Photography</button><button type="button">Math</button>
     </div>
+    <div class="filters" id="sFilters">
+      <button type="button" class="f-hot" id="fHot" aria-pressed="false">🔥 High demand</button>
+      <label class="f-sel"><span class="sr">Pay</span><select id="fPay">
+        <option value="0">💰 Any pay</option><option value="30">💰 Top rate $30+</option><option value="50">💰 Top rate $50+</option><option value="80">💰 Top rate $80+</option><option value="120">💰 Top rate $120+</option>
+      </select></label>
+      <label class="f-sel"><span class="sr">Field</span><select id="fField"><option value="">📂 All fields</option></select></label>
+      <label class="f-sel"><span class="sr">Sort</span><select id="fSort"><option value="new">🕒 Newest</option><option value="pay">💸 Top pay</option></select></label>
+    </div>
     <p class="s-meta" id="sMeta"></p>
     <div class="jobs" id="sJobs"></div>
     <button class="s-more" id="sMore" type="button" hidden>Show more roles</button>
+  </section>
+
+  <section class="calc" id="calc" aria-label="Earnings calculator">
+    <p class="label">💸 What could you earn?</p>
+    <div class="calc-card">
+      <div class="calc-row"><span>Hourly rate</span><b id="cRateV">$45/hr</b></div>
+      <input type="range" id="cRate" min="15" max="150" step="5" value="45" aria-label="Hourly rate in dollars">
+      <div class="calc-row"><span>Hours per week</span><b id="cHrsV">10 hrs</b></div>
+      <input type="range" id="cHrs" min="1" max="40" step="1" value="10" aria-label="Hours per week">
+      <div class="calc-out">
+        <div><small>Per week</small><b id="cWeek">$450</b></div>
+        <div class="big"><small>Per month</small><b id="cMonth">$1,949</b></div>
+        <div><small>Per year</small><b id="cYear">$23,400</b></div>
+      </div>
+      <p class="calc-note">Estimate before tax, in US dollars. Real hours depend on available work. Tap any role's pay to use its rate here.</p>
+    </div>
   </section>
 
   <p class="label">Top platforms 👇</p>
@@ -465,7 +528,7 @@
   /* ---------- click tracking (counts taps, no cookies, no personal data) ---------- */
   document.addEventListener('click', e => {
     const a = e.target.closest('a[href]');
-    if (!a) return;
+    if (!a || e.defaultPrevented) return;
     const id = a.dataset.track || a.getAttribute('aria-label') || a.querySelector('.name')?.textContent || a.href;
     try { navigator.sendBeacon('/api/click', JSON.stringify({ link: String(id).slice(0, 60) })); } catch (_) {}
   });
@@ -474,8 +537,19 @@
   (function(){
     const $ = id => document.getElementById(id);
     const input = $('sInput'), box = $('sBox'), list = $('sJobs'), meta = $('sMeta'), more = $('sMore'), chips = $('sChips');
+    const fHot = $('fHot'), fPay = $('fPay'), fField = $('fField'), fSort = $('fSort');
     const WA = 'https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u';
-    let q = '', page = 1, timer, seq = 0, expanded = false;
+    let q = '', page = 1, timer, seq = 0, expanded = false, showSaved = false;
+    const shown = new Map();   // id -> job, for saving
+
+    /* saved roles live only on this phone/browser */
+    const KEY = 'gigrai_saved_v1';
+    const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (_) { return []; } };
+    const store = v => { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (_) {} };
+    let saved = load();
+    const isSaved = id => saved.some(j => j.id === id);
+    const updateCount = () => { $('savedN').textContent = saved.length; };
+    updateCount();
 
     const ago = d => {
       if (!d) return '';
@@ -483,33 +557,73 @@
       return days <= 0 ? 'Posted today' : days === 1 ? 'Posted yesterday' : days < 30 ? `Posted ${days}d ago` : 'Posted 30d+ ago';
     };
     const pay = j => j.min && j.max ? `$${j.min}–$${j.max}/hr` : j.max ? `Up to $${j.max}/hr` : j.min ? `From $${j.min}/hr` : '';
-    const card = j => `<a class="job" href="${esc(j.url)}" target="_blank" rel="noopener sponsored" data-track="live-${esc(j.title.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,40))}">
-        <div class="job-h"><b>${esc(j.title)}</b>${pay(j) ? `<span class="job-pay">${esc(pay(j))}</span>` : ''}</div>
-        <div class="job-sub">${j.hot ? '<span class="hot">🔥 High demand</span>' : ''}${j.domain ? `<span>${esc(j.domain)}</span>` : ''}${j.skills.slice(0,2).map(t => `<span>${esc(t)}</span>`).join('')}</div>
-        <div class="job-foot"><span>via micro1 · ${esc(ago(j.posted))}</span><em>Apply free →</em></div>
-      </a>`;
+    const slug = t => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40);
+    const card = j => {
+      shown.set(j.id, j);
+      const on = isSaved(j.id);
+      return `<article class="job">
+        <a class="job-link" href="${esc(j.url)}" target="_blank" rel="noopener sponsored" data-track="live-${esc(slug(j.title))}">
+          <div class="job-h"><b>${esc(j.title)}</b>${pay(j) ? `<span class="job-pay" data-rate="${esc(j.max || j.min)}" title="Use this rate in the calculator">${esc(pay(j))}</span>` : ''}</div>
+          <div class="job-sub">${j.hot ? '<span class="hot">🔥 High demand</span>' : ''}${j.domain ? `<span>${esc(j.domain)}</span>` : ''}${(j.skills || []).slice(0,2).map(t => `<span>${esc(t)}</span>`).join('')}</div>
+          <div class="job-foot"><span>via micro1 · ${esc(ago(j.posted))}</span><em>Apply free →</em></div>
+        </a>
+        <button class="heart${on ? ' on' : ''}" type="button" data-id="${esc(j.id)}" aria-pressed="${on}" aria-label="${on ? 'Remove from saved' : 'Save role'}">${on ? '♥' : '♡'}</button>
+      </article>`;
+    };
+
+    const filtersOn = () => fHot.getAttribute('aria-pressed') === 'true' || fPay.value !== '0' || fField.value !== '';
+    function params() {
+      const p = new URLSearchParams({ q, page });
+      if (fHot.getAttribute('aria-pressed') === 'true') p.set('hot', '1');
+      if (fPay.value !== '0') p.set('minpay', fPay.value);
+      if (fField.value) p.set('field', fField.value);
+      if (fSort.value !== 'new') p.set('sort', fSort.value);
+      return p.toString();
+    }
+    function fillFields(fields) {
+      const cur = fField.value;
+      fField.innerHTML = '<option value="">📂 All fields</option>' + fields.map(f => `<option value="${esc(f.name)}">${esc(f.name)} (${f.n})</option>`).join('');
+      if (cur && !fields.some(f => f.name === cur)) fField.insertAdjacentHTML('beforeend', `<option value="${esc(cur)}">${esc(cur)} (0)</option>`);
+      fField.value = cur;
+    }
+    function markFilters() {
+      fPay.classList.toggle('on', fPay.value !== '0');
+      fField.classList.toggle('on', fField.value !== '');
+      fSort.classList.toggle('on', fSort.value !== 'new');
+    }
+
+    function renderSaved() {
+      more.hidden = true;
+      meta.innerHTML = saved.length ? `<b>${saved.length}</b> saved role${saved.length === 1 ? '' : 's'} on this device` : '';
+      list.innerHTML = saved.length ? saved.map(card).join('')
+        : `<div class="s-empty"><b>No saved roles yet</b>Tap ♡ on any role to keep it here for later.</div>`;
+    }
 
     async function run(append) {
+      if (showSaved) return renderSaved();
       const my = ++seq;
       if (!append) { list.innerHTML = '<div class="skel"></div><div class="skel"></div>'; more.hidden = true; }
       try {
-        const res = await fetch(`/api/jobs?q=${encodeURIComponent(q)}&page=${page}`);
+        const res = await fetch(`/api/jobs?${params()}`);
         const d = await res.json();
         if (my !== seq) return;
         if (!d.ok) throw new Error(d.error);
-        if (!q && !append) $('sLabel').textContent = `🔎 Search ${d.total}+ live roles`;
-        const preview = !q && !expanded;
-        const shown = preview ? d.items.slice(0, 3) : d.items;
+        $('sLabel').textContent = `🔎 Search ${d.all || d.total}+ live roles`;
+        fillFields(d.fields || []);
+        const browsing = !q && !filtersOn();
+        const preview = browsing && !expanded;
+        const items = preview ? d.items.slice(0, 3) : d.items;
         if (!d.total) {
-          meta.innerHTML = '';
-          list.innerHTML = `<div class="s-empty"><b>No live roles for “${esc(q)}” yet</b>New roles drop every week. Get them first on WhatsApp.<br><a href="${WA}" target="_blank" rel="noopener" data-track="search-empty-whatsapp">🔔 Get notified</a></div>`;
+          meta.innerHTML = filtersOn() ? `No matches with these filters <button class="s-reset" type="button" id="sReset">Clear filters</button>` : '';
+          list.innerHTML = `<div class="s-empty"><b>No live roles${q ? ` for “${esc(q)}”` : ''} yet</b>New roles drop every week. Get them first on WhatsApp.<br><a href="${WA}" target="_blank" rel="noopener" data-track="search-empty-whatsapp">🔔 Get notified</a></div>`;
           return;
         }
-        meta.innerHTML = q ? `<b>${d.total}</b> role${d.total === 1 ? '' : 's'} for “${esc(q)}”` : 'Newest roles';
-        if (append) list.insertAdjacentHTML('beforeend', shown.map(card).join(''));
-        else list.innerHTML = shown.map(card).join('');
+        meta.innerHTML = browsing ? (fSort.value === 'pay' ? 'Top paying roles' : 'Newest roles')
+          : `<b>${d.total}</b> role${d.total === 1 ? '' : 's'}${q ? ` for “${esc(q)}”` : ''}${filtersOn() ? ' <button class="s-reset" type="button" id="sReset">Clear filters</button>' : ''}`;
+        if (append) list.insertAdjacentHTML('beforeend', items.map(card).join(''));
+        else list.innerHTML = items.map(card).join('');
         more.hidden = preview ? false : page >= d.pages;
-        more.textContent = preview ? 'Show more new roles' : 'Show more roles';
+        more.textContent = preview ? 'Show more roles' : 'Show more roles';
       } catch (e) {
         if (my !== seq) return;
         meta.textContent = '';
@@ -518,26 +632,81 @@
     }
 
     function search(v) {
-      q = v.trim(); page = 1; expanded = false;
+      showSaved = false;
+      q = (v || '').trim(); page = 1; expanded = false;
       box.classList.toggle('has', !!q);
-      chips.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.textContent.toLowerCase() === q.toLowerCase()));
+      chips.querySelectorAll('button').forEach(b => b.classList.toggle('on', !b.hasAttribute('data-saved') && b.textContent.toLowerCase() === q.toLowerCase()));
+      markFilters();
       run(false);
     }
+    const refilter = () => { page = 1; expanded = true; showSaved = false; chips.querySelector('[data-saved]').classList.remove('on'); markFilters(); run(false); };
+
     input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => search(input.value), 350); });
     input.addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(timer); search(input.value); input.blur(); } });
     $('sClear').addEventListener('click', () => { input.value = ''; search(''); input.focus(); });
     chips.addEventListener('click', e => {
       const b = e.target.closest('button'); if (!b) return;
+      if (b.hasAttribute('data-saved')) {
+        showSaved = !b.classList.contains('on');
+        chips.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b && showSaved));
+        if (showSaved) { renderSaved(); } else { search(input.value); }
+        return;
+      }
       input.value = b.classList.contains('on') ? '' : b.textContent; search(input.value);
     });
+    fHot.addEventListener('click', () => { fHot.setAttribute('aria-pressed', fHot.getAttribute('aria-pressed') !== 'true'); refilter(); });
+    [fPay, fField, fSort].forEach(el => el.addEventListener('change', refilter));
+    meta.addEventListener('click', e => {
+      if (e.target.id !== 'sReset') return;
+      fHot.setAttribute('aria-pressed', 'false'); fPay.value = '0'; fField.value = ''; refilter();
+    });
     more.addEventListener('click', () => {
-      if (!q && !expanded) { expanded = true; page = 1; run(false); }
+      if (!q && !filtersOn() && !expanded) { expanded = true; page = 1; run(false); }
       else { page++; run(true); }
     });
+
+    list.addEventListener('click', e => {
+      const h = e.target.closest('.heart');
+      if (h) {
+        const id = h.dataset.id;
+        if (isSaved(id)) saved = saved.filter(j => j.id !== id);
+        else { const j = shown.get(id); if (j) saved = [j, ...saved].slice(0, 50); }
+        store(saved); updateCount();
+        const on = isSaved(id);
+        h.classList.toggle('on', on); h.textContent = on ? '♥' : '♡';
+        h.setAttribute('aria-pressed', on); h.setAttribute('aria-label', on ? 'Remove from saved' : 'Save role');
+        h.classList.remove('pop'); void h.offsetWidth; h.classList.add('pop');
+        if (showSaved && !on) renderSaved();
+        return;
+      }
+      const p = e.target.closest('.job-pay');
+      if (p && p.dataset.rate) {
+        e.preventDefault();
+        window.setCalcRate && window.setCalcRate(+p.dataset.rate);
+      }
+    });
+
     // ?q=coding in the link pre-fills the search (handy for Stories/WhatsApp)
     const pre = new URLSearchParams(location.search).get('q');
     if (pre) input.value = pre.slice(0, 60);
     search(input.value);
+  })();
+
+  /* ---------- earnings calculator ---------- */
+  (function(){
+    const $ = id => document.getElementById(id);
+    const rate = $('cRate'), hrs = $('cHrs');
+    const money = n => '$' + Math.round(n).toLocaleString('en-US');
+    function calc() {
+      const r = +rate.value, h = +hrs.value, wk = r * h;
+      $('cRateV').textContent = `$${r}/hr`; $('cHrsV').textContent = `${h} hr${h === 1 ? '' : 's'}`;
+      $('cWeek').textContent = money(wk); $('cMonth').textContent = money(wk * 52 / 12); $('cYear').textContent = money(wk * 52);
+    }
+    rate.addEventListener('input', calc); hrs.addEventListener('input', calc); calc();
+    window.setCalcRate = r => {
+      rate.value = Math.max(+rate.min, Math.min(+rate.max, Math.round(r / 5) * 5)); calc();
+      $('calc').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
   })();
 
   document.getElementById('yr').textContent = new Date().getFullYear();

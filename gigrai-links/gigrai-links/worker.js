@@ -181,13 +181,29 @@ async function handleJobs(url, env, ctx) {
     console.error("micro1 feed failed", String(e));
     return json({ ok: false, error: "Live roles are unavailable right now." }, 502);
   }
+  const hot = url.searchParams.get("hot") === "1";
+  const minpay = Math.max(0, Math.min(500, parseInt(url.searchParams.get("minpay") || "0", 10) || 0));
+  const field = (url.searchParams.get("field") || "").slice(0, 60);
+  const sort = url.searchParams.get("sort") === "pay" ? "pay" : "new";
+
   const groups = q.split(/\s+/).filter(t => t.length > 1).map(expand);
-  let list = groups.length ? feed.filter(j => matches(j, groups)) : feed;
-  list = list.slice().sort((a, b) => (b.posted || "").localeCompare(a.posted || ""));
+  let list = feed.filter(j =>
+    (!groups.length || matches(j, groups)) &&
+    (!hot || j.hot) &&
+    (!minpay || (j.max || j.min || 0) >= minpay));
+  // field counts for the dropdown (before the field filter is applied)
+  const counts = {};
+  for (const j of list) if (j.domain) counts[j.domain] = (counts[j.domain] || 0) + 1;
+  const fields = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([name, n]) => ({ name, n }));
+  if (field) list = list.filter(j => j.domain === field);
+
+  list = list.slice().sort(sort === "pay"
+    ? (a, b) => (b.max || b.min || 0) - (a.max || a.min || 0) || (b.posted || "").localeCompare(a.posted || "")
+    : (a, b) => (b.posted || "").localeCompare(a.posted || ""));
   const total = list.length;
   const items = list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   if (q && page === 1) console.log(JSON.stringify({ event: "job_search", q, results: total }));
-  return new Response(JSON.stringify({ ok: true, q, total, page, pages: Math.ceil(total / PAGE_SIZE), items }), {
+  return new Response(JSON.stringify({ ok: true, q, total, all: feed.length, page, pages: Math.ceil(total / PAGE_SIZE), fields, items }), {
     headers: { "content-type": "application/json", "cache-control": "public, max-age=120" },
   });
 }
