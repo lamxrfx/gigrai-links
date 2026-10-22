@@ -1,0 +1,14 @@
+{
+  "_help": "Paid Featured roles. Add one block per advertiser and push. It shows (with a 'Sponsored' label) at the top of the homepage and the All roles page until the 'until' date, then disappears by itself. 'id' = short lowercase name with no spaces (used for click counts: Cloudflare > Observability, search apply_click and the id). 'url' must be the advertiser's own https application page.",
+  "featured": [
+    {
+      "id": "example",
+      "title": "Example: AI Trainer (Maths)",
+      "company": "Example Co",
+      "pay": "$40–60/hr",
+      "blurb": "Remote, flexible hours. Free to apply.",
+      "url": "https://example.com/apply",
+      "until": "2000-01-01"
+    }
+  ]
+}

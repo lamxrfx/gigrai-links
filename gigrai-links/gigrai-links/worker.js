@@ -1,5 +1,6 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
-import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex } from "./seo.js";
+import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, liveFeatured, featuredHtml } from "./seo.js";
+import SPONSORED from "./sponsored.json";
 import { GUIDES } from "./guides.js";
 // Serves the static link page from ./public and handles one API route:
 //   POST /api/subscribe  { email, name }  -> adds the person to the MailerLite "GigrAI Jobs" group.
@@ -83,6 +84,11 @@ export default {
     if (url.pathname.startsWith("/go/") && request.method === "GET") {
       const id = decodeURIComponent(url.pathname.slice(4));
       if (!/^[a-z0-9]{1,30}-[A-Za-z0-9_-]{1,80}$/.test(id)) return Response.redirect(new URL("/", url).toString(), 302);
+      if (id.startsWith("sponsored-")) {
+        const f = liveFeatured(SPONSORED).find(x => "sponsored-" + x.id === id);
+        console.log(JSON.stringify({ event: "apply_click", id, platform: "sponsored", found: !!f, src: cleanSrc(url.searchParams.get("src")), country: request.cf?.country || "??" }));
+        return Response.redirect(f ? f.url : new URL("/", url).toString(), 302);
+      }
       let feed = [];
       try { feed = await loadFeed(env, ctx); } catch {}
       const job = feed.find(j => j.id === id);
@@ -132,6 +138,12 @@ export default {
     }
     if (url.pathname === "/sitemap.xml") return sitemap(url, env, ctx);
 
+    if (request.method === "GET" && (url.pathname === "/advertise" || url.pathname === "/advertise/")) {
+      let feed = [];
+      try { feed = await loadFeed(env, ctx); } catch {}
+      return decorate(advertisePage(url.origin, feed.length, new Set(feed.map(j => j.platform)).size), url, env, ctx, "/advertise");
+    }
+
     // ---- Guides: /guides and /guides/<slug> ----
     if (request.method === "GET" && (url.pathname === "/guides" || url.pathname === "/guides/")) {
       return decorate(guidesIndex(GUIDES, url.origin), url, env, ctx, "/guides");
@@ -147,7 +159,7 @@ export default {
     if (request.method === "GET" && (url.pathname === "/jobs" || url.pathname === "/jobs/")) {
       let feed;
       try { feed = await loadFeed(env, ctx); } catch { return Response.redirect(new URL("/", url).toString(), 302); }
-      return decorate(jobsIndex(feed, url.origin, PLATFORM_CONFIG.platforms), url, env, ctx, "/jobs");
+      return decorate(jobsIndex(feed, url.origin, PLATFORM_CONFIG.platforms, liveFeatured(SPONSORED)), url, env, ctx, "/jobs");
     }
     const jm = request.method === "GET" && url.pathname.match(/^\/jobs\/([^/]+)(?:\/([^/]*))?\/?$/);
     if (jm) {
@@ -227,6 +239,8 @@ async function decorate(res, url, env, ctx, page) {
       }
     },
   });
+  const feat = page === "/" ? liveFeatured(SPONSORED) : [];
+  if (feat.length) rw = rw.on("#trust", { element(el) { el.after(featuredHtml(feat), { html: true }); } });
   if (meta) {
     rw = rw
       .on("title", { element(el) { el.setInnerContent(meta.title); } })
@@ -251,6 +265,7 @@ async function sitemap(url, env, ctx) {
     { loc: `${o}/privacy`, freq: "monthly", pri: "0.3" },
     { loc: `${o}/jobs`, freq: "hourly", pri: "0.9" },
     { loc: `${o}/guides`, freq: "weekly", pri: "0.7" },
+    { loc: `${o}/advertise`, freq: "monthly", pri: "0.4" },
     ...GUIDES.map(g => ({ loc: `${o}/guides/${g.slug}`, freq: "monthly", pri: "0.8", mod: g.updated })),
     ...SITEMAP_SEARCHES.map(s => ({ loc: `${o}/?q=${encodeURIComponent(s)}`, freq: "daily", pri: "0.7" })),
   ];

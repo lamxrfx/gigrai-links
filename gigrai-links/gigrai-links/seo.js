@@ -138,6 +138,11 @@ table{border-collapse:collapse;width:100%;font-size:14px;table-layout:fixed}
 th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
 thead th{color:var(--text)}tbody th{color:var(--text);width:28%}
 @media(max-width:480px){table{font-size:13px}th,td{padding:9px 6px}}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:8px 0}
+.opt{padding:18px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.opt h3{margin:0}.opt .price{font-size:26px;font-weight:800;color:var(--text)}.opt .price small{font-size:14px;font-weight:600;color:var(--muted)}
+.opt.best{background:linear-gradient(160deg,rgba(47,107,255,.22),rgba(139,61,255,.12) 60%,rgba(255,255,255,.04));border-color:rgba(139,61,255,.5)}
+.tag{align-self:flex-start;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--grad);color:#fff}
 .cta{margin:34px 0 0;padding:20px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
 </style>
 </head>
@@ -148,7 +153,7 @@ thead th{color:var(--text)}tbody th{color:var(--text);width:28%}
 ${body}
 </main>
 <footer>
-<span>© ${new Date().getFullYear()} GigrAI · remotegigrai.com · <a href="/">Search roles</a> · <a href="/jobs">All roles</a> · <a href="/guides">Guides</a> · <a href="/privacy">Privacy &amp; cookies</a></span>
+<span>© ${new Date().getFullYear()} GigrAI · remotegigrai.com · <a href="/">Search roles</a> · <a href="/jobs">All roles</a> · <a href="/guides">Guides</a> · <a href="/advertise">Advertise</a> · <a href="/privacy">Privacy &amp; cookies</a></span>
 <span>Some links are referral links. It costs you nothing and doesn't change your pay.</span>
 </footer>
 </div>
@@ -200,11 +205,12 @@ ${similar.length ? `<h2>Similar remote roles</h2><ul class="list">${similar.map(
 }
 
 // ---------- /jobs ----------
-export function jobsIndex(feed, origin, platforms) {
+export function jobsIndex(feed, origin, platforms, featured = []) {
   const groups = (platforms || []).map((p) => ({ p, jobs: feed.filter((j) => j.platform === p.id).sort((a, b) => (b.posted || "").localeCompare(a.posted || "")) }))
     .filter((g) => g.jobs.length);
   const body = `<nav class="crumbs"><a href="/">GigrAI</a> › All roles</nav>
 <h1>All live remote AI jobs</h1>
+${featuredHtml(featured)}
 <p>${feed.length} live remote roles training and testing AI, from ${groups.map((g) => esc(g.p.name)).join(" and ")}. Updated every 30 minutes. Every role is free to apply for on the platform's own site. <a href="/">Search and filter roles →</a></p>
 ${groups.map((g) => `<h2 id="${esc(g.p.id)}">${esc(g.p.name)} (${g.jobs.length})</h2><ul class="list">${g.jobs.map((x) => `<li><a href="${jobPath(x)}"><span>${esc(x.title)}</span><span class="p">${esc(pay(x))}</span></a></li>`).join("")}</ul>`).join("\n")}`;
   return html(shell({
@@ -262,4 +268,65 @@ export function guidesIndex(guides, origin) {
 <p>Honest, plain-English guides to getting paid for AI training work: which platforms are legit, how the AI interviews work and how to avoid scams.</p>
 <ul class="list">${guides.map((g) => `<li><a href="/guides/${g.slug}"><span>${esc(g.title)}</span></a></li>`).join("")}</ul>`;
   return html(shell({ title: "Guides to remote AI work · GigrAI", desc: "Honest guides to remote AI training work: is micro1 legit, how AI interviews work, micro1 vs Mercor and avoiding scams.", canonical: origin + "/guides", body }), 200, 3600);
+}
+
+// ---------- Featured (paid) roles from sponsored.json ----------
+export function liveFeatured(cfg) {
+  const today = new Date().toISOString().slice(0, 10);
+  return ((cfg && cfg.featured) || []).filter((f) =>
+    f && /^[a-z0-9-]{1,40}$/.test(f.id || "") && f.title && /^https:\/\//.test(f.url || "") && (f.until || "") >= today);
+}
+
+export function featuredHtml(list) {
+  if (!list.length) return "";
+  return `<style>.gf{display:flex;flex-direction:column;gap:10px;margin:18px 0 6px}.gf a{display:flex;flex-direction:column;gap:4px;padding:16px 18px;border-radius:18px;text-decoration:none;color:#f2f4ff;background:linear-gradient(160deg,rgba(47,107,255,.24),rgba(139,61,255,.12) 60%,rgba(255,255,255,.04));border:1px solid rgba(139,61,255,.45)}.gf .gl{font-size:12px;font-weight:700;color:#b8bfdc;text-transform:uppercase;letter-spacing:.06em}.gf .gt{font-weight:700;font-size:17px}.gf .gm{font-size:14px;color:#e2e6f8}</style>
+<div class="gf" aria-label="Featured roles">${list.map((f) => `<a href="/go/sponsored-${esc(f.id)}?src=featured" target="_blank" rel="sponsored noopener"><span class="gl">Sponsored · Featured role</span><span class="gt">${esc(f.title)}</span><span class="gm">${[f.company && "via " + f.company, f.pay, f.blurb].filter(Boolean).map(esc).join(" · ")}</span></a>`).join("")}</div>`;
+}
+
+// ---------- /advertise ----------
+export function advertisePage(origin, liveRoles, platformCount) {
+  const dm = "https://ig.me/m/gigr.ai";
+  const body = `<nav class="crumbs"><a href="/">GigrAI</a> › Advertise</nav>
+<h1>Advertise with GigrAI</h1>
+<p class="lead">GigrAI is a free search engine for remote AI jobs. Everyone who visits is actively looking for AI training work, so your roles reach the right people at the moment they're ready to apply.</p>
+
+<h2>Who you'll reach</h2>
+<ul>
+<li><strong>Job seekers ready to apply:</strong> people searching for paid remote AI work, worldwide.</li>
+<li><strong>Three channels:</strong> remotegigrai.com, <a href="https://www.instagram.com/gigr.ai/" rel="noopener">@gigr.ai on Instagram</a> and the <a href="https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u" rel="noopener">GigrAI Jobs WhatsApp channel</a>.</li>
+<li><strong>${liveRoles ? liveRoles + " live roles" : "Hundreds of live roles"}</strong>${platformCount ? ` from ${platformCount} platforms` : ""}, so people come back often.</li>
+</ul>
+<p class="note">Message us for our latest visitor, follower and channel numbers.</p>
+
+<h2>Options and launch prices</h2>
+<div class="opts">
+<div class="opt"><h3>Featured role</h3><div class="price">£49 <small>/ week</small></div><p>Your role pinned at the top of the GigrAI homepage and All roles page, labelled Sponsored, linking straight to your application page.</p></div>
+<div class="opt"><h3>Sponsored Instagram post</h3><div class="price">£99</div><p>A carousel about your role in the GigrAI style on @gigr.ai, shared to our Story. Labelled as an ad.</p></div>
+<div class="opt"><h3>WhatsApp shout-out</h3><div class="price">£49</div><p>One post about your role, with your link, to the GigrAI Jobs WhatsApp channel.</p></div>
+<div class="opt best"><span class="tag">Best value</span><h3>Launch bundle</h3><div class="price">£179</div><p>All three: a week as a Featured role, a sponsored Instagram post and a WhatsApp shout-out. Save £18.</p></div>
+</div>
+<p class="note">Prices in GBP. Launch prices may change.</p>
+
+<h2>How it works</h2>
+<ol>
+<li><strong>Message us</strong> on Instagram with your role link and the option you'd like.</li>
+<li><strong>We confirm</strong> your dates and send you a payment link.</li>
+<li><strong>You go live</strong> on the agreed date. We write the post copy and design for you.</li>
+<li><strong>You get a report</strong> of how many people clicked through to apply.</li>
+</ol>
+
+<h2>Our standards</h2>
+<ul>
+<li>We only feature real roles that are <strong>free to apply for</strong>. We never promote anything that charges applicants.</li>
+<li>Everything paid is clearly labelled as Sponsored or Ad.</li>
+<li>We may decline roles that aren't a good fit for our audience.</li>
+</ul>
+
+<a class="apply" href="${dm}" target="_blank" rel="noopener">Message @gigr.ai on Instagram</a>
+<p class="note">Usually replies within a day.</p>`;
+  return html(shell({
+    title: "Advertise with GigrAI: reach people looking for remote AI work",
+    desc: "Put your AI training roles in front of people actively looking for remote AI work. Featured roles from £49 a week, sponsored Instagram posts and WhatsApp shout-outs.",
+    canonical: origin + "/advertise", body,
+  }), 200, 3600);
 }

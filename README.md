@@ -58,3 +58,9 @@ If one platform's feed fails, the others keep working, and the error shows in Cl
 - The sitemap lists the homepage, `/jobs`, popular searches and every live role page. It updates itself as roles open and close.
 - Guides live in `gigrai-links/gigrai-links/guides.js` and appear at `/guides/<slug>`. To add one, copy a block and push; it joins the sitemap automatically.
 - Roles with a full description (Mercor) carry JobPosting data, so they can appear in Google's jobs panel. micro1 roles have no description in their feed, so they get a page but no JobPosting data.
+
+## Advertising
+
+- `/advertise` is the sales page (prices and the Instagram DM button are in `seo.js`, `advertisePage`).
+- To run a paid **Featured role**, add a block to `gigrai-links/gigrai-links/sponsored.json` with an `until` date and push. It shows at the top of the homepage and `/jobs`, labelled Sponsored, then disappears by itself after that date.
+- Clicks for the advertiser's report: Cloudflare → Observability, search `apply_click` and `sponsored-<id>`.
