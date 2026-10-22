@@ -351,32 +351,51 @@ export function guidesIndex(guides, origin) {
 export function platformsPage(feed, origin, platforms, guides = []) {
   const live = (platforms || []).filter((p) => p.active && p.signupUrl);
   const soon = (platforms || []).filter((p) => !p.active);
+  // Typical pay: the middle half of hourly rates (ignores one-off highs and lows)
+  const pct = (arr, q) => arr[Math.min(arr.length - 1, Math.max(0, Math.round(q * (arr.length - 1))))];
   const stat = (p) => {
     const jobs = feed.filter((j) => j.platform === p.id);
-    const lo = Math.min(...jobs.map((j) => j.min || j.max || Infinity));
-    const hi = Math.max(...jobs.map((j) => j.max || j.min || 0));
-    return { n: jobs.length, pay: jobs.length && isFinite(lo) && hi ? (lo === hi ? `$${lo}/hr` : `$${lo}–${hi}/hr`) : "" };
+    const rates = jobs.map((j) => (j.min && j.max ? (j.min + j.max) / 2 : j.min || j.max)).filter((v) => v > 0 && v <= 1000).sort((a, b) => a - b);
+    let pay = "";
+    if (rates.length >= 3) {
+      const lo = Math.round(pct(rates, 0.25)), hi = Math.round(pct(rates, 0.75));
+      pay = lo === hi ? `$${lo}` : `$${lo}–${hi}`;
+    } else if (rates.length) pay = `$${Math.round(rates[0])}`;
+    return { n: jobs.length, pay, feed: !!p.feed };
   };
-  const related = (p) => guides.filter((g) => g.slug.includes(p.id));
+  const BOOK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v16H6.5A2.5 2.5 0 0 0 4 21.5v-2z"/></svg>';
   const card = (p) => {
     const st = stat(p);
-    const facts = [st.n ? `<li><b>${st.n}</b> live roles</li>` : "", st.pay ? `<li>Pay seen: <b>${esc(st.pay)}</b></li>` : "", "<li>Free to join</li>"].filter(Boolean).join("");
-    const g = related(p);
-    return `<article class="panel glass plat" id="${esc(p.id)}">
-  <div class="plat-h">${avatar(platforms, p.id, p.name)}<div><h2>${esc(p.name)}</h2><p>${esc(p.tagline || "")}</p></div></div>
-  <ul class="plat-f">${facts}</ul>
-  ${g.length ? `<p class="plat-g">Read first: ${g.map((x) => `<a href="/guides/${esc(x.slug)}">${esc(x.title)}</a>`).join(" · ")}</p>` : ""}
-  <div class="plat-a"><a class="btn btn-grad" href="/join/${esc(p.id)}?src=platforms" target="_blank" rel="sponsored noopener">Sign up free on ${esc(p.name)} ${ARROW}</a>${st.n ? `<a class="ghost-btn" href="/jobs#${esc(p.id)}">See ${st.n} roles</a>` : ""}</div>
+    const g = guides.filter((x) => x.slug.includes(p.id)).slice(0, 2);
+    const stats = st.n
+      ? `<div class="pl-stats"><div><b>${st.n}</b><span>live roles</span></div><div><b>${esc(st.pay || "Varies")}</b><span>${st.pay ? "typical pay per hour" : "pay"}</span></div></div>`
+      : `<div class="pl-stats one"><div><b>Free</b><span>to join</span></div><div><span class="pl-note">Open projects are listed on ${esc(p.name)} itself</span></div></div>`;
+    return `<article class="pl glass" id="${esc(p.id)}">
+  <div class="pl-h">${avatar(platforms, p.id, p.name)}<div><h2>${esc(p.name)}</h2><p>${esc(p.tagline || "")}</p></div></div>
+  ${stats}
+  <ul class="pl-g">${g.map((x) => `<li><a href="/guides/${esc(x.slug)}">${BOOK}<span>${esc(x.title)}</span></a></li>`).join("")}</ul>
+  <div class="pl-a"><a class="btn btn-grad" href="/join/${esc(p.id)}?src=platforms" target="_blank" rel="sponsored noopener">Sign up free ${ARROW}</a>${st.n ? `<a class="pl-sec" href="/jobs#${esc(p.id)}">View roles</a>` : ""}</div>
 </article>`;
   };
   const body = `<style>
-.plats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px}
-.plat{display:flex;flex-direction:column;gap:14px}
-.plat-h{display:flex;gap:14px;align-items:center}.plat-h h2{margin:0;font-size:22px;font-weight:800}.plat-h p{margin:2px 0 0;color:var(--muted)}
-.plat-f{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}.plat-f li{padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);font-size:14px;color:var(--soft)}
-.plat-g{margin:0;font-size:14px;color:var(--muted)}
-.plat-a{margin-top:auto;display:flex;flex-wrap:wrap;gap:10px}.plat-a .btn{height:50px;padding:0 22px;color:#fff}
-.ghost-btn{display:inline-flex;align-items:center;height:50px;padding:0 20px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--soft);font-weight:600;text-decoration:none}.ghost-btn:hover{color:var(--text)}
+.pls{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px}
+.pl{display:flex;flex-direction:column;gap:18px;padding:24px;border-radius:var(--r-lg)}
+.pl-h{display:flex;gap:14px;align-items:center}.pl-h h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em}.pl-h p{margin:2px 0 0;color:var(--muted);font-size:14.5px}
+.pl-stats{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.pl-stats > div{padding:14px 16px;display:flex;flex-direction:column;gap:2px;min-height:78px;justify-content:center}
+.pl-stats > div + div{border-left:1px solid var(--line)}
+.pl-stats b{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.pl-stats span{color:var(--muted);font-size:13px}
+.pl-stats .pl-note{font-size:13.5px;color:var(--soft);line-height:1.45}
+.pl-g{list-style:none;margin:0;padding:0;display:grid;gap:6px;min-height:60px;align-content:start}
+.pl,.pl-g,.pl-g li{min-width:0}
+.pl-g a{display:flex;gap:8px;align-items:flex-start;color:#9fdcf0;font-size:14px;font-weight:600;line-height:1.4;text-decoration:none}
+.pl-g a:hover span{text-decoration:underline}
+.pl-g svg{flex:0 0 16px;color:var(--muted);margin-top:2px}
+.pl-a{margin-top:auto;display:grid;grid-template-columns:1fr auto;gap:10px}
+.pl-a .btn{height:50px;padding:0 20px;color:#fff;font-size:15px}
+.pl-a .btn:only-child{grid-column:1 / -1}
+.pl-sec{display:inline-flex;align-items:center;justify-content:center;height:50px;padding:0 20px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--soft);font-weight:600;font-size:15px;text-decoration:none;white-space:nowrap}.pl-sec:hover{color:var(--text)}
 .soon{display:flex;flex-wrap:wrap;gap:10px}.soon span{padding:10px 16px;border-radius:999px;background:rgba(255,255,255,.04);border:1px dashed var(--line);color:var(--muted);font-weight:600}
 </style>
 ${crumbs([["/", "GigrAI"], ["", "Platforms"]])}
@@ -385,12 +404,12 @@ ${crumbs([["/", "GigrAI"], ["", "Platforms"]])}
   <h1>AI training <span class="grad-text">platforms</span></h1>
   <p>Join once and get matched to new roles as they open. Every platform here is free to join and pays you, never the other way round.</p>
 </section>
-<div class="plats">${[...live].sort((a, b) => stat(b).n - stat(a).n).map(card).join("\n")}</div>
+<div class="pls">${[...live].sort((a, b) => stat(b).n - stat(a).n).map(card).join("\n")}</div>
 ${soon.length ? `<section class="block" aria-labelledby="soon"><h2 id="soon">Coming soon</h2><div class="soon">${soon.map((p) => `<span>${esc(p.name)}</span>`).join("")}</div></section>` : ""}
-<p class="note" style="margin-top:28px;color:var(--muted);font-size:14px">Some sign-up links are referral links. It costs you nothing and doesn't change your pay.</p>`;
+<p style="margin-top:28px;color:var(--muted);font-size:14px">Typical pay is the middle range of hourly rates across a platform's live roles. Some sign-up links are referral links. It costs you nothing and doesn't change your pay.</p>`;
   return html(shell({
     title: "AI training platforms: micro1, Mercor and more · GigrAI",
-    desc: `Remote AI training platforms that pay you: ${live.map((p) => p.name).join(", ")}. Live role counts, pay seen and free sign-up links.`,
+    desc: `Remote AI training platforms that pay you: ${live.map((p) => p.name).join(", ")}. Live role counts, typical pay and free sign-up links.`,
     canonical: origin + "/platforms", body, active: "/platforms",
   }));
 }

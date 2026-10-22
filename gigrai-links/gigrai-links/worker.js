@@ -382,8 +382,8 @@ const ADAPTERS = {
       return {
         id: `micro1-${j.job_id}`,
         title: String(j.job_name).trim(),
-        min: Number.isFinite(+hr.min) && +hr.min > 0 ? +hr.min : null,
-        max: Number.isFinite(+hr.max) && +hr.max > 0 ? +hr.max : null,
+        min: hourlyOk(hr.min),
+        max: hourlyOk(hr.max),
         skills: Array.isArray(j.skills) ? j.skills.slice(0, 8).map(String) : [],
         domain: pretty(j.domain_slug),
         posted: j.date_posted || null,
@@ -487,6 +487,9 @@ function visitSource(request, url) {
   const hit = REF_SRC.find(([re]) => re.test(host));
   return hit ? hit[1] : "other";
 }
+
+// An hourly rate we trust: drops blanks and obvious data errors (e.g. an annual salary typed as hourly)
+const hourlyOk = v => (Number.isFinite(+v) && +v > 0 && +v <= 1000 ? +v : null);
 
 const cleanSrc = v => String(v || "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 20);
 
