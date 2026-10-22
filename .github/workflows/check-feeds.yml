@@ -1,0 +1,16 @@
+# Checks the news sources whenever the list changes. Results appear as annotations on the run.
+name: Check news feeds
+on:
+  push:
+    branches: [main]
+    paths: ["gigrai-links/gigrai-links/news-sources.js", ".github/scripts/check-feeds.mjs"]
+  workflow_dispatch: {}
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node .github/scripts/check-feeds.mjs
