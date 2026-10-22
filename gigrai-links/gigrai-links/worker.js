@@ -1,6 +1,7 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
 import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, liveFeatured, featuredHtml } from "./seo.js";
 import SPONSORED from "./sponsored.json";
+import { menuButton, drawerHtml } from "./nav.js";
 import { GUIDES } from "./guides.js";
 // Serves the static link page from ./public and handles one API route:
 //   POST /api/subscribe  { email, name }  -> adds the person to the MailerLite "GigrAI Jobs" group.
@@ -239,6 +240,10 @@ async function decorate(res, url, env, ctx, page) {
       }
     },
   });
+  if (page === "/") {
+    rw = rw.on("header.top .wrap", { element(el) { el.append(menuButton(), { html: true }); } })
+      .on("body", { element(el) { el.append(drawerHtml(), { html: true }); } });
+  }
   const feat = page === "/" ? liveFeatured(SPONSORED) : [];
   if (feat.length) rw = rw.on("#trust", { element(el) { el.after(featuredHtml(feat), { html: true }); } });
   if (meta) {
