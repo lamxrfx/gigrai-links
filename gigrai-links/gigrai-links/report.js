@@ -128,8 +128,8 @@ function barList(rows, label, total, unit = "", pctOnly = false) {
   return `<ul class="bars">${rows.map((r) => {
     const pct = total ? Math.round((r.n / total) * 100) : 0;
     const name = label(r);
-    if (pctOnly) return `<li tabindex="0" data-label="${esc(name)}" data-pct="${pct}" aria-label="${esc(name)}: ${pct}% of ${esc(unit)}"><span>${esc(name)}</span><span class="t" aria-hidden="true"><span class="f" data-w="${Math.max(2, Math.round((r.n / max) * 100))}"></span></span><span class="v">${pct}%</span></li>`;
-    return `<li tabindex="0" data-label="${esc(name)}" data-n="${r.n}" data-pct="${pct}" data-unit="${esc(unit)}" aria-label="${esc(name)}: ${fmt(r.n)} ${esc(unit)}, ${pct}% of total"><span>${esc(name)}</span><span class="t" aria-hidden="true"><span class="f" data-w="${Math.max(2, Math.round((r.n / max) * 100))}"></span></span><span class="v">${fmt(r.n)}<small>${pct}%</small></span></li>`;
+    if (pctOnly) return `<li tabindex="0" data-label="${esc(name)}" data-pct="${pct}" aria-label="${esc(name)}: ${pct}% of ${esc(unit)}"><span>${esc(name)}</span><span class="t" aria-hidden="true"><span class="f" data-w="${Math.max(2, total ? Math.round((r.n / total) * 100) : 0)}"></span></span><span class="v">${pct}%</span></li>`;
+    return `<li tabindex="0" data-label="${esc(name)}" data-n="${r.n}" data-pct="${pct}" data-unit="${esc(unit)}" aria-label="${esc(name)}: ${fmt(r.n)} ${esc(unit)}, ${pct}% of total"><span>${esc(name)}</span><span class="t" aria-hidden="true"><span class="f" data-w="${Math.max(2, total ? Math.round((r.n / total) * 100) : 0)}"></span></span><span class="v">${fmt(r.n)}<small>${pct}%</small></span></li>`;
   }).join("")}</ul>`;
 }
 
