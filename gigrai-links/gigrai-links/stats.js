@@ -50,16 +50,24 @@ export class Stats extends DurableObject {
 }
 
 // ---- helpers used by worker.js ----
-const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|discord|headless|lighthouse|pingdom|monitor|curl|wget|python|go-http|node-fetch|axios/i;
+const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|discord|headless|lighthouse|pingdom|monitor|curl|wget|python|go-http|node-fetch|axios|mediapartners|google|bing|yandex|baidu|bytespider|petal|semrush|ahrefs|mj12|dotbot|gptbot|claude|anthropic|perplexity|amazonbot|applebot|scrapy|phantom|selenium|puppeteer|playwright/i;
+// Visits from cloud servers rather than homes or phones (scrapers, uptime checkers, ad crawlers)
+const DATACENTER = /amazon|aws|google|microsoft|azure|alibaba|aliyun|tencent|huawei|digitalocean|ovh|hetzner|linode|akamai|oracle|vultr|choopa|contabo|leaseweb|m247|datacamp|scaleway|cdn77|fastly|zenlayer|ucloud|baidu|kingsoft|hostinger|ionos|godaddy|colocrossing|hostroyale|frantech|psychz|quadranet|servers|hosting|cloud|data ?center|vps/i;
 
 export function isHuman(request) {
   const ua = request.headers.get("user-agent") || "";
-  if (!ua || BOT.test(ua)) return false;
+  if (!ua || BOT.test(ua) || !/mozilla/i.test(ua)) return false;
   const purpose = request.headers.get("purpose") || request.headers.get("sec-purpose") || "";
-  return !/prefetch|prerender/i.test(purpose);
+  if (/prefetch|prerender/i.test(purpose)) return false;
+  // Real browsers say they're opening a page; most scripts don't send this
+  if (!request.headers.get("sec-fetch-mode")) return false;
+  const org = String(request.cf?.asOrganization || "");
+  if (org && DATACENTER.test(org)) return false;
+  return true;
 }
 
-const stub = (env) => env.STATS.get(env.STATS.idFromName("global"));
+// "v2": counting restarted 22 Oct 2026 with the stricter bot filter above
+const stub = (env) => env.STATS.get(env.STATS.idFromName("global-v2"));
 
 // Count something without slowing the response down. Never throws.
 export function track(env, ctx, request, kind, k, src) {

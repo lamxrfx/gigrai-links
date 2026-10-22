@@ -161,9 +161,11 @@ export default {
       let feed = [];
       try { feed = await loadFeed(env, ctx); } catch {}
       view("media-kit");
-      const from = daysAgo(29);
+      const days = pickDays(url);
+      const from = daysAgo(days - 1), to = new Date().toISOString().slice(0, 10);
       const [views, applies] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from })]);
-      return decorate(mediaKitPage({ origin: url.origin, kit: MEDIAKIT, liveRoles: feed.length, platforms: new Set(feed.map(j => j.platform)).size, views, applies }), url, env, ctx, "/media-kit");
+      if (views) Object.assign(views, { from, to });
+      return decorate(mediaKitPage({ origin: url.origin, kit: MEDIAKIT, liveRoles: feed.length, platforms: new Set(feed.map(j => j.platform)).size, views, applies, days }), url, env, ctx, "/media-kit");
     }
 
     // ---- Private reports: /report?k=<owner key> and /report/<sponsor id>?k=<sponsor key> ----
@@ -173,12 +175,13 @@ export default {
       const nocache = (res) => { const h = new Headers(res.headers); h.set("cache-control", "private, no-store"); h.set("x-robots-tag", "noindex"); return new Response(res.body, { status: res.status, headers: h }); };
       if (!rm[1]) {
         if (!(await keyOk(env, "owner", k))) return nocache(reportsOff(url.origin));
-        const from = daysAgo(29), to = new Date().toISOString().slice(0, 10);
+        const days = pickDays(url);
+        const from = daysAgo(days - 1), to = new Date().toISOString().slice(0, 10);
         const [views, applies] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from })]);
         if (views) Object.assign(views, { from, to });
         const sponsors = allSponsors(SPONSORED).filter(s => s.id !== "example");
         const links = await Promise.all(sponsors.map(async s => `${url.origin}/report/${s.id}?k=${await signKey(env, "sponsor:" + s.id)}`));
-        return nocache(adminPage({ origin: url.origin, views, applies, sponsors, links }));
+        return nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, key: k }));
       }
       const sponsor = ((SPONSORED && SPONSORED.featured) || []).find(s => s.id === rm[1]);
       if (!sponsor || !(await keyOk(env, "sponsor:" + sponsor.id, k))) return nocache(reportsOff(url.origin));
@@ -475,6 +478,9 @@ function eligibility(j, country) {
   if ((j.allow || []).length && !j.allow.includes(country)) return "no";
   return "yes";
 }
+// ?days=7|30|90 on the stats pages (default 30)
+const pickDays = (url) => ([7, 30, 90].includes(+url.searchParams.get("days")) ? +url.searchParams.get("days") : 30);
+
 // Where a page view came from: ?src= tag first, otherwise the referring site
 const REF_SRC = [[/instagram\./, "ig"], [/whatsapp\./, "wa"], [/(^|\.)google\./, "google"], [/bing\.com/, "bing"], [/(^|\.)(x|twitter)\.com|^t\.co$/, "x"], [/linkedin\./, "li"], [/facebook\.|fb\.com/, "fb"], [/tiktok\./, "tt"], [/reddit\./, "reddit"]];
 function visitSource(request, url) {
