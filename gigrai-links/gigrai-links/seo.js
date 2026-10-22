@@ -81,7 +81,50 @@ function jobPosting(j, origin, platform) {
 }
 
 // ---------- shared page shell (matches the homepage look) ----------
-function shell({ title, desc, canonical, body, ld = [], robots = "index,follow,max-image-preview:large" }) {
+// ---------- shared page chrome: same header, footer and styles as the homepage ----------
+const WA = "https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u";
+const BELL = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
+const ARROW = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+const CHECK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+
+const NAV = [["/", "Find jobs"], ["/#platforms", "Platforms"], ["/#earnings", "Earnings calculator"], ["/jobs", "All roles"], ["/guides", "Guides"], ["/#faq", "FAQ"]];
+
+function header(active) {
+  return `<header class="top"><div class="wrap">
+  <a class="brand" href="/"><img src="/icon.png" alt="" width="36" height="36">GigrAI</a>
+  <nav class="nav" aria-label="Main">${NAV.map(([h, t]) => `<a href="${h}"${h === active ? ' aria-current="page"' : ""}>${t}</a>`).join("")}</nav>
+  <a class="alerts btn-grad" href="${WA}" target="_blank" rel="noopener" data-track="header-whatsapp">${BELL}Job alerts</a>
+  <a class="icon-btn alerts-icon" href="${WA}" target="_blank" rel="noopener" aria-label="Job alerts on WhatsApp" data-track="header-whatsapp">${BELL.replace(/17/g, "20")}</a>
+  ${menuButton()}
+</div></header>`;
+}
+
+const FOOTER = `<footer class="foot"><div class="wrap">
+  <div class="f-top">
+    <div class="f-brand">
+      <a class="brand" href="/"><img src="/icon.png" alt="" width="36" height="36">GigrAI</a>
+      <p>Every remote AI job. One search.</p>
+    </div>
+    <div class="f-social">
+      <span class="f-label">Connect with us</span>
+      <a class="ig" href="https://www.instagram.com/gigr.ai/" target="_blank" rel="noopener" data-track="footer-instagram">
+        <span class="ig-ic" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></span>
+        <span class="ig-t"><b>@gigr.ai</b><span>on Instagram</span></span>
+      </a>
+      <a class="ig" href="https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u" target="_blank" rel="noopener" data-track="footer-whatsapp">
+        <span class="ig-ic wa-c" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.8-1.2.2-.6.2-1.1.1-1.2l-.5-.3z"/></svg></span>
+        <span class="ig-t"><b>GigrAI Jobs</b><span>WhatsApp channel</span></span>
+      </a>
+    </div>
+  </div>
+  <div class="f-bottom">
+    <span>© __YEAR__ GigrAI · remotegigrai.com</span>
+    <span>Some links are referral links. It costs you nothing and doesn't change your pay.</span>
+    <span><a href="/jobs">Browse all roles</a> · <a href="/guides">Guides</a> · <a href="/advertise">Advertise</a> · <a href="/privacy">Privacy &amp; cookies</a></span>
+  </div>
+</div></footer>`;
+
+function shell({ title, desc, canonical, body, ld = [], robots = "index,follow,max-image-preview:large", active = "", bodyClass = "" }) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -94,72 +137,26 @@ function shell({ title, desc, canonical, body, ld = [], robots = "index,follow,m
 ${canonical ? `<link rel="canonical" href="${esc(canonical)}">` : ""}
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="GigrAI">
+<meta property="og:locale" content="en_GB">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:image" content="https://remotegigrai.com/og-image-v2.jpg">
 ${canonical ? `<meta property="og:url" content="${esc(canonical)}">` : ""}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/icon.png">
+<link rel="apple-touch-icon" href="/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site.css?v=4">
 ${ld.filter(Boolean).map((o) => `<script type="application/ld+json">${ldJson(o)}</script>`).join("\n")}
-<style>
-:root{--bg:#070914;--line:rgba(255,255,255,.12);--text:#f2f4ff;--soft:#e2e6f8;--muted:#b8bfdc;--link:#7dd8f0;--grad:linear-gradient(90deg,#22D3EE,#2F6BFF,#8B3DFF)}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--soft);font:16px/1.6 "Plus Jakarta Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-body:before{content:"";position:fixed;inset:-20% -10% auto;height:520px;background:radial-gradient(closest-side,rgba(47,107,255,.25),transparent),radial-gradient(closest-side at 80% 30%,rgba(139,61,255,.2),transparent);pointer-events:none;z-index:-1}
-a{color:var(--link)}
-.wrap{max-width:780px;margin:0 auto;padding:0 16px}
-header.top{position:sticky;top:0;z-index:30;background:rgba(7,9,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:8px}
-header.top .hrow{display:flex;align-items:center;justify-content:space-between;min-height:68px;padding-top:env(safe-area-inset-top)}
-html{scroll-padding-top:84px}
-.brand{display:inline-flex;align-items:center;gap:10px;color:var(--text);font-weight:800;font-size:19px;text-decoration:none}
-.brand img{border-radius:10px}
-.crumbs{font-size:14px;color:var(--muted);margin:8px 0 18px}
-.crumbs a{color:var(--muted)}
-h1{color:var(--text);font-size:clamp(26px,5vw,36px);line-height:1.2;margin:0 0 12px;letter-spacing:-.02em}
-h2{color:var(--text);font-size:21px;margin:34px 0 12px}
-h3{color:var(--text);font-size:16px;margin:18px 0 4px}
-.meta{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
-.pill{padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);font-size:14px;color:var(--soft)}
-.pill.pay{background:var(--grad);color:#fff;border:0;font-weight:700}
-.card{padding:20px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
-.card p{margin:0 0 10px}.card ul{margin:0 0 10px;padding-left:20px}
-.apply{display:inline-block;margin:22px 0 6px;padding:14px 26px;border-radius:14px;background:var(--grad);color:#fff;font-weight:700;text-decoration:none}
-.note{font-size:13px;color:var(--muted)}
-.list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
-.list a{display:flex;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--text);text-decoration:none}
-.list a:hover{border-color:rgba(255,255,255,.25)}
-.list .p{color:var(--muted);white-space:nowrap;font-size:14px}
-footer{margin:56px 0 0;border-top:1px solid rgba(255,255,255,.08);padding:24px 0 40px;font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
-footer a{color:var(--muted)}
-.lead{font-size:18px;color:var(--text)}
-main ol,main ul:not(.list){padding-left:22px}main li{margin:4px 0}
-.tbl{overflow-x:auto;margin:8px 0}
-table{border-collapse:collapse;width:100%;font-size:14px;table-layout:fixed}
-th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
-thead th{color:var(--text)}tbody th{color:var(--text);width:28%}
-@media(max-width:480px){table{font-size:13px}th,td{padding:9px 6px}}
-.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:8px 0}
-.opt{padding:18px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
-.opt h3{margin:0}.opt .price{font-size:26px;font-weight:800;color:var(--text)}.opt .price small{font-size:14px;font-weight:600;color:var(--muted)}
-.opt.best{background:linear-gradient(160deg,rgba(47,107,255,.22),rgba(139,61,255,.12) 60%,rgba(255,255,255,.04));border-color:rgba(139,61,255,.5)}
-.tag{align-self:flex-start;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--grad);color:#fff}
-.cta{margin:34px 0 0;padding:20px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
-</style>
 </head>
-<body>
-<header class="top"><div class="wrap hrow"><a class="brand" href="/"><img src="/icon.png" alt="" width="34" height="34">GigrAI</a>${menuButton()}</div></header>
-<div class="wrap">
-<main>
+<body${bodyClass ? ` class="${bodyClass}"` : ""}>
+${header(active)}
+<main id="main"><div class="wrap">
 ${body}
-</main>
-<footer>
-<span>© ${new Date().getFullYear()} GigrAI · remotegigrai.com · <a href="/">Search roles</a> · <a href="/jobs">All roles</a> · <a href="/guides">Guides</a> · <a href="/advertise">Advertise</a> · <a href="/privacy">Privacy &amp; cookies</a></span>
-<span>Some links are referral links. It costs you nothing and doesn't change your pay.</span>
-</footer>
-</div>
+</div></main>
+${FOOTER.replace("__YEAR__", String(new Date().getFullYear()))}
 ${drawerHtml()}
 </body>
 </html>`;
@@ -168,14 +165,39 @@ ${drawerHtml()}
 const html = (body, status = 200, maxAge = 600) =>
   new Response(body, { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": `public, max-age=${maxAge}` } });
 
+const crumbs = (items) => `<nav class="crumbs" aria-label="Breadcrumb">${items.map(([h, t], i) =>
+  (i ? '<span aria-hidden="true">›</span>' : "") + (h ? `<a href="${h}">${esc(t)}</a>` : `<span aria-current="page">${esc(t)}</span>`)).join("")}</nav>`;
+
+// Platform logo, same as the homepage cards
+function avatar(platforms, id, name) {
+  const p = (platforms || []).find((x) => x.id === id) || {};
+  if (p.icon) return `<span class="av" aria-hidden="true" style="background:#fff"><img src="/${esc(p.icon)}" alt="" width="50" height="50"></span>`;
+  if (p.logo && p.logoShape === "square") return `<span class="av" aria-hidden="true"><img src="/${esc(p.logo)}" alt="" width="50" height="50"></span>`;
+  return `<span class="av" aria-hidden="true" style="background:var(--grad);color:#fff">${esc(String(name || "?").slice(0, 2))}</span>`;
+}
+
+const payHtml = (j) => {
+  if (!j.min && !j.max) return "";
+  const v = j.min && j.max && j.min !== j.max ? `$${j.min}–${j.max}` : `$${j.min || j.max}`;
+  return `${v}<small>/hr</small>`;
+};
+
+function roleCard(x, platforms) {
+  return `<a class="card" href="${jobPath(x)}">
+  <div class="c-top">${avatar(platforms, x.platform, x.via)}<div class="c-title"><span class="c-name">${esc(x.title)}</span><span class="meta">via ${esc(x.via)}</span></div></div>
+  ${payHtml(x) ? `<div class="pay">${payHtml(x)}</div>` : ""}
+  ${x.domain ? `<div class="tags"><span class="tag">${esc(x.domain)}</span><span class="tag">Remote</span></div>` : `<div class="tags"><span class="tag">Remote</span></div>`}
+</a>`;
+}
+
 // ---------- /jobs/<id>/<slug> ----------
 export function rolePage(j, feed, origin, platforms) {
   const p = pay(j);
   const platform = (platforms || []).find((x) => x.id === j.platform);
   const canonical = origin + jobPath(j);
-  const tags = [p && `<span class="pill pay">${esc(p)}</span>`, `<span class="pill">Remote</span>`, `<span class="pill">via ${esc(j.via)}</span>`,
-    j.kind && `<span class="pill">${esc(j.kind)}</span>`, j.domain && `<span class="pill">${esc(j.domain)}</span>`,
-    ...(j.skills || []).slice(0, 5).map((s) => `<span class="pill">${esc(s)}</span>`)].filter(Boolean).join("");
+  const applyHref = `/go/${encodeURIComponent(j.id)}?src=seo`;
+  const tags = ['<span class="tag new">Remote</span>', j.kind && `<span class="tag">${esc(j.kind)}</span>`, j.domain && `<span class="tag">${esc(j.domain)}</span>`,
+    ...(j.skills || []).slice(0, 5).map((s) => `<span class="tag">${esc(s)}</span>`)].filter(Boolean).join("");
 
   const about = j.desc && j.desc.length >= 150
     ? descHtml(j.desc)
@@ -183,21 +205,35 @@ export function rolePage(j, feed, origin, platforms) {
 <p>Applying is free. You apply on ${esc(j.via)}'s site, and if you're accepted you're paid by ${esc(j.via)} directly.</p>`;
 
   const similar = feed.filter((x) => x.id !== j.id && ((j.domain && x.domain === j.domain) || x.platform === j.platform))
-    .sort((a, b) => (b.posted || "").localeCompare(a.posted || "")).slice(0, 8);
+    .sort((a, b) => (b.posted || "").localeCompare(a.posted || "")).slice(0, 6);
 
-  const body = `<nav class="crumbs"><a href="/">GigrAI</a> › <a href="/jobs">All roles</a> › ${esc(j.via)}</nav>
-<h1>${esc(j.title)}</h1>
-<div class="meta">${tags}</div>
-<section class="card">${about}</section>
-<a class="apply" href="/go/${encodeURIComponent(j.id)}?src=seo" rel="nofollow">Apply free on ${esc(j.via)}</a>
-<p class="note">You'll apply on ${esc(j.via)}'s own site. This is a referral link: it costs you nothing and doesn't change your pay.${isoDate(j.posted) ? ` Posted ${isoDate(j.posted)}.` : ""}</p>
-${similar.length ? `<h2>Similar remote roles</h2><ul class="list">${similar.map((x) => `<li><a href="${jobPath(x)}"><span>${esc(x.title)}</span><span class="p">${esc(pay(x) || x.via)}</span></a></li>`).join("")}</ul>` : ""}
-<p style="margin-top:24px"><a href="/?q=${encodeURIComponent((j.domain || j.title.split(" ")[0] || "").toLowerCase())}">Search more roles like this →</a></p>`;
+  const facts = [["Pay", p || "See listing"], ["Where", "Remote"], ["Platform", j.via], j.hours && ["Hours", `${j.hours} hrs/wk`], isoDate(j.posted) && ["Posted", isoDate(j.posted)]].filter(Boolean);
+
+  const body = `${crumbs([["/", "GigrAI"], ["/jobs", "All roles"], ["", j.via]])}
+<div class="role">
+  <div>
+    <div class="role-head">
+      <div class="c-top">${avatar(platforms, j.platform, j.via)}<span class="meta">via <b style="color:var(--text)">${esc(j.via)}</b></span></div>
+      <h1>${esc(j.title)}</h1>
+      ${payHtml(j) ? `<div class="pay">${payHtml(j)}</div>` : ""}
+      <div class="tags">${tags}</div>
+    </div>
+    <section class="panel desc prose" aria-labelledby="ab"><h2 id="ab">About this role</h2>${about}</section>
+  </div>
+  <aside class="apply-card" aria-label="Apply">
+    ${payHtml(j) ? `<div class="pay">${payHtml(j)}</div>` : `<b style="font-size:18px">Apply on ${esc(j.via)}</b>`}
+    <dl>${facts.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    <a class="btn btn-grad" href="${applyHref}" rel="nofollow sponsored" target="_blank">Apply free on ${esc(j.via)} ${ARROW}</a>
+    <p class="fine">You'll apply on ${esc(j.via)}'s own site. Referral link: it costs you nothing and doesn't change your pay.</p>
+  </aside>
+</div>
+${similar.length ? `<section class="block" aria-labelledby="sim"><h2 id="sim">Similar remote roles</h2><p class="lead">More live roles like this one.</p><div class="cards">${similar.map((x) => roleCard(x, platforms)).join("")}</div></section>` : ""}
+<div class="mbar">${payHtml(j) ? `<div class="pay">${payHtml(j)}</div>` : ""}<a class="btn btn-grad" href="${applyHref}" rel="nofollow sponsored" target="_blank">Apply free ${ARROW}</a></div>`;
 
   const desc = `${p ? p + " · " : ""}Remote ${j.title} role via ${j.via}. See the details and apply free on GigrAI.`.slice(0, 160);
   return html(shell({
     title: `${j.title}${p ? ` (${p})` : ""}: remote via ${j.via} · GigrAI`,
-    desc, canonical, body,
+    desc, canonical, body, active: "/jobs", bodyClass: "has-mbar",
     ld: [jobPosting(j, origin, platform), {
       "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
         { "@type": "ListItem", position: 1, name: "GigrAI", item: origin + "/" },
@@ -212,15 +248,19 @@ ${similar.length ? `<h2>Similar remote roles</h2><ul class="list">${similar.map(
 export function jobsIndex(feed, origin, platforms, featured = []) {
   const groups = (platforms || []).map((p) => ({ p, jobs: feed.filter((j) => j.platform === p.id).sort((a, b) => (b.posted || "").localeCompare(a.posted || "")) }))
     .filter((g) => g.jobs.length);
-  const body = `<nav class="crumbs"><a href="/">GigrAI</a> › All roles</nav>
-<h1>All live remote AI jobs</h1>
+  const body = `${crumbs([["/", "GigrAI"], ["", "All roles"]])}
+<section class="hero sm">
+  <span class="eyebrow"><i></i>Updated every 30 minutes</span>
+  <h1>All <span class="grad-text">${feed.length} live</span> remote AI jobs</h1>
+  <p>Every live role training and testing AI, from ${groups.map((g) => esc(g.p.name)).join(" and ")}. Free to apply on the platform's own site. Want filters? <a href="/">Search and filter roles</a>.</p>
+  <div class="jump">${groups.map((g) => `<a href="#${esc(g.p.id)}">${esc(g.p.name)} <b>${g.jobs.length}</b></a>`).join("")}</div>
+</section>
 ${featuredHtml(featured)}
-<p>${feed.length} live remote roles training and testing AI, from ${groups.map((g) => esc(g.p.name)).join(" and ")}. Updated every 30 minutes. Every role is free to apply for on the platform's own site. <a href="/">Search and filter roles →</a></p>
-${groups.map((g) => `<h2 id="${esc(g.p.id)}">${esc(g.p.name)} (${g.jobs.length})</h2><ul class="list">${g.jobs.map((x) => `<li><a href="${jobPath(x)}"><span>${esc(x.title)}</span><span class="p">${esc(pay(x))}</span></a></li>`).join("")}</ul>`).join("\n")}`;
+${groups.map((g) => `<section class="block" id="${esc(g.p.id)}" aria-labelledby="h-${esc(g.p.id)}"><h2 id="h-${esc(g.p.id)}">${esc(g.p.name)} roles</h2><p class="lead">${g.jobs.length} live, newest first.</p><div class="cards">${g.jobs.map((x) => roleCard(x, platforms)).join("")}</div></section>`).join("\n")}`;
   return html(shell({
     title: `All ${feed.length} live remote AI jobs · GigrAI`,
     desc: `Browse ${feed.length} live remote AI jobs from ${groups.map((g) => g.p.name).join(", ")}, with real pay rates. Free to apply.`,
-    canonical: origin + "/jobs", body,
+    canonical: origin + "/jobs", body, active: "/jobs",
   }), 200, 900);
 }
 
@@ -229,27 +269,34 @@ export function roleGone(origin) {
   return html(shell({
     title: "This role has closed · GigrAI",
     desc: "This remote AI role has closed. Search live roles on GigrAI.",
-    canonical: "", robots: "noindex",
-    body: `<h1>This role has closed</h1><p>It's no longer taking applications. There are plenty of live roles though.</p><a class="apply" href="/">Search live roles</a><p><a href="/jobs">Browse all roles →</a></p>`,
+    canonical: "", robots: "noindex", active: "/jobs",
+    body: `<section class="hero sm"><span class="eyebrow"><i></i>Role closed</span><h1>This role has <span class="grad-text">closed</span></h1><p>It's no longer taking applications, but there are plenty of live roles.</p><div class="jump"><a class="btn btn-grad" href="/" style="color:#fff">Search live roles ${ARROW}</a><a class="ghost" href="/jobs">Browse all roles</a></div></section>`,
   }), 404, 300);
 }
 
 // ---------- /guides and /guides/<slug> ----------
 const longDate = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
+function guideCard(g) {
+  return `<a class="card" href="/guides/${g.slug}"><span class="tag new" style="align-self:flex-start">Guide</span><span class="c-name">${esc(g.title)}</span><p class="c-desc">${esc(g.desc)}</p><span class="go">Read the guide →</span></a>`;
+}
+
 export function guidePage(g, guides, origin) {
   const canonical = `${origin}/guides/${g.slug}`;
   const more = guides.filter((x) => x.slug !== g.slug);
-  const body = `<nav class="crumbs"><a href="/">GigrAI</a> › <a href="/guides">Guides</a></nav>
-<article>
-<h1>${esc(g.title)}</h1>
-<p class="note">Updated ${longDate(g.updated)} · GigrAI earns a referral fee if you join a platform through our links. It costs you nothing and doesn't change your pay.</p>
-${g.body}
+  const body = `${crumbs([["/", "GigrAI"], ["/guides", "Guides"], ["", g.title]])}
+<article class="read">
+  <header class="hero sm">
+    <span class="eyebrow"><i></i>Guide · Updated ${longDate(g.updated)}</span>
+    <h1>${esc(g.title)}</h1>
+    <p class="fine">GigrAI earns a referral fee if you join a platform through our links. It costs you nothing and doesn't change your pay.</p>
+  </header>
+  <div class="prose">${g.body}</div>
+  <div class="cta-panel"><h2>Find your next remote AI role</h2><p>Search live roles from every platform in one place, with real pay rates.</p><a class="btn btn-grad" href="/">Search GigrAI ${ARROW}</a></div>
 </article>
-<div class="cta"><strong style="color:var(--text)">Find your next remote AI role</strong><p style="margin:6px 0 0">Search live roles from every platform in one place, with real pay rates. <a href="/">Search GigrAI →</a></p></div>
-${more.length ? `<h2>More guides</h2><ul class="list">${more.map((x) => `<li><a href="/guides/${x.slug}"><span>${esc(x.title)}</span></a></li>`).join("")}</ul>` : ""}`;
+${more.length ? `<section class="block" aria-labelledby="mg"><h2 id="mg">More guides</h2><p class="lead">Plain-English guides to getting paid for AI work.</p><div class="cards">${more.map(guideCard).join("")}</div></section>` : ""}`;
   return html(shell({
-    title: `${g.title} · GigrAI`, desc: g.desc, canonical, body,
+    title: `${g.title} · GigrAI`, desc: g.desc, canonical, body, active: "/guides",
     ld: [{
       "@context": "https://schema.org", "@type": "Article", headline: g.title, description: g.desc,
       datePublished: g.updated, dateModified: g.updated, mainEntityOfPage: canonical,
@@ -267,11 +314,14 @@ ${more.length ? `<h2>More guides</h2><ul class="list">${more.map((x) => `<li><a 
 }
 
 export function guidesIndex(guides, origin) {
-  const body = `<nav class="crumbs"><a href="/">GigrAI</a> › Guides</nav>
-<h1>Guides to remote AI work</h1>
-<p>Honest, plain-English guides to getting paid for AI training work: which platforms are legit, how the AI interviews work and how to avoid scams.</p>
-<ul class="list">${guides.map((g) => `<li><a href="/guides/${g.slug}"><span>${esc(g.title)}</span></a></li>`).join("")}</ul>`;
-  return html(shell({ title: "Guides to remote AI work · GigrAI", desc: "Honest guides to remote AI training work: is micro1 legit, how AI interviews work, micro1 vs Mercor and avoiding scams.", canonical: origin + "/guides", body }), 200, 3600);
+  const body = `${crumbs([["/", "GigrAI"], ["", "Guides"]])}
+<section class="hero sm">
+  <span class="eyebrow"><i></i>${guides.length} guides</span>
+  <h1>Guides to <span class="grad-text">remote AI work</span></h1>
+  <p>Honest, plain-English guides to getting paid for AI training work: which platforms are legit, how the AI interviews work and how to avoid scams.</p>
+</section>
+<div class="cards">${guides.map(guideCard).join("")}</div>`;
+  return html(shell({ title: "Guides to remote AI work · GigrAI", desc: "Honest guides to remote AI training work: is micro1 legit, how AI interviews work, micro1 vs Mercor and avoiding scams.", canonical: origin + "/guides", body, active: "/guides" }), 200, 3600);
 }
 
 // ---------- Featured (paid) roles from sponsored.json ----------
@@ -290,44 +340,46 @@ export function featuredHtml(list) {
 // ---------- /advertise ----------
 export function advertisePage(origin, liveRoles, platformCount) {
   const dm = "https://ig.me/m/gigr.ai";
-  const body = `<nav class="crumbs"><a href="/">GigrAI</a> › Advertise</nav>
-<h1>Advertise with GigrAI</h1>
-<p class="lead">GigrAI is a free search engine for remote AI jobs. Everyone who visits is actively looking for AI training work, so your roles reach the right people at the moment they're ready to apply.</p>
+  const opt = (name, price, per, text, feat) => `<div class="panel glass opt${feat ? " feat" : ""}">${feat ? '<span class="badge">Best value</span>' : ""}<h3>${name}</h3><div class="price">${price}${per ? ` <small>${per}</small>` : ""}</div><p>${text}</p></div>`;
+  const body = `${crumbs([["/", "GigrAI"], ["", "Advertise"]])}
+<section class="hero sm">
+  <span class="eyebrow"><i></i>For AI companies and platforms</span>
+  <h1>Advertise with <span class="grad-text">GigrAI</span></h1>
+  <p>GigrAI is a free search engine for remote AI jobs. Everyone who visits is actively looking for AI training work, so your roles reach the right people at the moment they're ready to apply.</p>
+  <div class="jump"><a class="btn btn-grad" href="${dm}" target="_blank" rel="noopener" style="color:#fff">Message @gigr.ai ${ARROW}</a><a class="ghost" href="#options">See prices</a></div>
+</section>
 
-<h2>Who you'll reach</h2>
-<ul>
-<li><strong>Job seekers ready to apply:</strong> people searching for paid remote AI work, worldwide.</li>
-<li><strong>Three channels:</strong> remotegigrai.com, <a href="https://www.instagram.com/gigr.ai/" rel="noopener">@gigr.ai on Instagram</a> and the <a href="https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u" rel="noopener">GigrAI Jobs WhatsApp channel</a>.</li>
-<li><strong>${liveRoles ? liveRoles + " live roles" : "Hundreds of live roles"}</strong>${platformCount ? ` from ${platformCount} platforms` : ""}, so people come back often.</li>
-</ul>
-<p class="note">Message us for our latest visitor, follower and channel numbers.</p>
+<section class="block" aria-labelledby="who"><h2 id="who">Who you'll reach</h2><p class="lead">Message us for our latest visitor, follower and channel numbers.</p>
+<div class="cards">
+  <div class="panel glass"><h3>Ready to apply</h3><p>People searching for paid remote AI work, worldwide, at the moment they're choosing where to apply.</p></div>
+  <div class="panel glass"><h3>Three channels</h3><p>remotegigrai.com, <a href="https://www.instagram.com/gigr.ai/" rel="noopener">@gigr.ai on Instagram</a> and the <a href="${WA}" rel="noopener">GigrAI Jobs WhatsApp channel</a>.</p></div>
+  <div class="panel glass"><h3>${liveRoles ? liveRoles + " live roles" : "Hundreds of live roles"}</h3><p>${platformCount ? `From ${platformCount} platforms and refreshed` : "Refreshed"} every 30 minutes, so people come back often.</p></div>
+</div></section>
 
-<h2>Options and launch prices</h2>
-<div class="opts">
-<div class="opt"><h3>Featured role</h3><div class="price">£49 <small>/ week</small></div><p>Your role pinned at the top of the GigrAI homepage and All roles page, labelled Sponsored, linking straight to your application page.</p></div>
-<div class="opt"><h3>Sponsored Instagram post</h3><div class="price">£99</div><p>A carousel about your role in the GigrAI style on @gigr.ai, shared to our Story. Labelled as an ad.</p></div>
-<div class="opt"><h3>WhatsApp shout-out</h3><div class="price">£49</div><p>One post about your role, with your link, to the GigrAI Jobs WhatsApp channel.</p></div>
-<div class="opt best"><span class="tag">Best value</span><h3>Launch bundle</h3><div class="price">£179</div><p>All three: a week as a Featured role, a sponsored Instagram post and a WhatsApp shout-out. Save £18.</p></div>
-</div>
-<p class="note">Prices in GBP. Launch prices may change.</p>
+<section class="block" id="options" aria-labelledby="op"><h2 id="op">Options and launch prices</h2><p class="lead">Prices in GBP. Launch prices may change.</p>
+<div class="cards" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+${opt("Featured role", "£49", "/ week", "Your role pinned at the top of the GigrAI homepage and All roles page, labelled Sponsored, linking straight to your application page.")}
+${opt("Sponsored Instagram post", "£99", "", "A carousel about your role in the GigrAI style on @gigr.ai, shared to our Story. Labelled as an ad.")}
+${opt("WhatsApp shout-out", "£49", "", "One post about your role, with your link, to the GigrAI Jobs WhatsApp channel.")}
+${opt("Launch bundle", "£179", "", "All three: a week as a Featured role, a sponsored Instagram post and a WhatsApp shout-out. Save £18.", true)}
+</div></section>
 
-<h2>How it works</h2>
-<ol>
-<li><strong>Message us</strong> on Instagram with your role link and the option you'd like.</li>
-<li><strong>We confirm</strong> your dates and send you a payment link.</li>
-<li><strong>You go live</strong> on the agreed date. We write the post copy and design for you.</li>
-<li><strong>You get a report</strong> of how many people clicked through to apply.</li>
-</ol>
+<section class="block" aria-labelledby="hw"><h2 id="hw">How it works</h2><p class="lead">Live within days. We handle the copy and design.</p>
+<ol class="steps">
+  <li class="glass"><b>Message us</b><span>On Instagram, with your role link and the option you'd like.</span></li>
+  <li class="glass"><b>We confirm</b><span>Your dates, and send you a payment link.</span></li>
+  <li class="glass"><b>You go live</b><span>On the agreed date. We write and design the posts.</span></li>
+  <li class="glass"><b>You get a report</b><span>Of how many people clicked through to apply.</span></li>
+</ol></section>
 
-<h2>Our standards</h2>
-<ul>
-<li>We only feature real roles that are <strong>free to apply for</strong>. We never promote anything that charges applicants.</li>
-<li>Everything paid is clearly labelled as Sponsored or Ad.</li>
-<li>We may decline roles that aren't a good fit for our audience.</li>
-</ul>
+<section class="block" aria-labelledby="st"><h2 id="st">Our standards</h2><p class="lead">So job seekers keep trusting what they see here.</p>
+<ul class="checks">
+  <li class="glass">${CHECK}<span>We only feature real roles that are <b>free to apply for</b>. We never promote anything that charges applicants.</span></li>
+  <li class="glass">${CHECK}<span>Everything paid is clearly labelled as Sponsored or Ad.</span></li>
+  <li class="glass">${CHECK}<span>We may decline roles that aren't a good fit for our audience.</span></li>
+</ul></section>
 
-<a class="apply" href="${dm}" target="_blank" rel="noopener">Message @gigr.ai on Instagram</a>
-<p class="note">Usually replies within a day.</p>`;
+<div class="cta-panel"><h2>Ready to reach AI talent?</h2><p>Send us your role link and we'll reply within a day.</p><a class="btn btn-grad" href="${dm}" target="_blank" rel="noopener">Message us on Instagram ${ARROW}</a></div>`;
   return html(shell({
     title: "Advertise with GigrAI: reach people looking for remote AI work",
     desc: "Put your AI training roles in front of people actively looking for remote AI work. Featured roles from £49 a week, sponsored Instagram posts and WhatsApp shout-outs.",
