@@ -24,7 +24,7 @@ const MENU = [
   { label: "Find work", items: [
     { href: "/", text: "Search jobs", icon: "search" },
     { href: "/jobs", text: "All live roles", icon: "list" },
-    { href: "/#platforms", text: "Platforms", icon: "grid" },
+    { href: "/platforms", text: "Platforms", icon: "grid" },
   ] },
   { label: "Learn", items: [
     { href: "/guides", text: "Guides", icon: "book" },

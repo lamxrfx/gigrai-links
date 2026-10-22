@@ -87,7 +87,7 @@ const BELL = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke
 export const ARROW = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 export const CHECK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
 
-const NAV = [["/", "Find jobs"], ["/jobs", "All roles"], ["/#platforms", "Platforms"], ["/guides", "Guides"]];
+const NAV = [["/", "Find jobs"], ["/jobs", "All roles"], ["/platforms", "Platforms"], ["/guides", "Guides"]];
 
 const CO_NAV = [["/advertise", "Overview"], ["/advertise#options", "Prices"], ["/media-kit", "Media kit"]];
 const CHAT = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>';
@@ -345,6 +345,54 @@ export function guidesIndex(guides, origin) {
   <a class="panel glass" href="/#faq" style="text-decoration:none;color:inherit"><h3>FAQ</h3><p>Quick answers: is it free, who can apply, how you get paid.</p></a>
 </div></section>`;
   return html(shell({ title: "Guides to remote AI work · GigrAI", desc: "Honest guides to remote AI training work: is micro1 legit, how AI interviews work, micro1 vs Mercor and avoiding scams.", canonical: origin + "/guides", body, active: "/guides" }), 200, 3600);
+}
+
+// ---------- /platforms ----------
+export function platformsPage(feed, origin, platforms, guides = []) {
+  const live = (platforms || []).filter((p) => p.active && p.signupUrl);
+  const soon = (platforms || []).filter((p) => !p.active);
+  const stat = (p) => {
+    const jobs = feed.filter((j) => j.platform === p.id);
+    const lo = Math.min(...jobs.map((j) => j.min || j.max || Infinity));
+    const hi = Math.max(...jobs.map((j) => j.max || j.min || 0));
+    return { n: jobs.length, pay: jobs.length && isFinite(lo) && hi ? (lo === hi ? `$${lo}/hr` : `$${lo}–${hi}/hr`) : "" };
+  };
+  const related = (p) => guides.filter((g) => g.slug.includes(p.id));
+  const card = (p) => {
+    const st = stat(p);
+    const facts = [st.n ? `<li><b>${st.n}</b> live roles</li>` : "", st.pay ? `<li>Pay seen: <b>${esc(st.pay)}</b></li>` : "", "<li>Free to join</li>"].filter(Boolean).join("");
+    const g = related(p);
+    return `<article class="panel glass plat" id="${esc(p.id)}">
+  <div class="plat-h">${avatar(platforms, p.id, p.name)}<div><h2>${esc(p.name)}</h2><p>${esc(p.tagline || "")}</p></div></div>
+  <ul class="plat-f">${facts}</ul>
+  ${g.length ? `<p class="plat-g">Read first: ${g.map((x) => `<a href="/guides/${esc(x.slug)}">${esc(x.title)}</a>`).join(" · ")}</p>` : ""}
+  <div class="plat-a"><a class="btn btn-grad" href="/join/${esc(p.id)}?src=platforms" target="_blank" rel="sponsored noopener">Sign up free on ${esc(p.name)} ${ARROW}</a>${st.n ? `<a class="ghost-btn" href="/jobs#${esc(p.id)}">See ${st.n} roles</a>` : ""}</div>
+</article>`;
+  };
+  const body = `<style>
+.plats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px}
+.plat{display:flex;flex-direction:column;gap:14px}
+.plat-h{display:flex;gap:14px;align-items:center}.plat-h h2{margin:0;font-size:22px;font-weight:800}.plat-h p{margin:2px 0 0;color:var(--muted)}
+.plat-f{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}.plat-f li{padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid var(--line);font-size:14px;color:var(--soft)}
+.plat-g{margin:0;font-size:14px;color:var(--muted)}
+.plat-a{margin-top:auto;display:flex;flex-wrap:wrap;gap:10px}.plat-a .btn{height:50px;padding:0 22px;color:#fff}
+.ghost-btn{display:inline-flex;align-items:center;height:50px;padding:0 20px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--soft);font-weight:600;text-decoration:none}.ghost-btn:hover{color:var(--text)}
+.soon{display:flex;flex-wrap:wrap;gap:10px}.soon span{padding:10px 16px;border-radius:999px;background:rgba(255,255,255,.04);border:1px dashed var(--line);color:var(--muted);font-weight:600}
+</style>
+${crumbs([["/", "GigrAI"], ["", "Platforms"]])}
+<section class="hero sm">
+  <span class="eyebrow"><i></i>${live.length} platforms</span>
+  <h1>AI training <span class="grad-text">platforms</span></h1>
+  <p>Join once and get matched to new roles as they open. Every platform here is free to join and pays you, never the other way round.</p>
+</section>
+<div class="plats">${[...live].sort((a, b) => stat(b).n - stat(a).n).map(card).join("\n")}</div>
+${soon.length ? `<section class="block" aria-labelledby="soon"><h2 id="soon">Coming soon</h2><div class="soon">${soon.map((p) => `<span>${esc(p.name)}</span>`).join("")}</div></section>` : ""}
+<p class="note" style="margin-top:28px;color:var(--muted);font-size:14px">Some sign-up links are referral links. It costs you nothing and doesn't change your pay.</p>`;
+  return html(shell({
+    title: "AI training platforms: micro1, Mercor and more · GigrAI",
+    desc: `Remote AI training platforms that pay you: ${live.map((p) => p.name).join(", ")}. Live role counts, pay seen and free sign-up links.`,
+    canonical: origin + "/platforms", body, active: "/platforms",
+  }));
 }
 
 // ---------- Featured (paid) roles from sponsored.json ----------

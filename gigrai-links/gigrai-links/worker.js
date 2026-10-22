@@ -1,5 +1,5 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
-import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, liveFeatured, allSponsors, featuredHtml } from "./seo.js";
+import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml } from "./seo.js";
 import { track, isHuman, readStats, signKey, keyOk, daysAgo } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
@@ -145,7 +145,7 @@ export default {
       return text(`google.com, ${pub}, DIRECT, f08c47fec0942fa0\n`, 3600);
     }
     if (url.pathname === "/robots.txt") {
-      return text(`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /go/\nDisallow: /picks\nDisallow: /report\n\nSitemap: ${url.origin}/sitemap.xml\n`, 3600);
+      return text(`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /go/\nDisallow: /join/\nDisallow: /picks\nDisallow: /report\n\nSitemap: ${url.origin}/sitemap.xml\n`, 3600);
     }
     if (url.pathname === "/sitemap.xml") return sitemap(url, env, ctx);
 
@@ -187,6 +187,22 @@ export default {
       const to = (sponsor.until || today) < today ? sponsor.until : today;
       const stats = (await readStats(env, { kind: "sponsor", k: sponsor.id, from, to })) || { total: 0, byDay: [], bySrc: [], byCountry: [] };
       return nocache(sponsorReportPage({ origin: url.origin, sponsor, stats, from, to: to < from ? from : to }));
+    }
+
+    // ---- Platforms page and tracked sign-up links (/join/<platform>?src=...) ----
+    if (request.method === "GET" && (url.pathname === "/platforms" || url.pathname === "/platforms/")) {
+      let feed = [];
+      try { feed = await loadFeed(env, ctx); } catch {}
+      view("platforms");
+      return decorate(platformsPage(feed, url.origin, PLATFORM_CONFIG.platforms, GUIDES), url, env, ctx, "/platforms");
+    }
+    const joinM = request.method === "GET" && url.pathname.match(/^\/join\/([a-z0-9-]{1,30})\/?$/);
+    if (joinM) {
+      const p = (PLATFORM_CONFIG.platforms || []).find(x => x.id === joinM[1] && x.active && /^https:\/\//.test(x.signupUrl || ""));
+      const src = cleanSrc(url.searchParams.get("src")) || "site";
+      console.log(JSON.stringify({ event: "link_click", link: "platform-" + joinM[1], src, country: request.cf?.country || "??" }));
+      if (p && isHuman(request)) track(env, ctx, request, "link", "platform-" + p.id, src);
+      return Response.redirect(p ? p.signupUrl : new URL("/platforms", url).toString(), 302);
     }
 
     // ---- Guides: /guides and /guides/<slug> ----
@@ -319,6 +335,7 @@ async function sitemap(url, env, ctx) {
     { loc: `${o}/privacy`, freq: "monthly", pri: "0.3" },
     { loc: `${o}/jobs`, freq: "hourly", pri: "0.9" },
     { loc: `${o}/guides`, freq: "weekly", pri: "0.7" },
+    { loc: `${o}/platforms`, freq: "daily", pri: "0.8" },
     { loc: `${o}/advertise`, freq: "monthly", pri: "0.4" },
     { loc: `${o}/media-kit`, freq: "weekly", pri: "0.4" },
     ...GUIDES.map(g => ({ loc: `${o}/guides/${g.slug}`, freq: "monthly", pri: "0.8", mod: g.updated })),
