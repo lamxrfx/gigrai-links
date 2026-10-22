@@ -60,9 +60,11 @@ jobs:
           WRANGLER_SEND_METRICS: "false"
         run: |
           export CLOUDFLARE_API_TOKEN="$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')"
-          if [ -z "$REPORT_SECRET" ]; then echo "No REPORT_SECRET in GitHub secrets, skipping"; exit 0; fi
+          if [ -z "$REPORT_SECRET" ]; then echo "::notice title=Report links::REPORT_SECRET is not in GitHub secrets yet (skipped)"; exit 0; fi
           if npx --yes wrangler@4.42.0 secret list 2>/dev/null | grep -q '"REPORT_SECRET"'; then
-            echo "REPORT_SECRET already set"
+            echo "::notice title=Report links::REPORT_SECRET is set on Cloudflare"
+          elif printf '%s' "$REPORT_SECRET" | npx --yes wrangler@4.42.0 secret put REPORT_SECRET; then
+            echo "::notice title=Report links::REPORT_SECRET copied to Cloudflare"
           else
-            printf '%s' "$REPORT_SECRET" | npx --yes wrangler@4.42.0 secret put REPORT_SECRET
+            echo "::warning title=Report links::Could not copy REPORT_SECRET to Cloudflare (check the API token can edit Workers)"
           fi
