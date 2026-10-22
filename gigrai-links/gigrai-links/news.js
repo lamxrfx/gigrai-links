@@ -203,7 +203,7 @@ const ADMIN_STYLE = `<style>
 const admShell = (title, body) => html(shell({ title: `${title} · GigrAI admin`, desc: "Private.", canonical: "", robots: "noindex,nofollow", body: ADMIN_STYLE + `<div class="adm">${body}</div>` }));
 const hidden = (k) => `<input type="hidden" name="k" value="${esc(k)}">`;
 
-export function adminHome({ k, posts, news, msg, fetched }) {
+export function adminHome({ k, posts, news, msg, fetched, suggested = [] }) {
   const a = (path) => `${path}${path.includes("?") ? "&" : "?"}k=${encodeURIComponent(k)}`;
   return admShell("Blog", `<section class="hero sm" style="padding-bottom:6px"><span class="eyebrow"><i></i>Private · only for you</span><h1>Blog <span class="grad-text">editor</span></h1>
 <p>Write your own posts, publish or keep them as drafts, and turn any headline into a post. Bookmark this page and don't share the link.</p>
@@ -216,6 +216,9 @@ ${posts.length ? `<table><thead><tr><th>Title</th><th>Status</th><th>Updated</th
 <td style="white-space:nowrap">${ago(p.updated)}</td>
 <td style="white-space:nowrap"><a class="b tiny" href="${a("/admin/post?slug=" + encodeURIComponent(p.slug))}">Edit</a> <a class="b tiny" href="${p.status === "published" ? "/news/" + esc(p.slug) : a("/news/" + encodeURIComponent(p.slug) + "?preview=1")}" target="_blank">View</a></td></tr>`).join("")}</tbody></table>` : `<p class="note">No posts yet. Start one with "New post", or use "Write about this" on a headline below.</p>`}
 </section>
+${suggested.length ? `<section class="block"><h2>Suggested drafts</h2><p class="note" style="margin:0 0 10px">Written for you each week from the latest news. Open one, check it, edit it, then publish. Nothing goes live until you press Publish.</p>
+<table><tbody>${suggested.map((d) => `<tr><td><b>${esc(d.title)}</b><br><small style="color:var(--muted)">${esc(catName(d.cat))}${d.created ? " · suggested " + ago(d.created) : ""}</small>${d.summary ? `<br><small style="color:var(--muted)">${esc(d.summary)}</small>` : ""}</td>
+<td style="white-space:nowrap"><a class="b tiny" href="${a("/admin/post?draft=" + encodeURIComponent(d.id))}">Open in editor</a></td></tr>`).join("")}</tbody></table></section>` : ""}
 <section class="block"><h2>Latest headlines</h2>
 <div class="bar" style="margin-bottom:10px"><form method="post" action="/admin/refresh">${hidden(k)}<button type="submit">Fetch new headlines now</button></form><span class="note">${fetched ? `Last checked ${ago(fetched)}. ` : ""}Checked automatically every hour. Hide anything off-topic.</span></div>
 <table><tbody>${news.map((n) => `<tr class="nl"><td><a href="${esc(n.link)}" target="_blank" rel="noopener">${esc(n.title)}</a><br><small>${esc(n.source)} · ${esc(catName(n.cat))} · ${ago(n.published)}${n.hidden ? " · <b>hidden</b>" : ""}</small></td>

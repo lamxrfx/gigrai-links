@@ -3,6 +3,7 @@ import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, adverti
 import { track, isHuman, readStats, signKey, keyOk, daysAgo } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
+import DRAFTS from "./drafts.json";
 export { Stats } from "./stats.js";
 export { Content } from "./content.js";
 import { content, refreshNews } from "./content.js";
@@ -545,7 +546,9 @@ async function handleAdmin(request, url, env, ctx) {
 
   if (url.pathname === "/admin" && request.method === "GET") {
     const [posts, news, fetched] = await Promise.all([db.listPosts({ status: "all", limit: 100 }), db.listNews({ limit: 60, includeHidden: true }), db.lastFetched()]);
-    return noStore(adminHome({ k, posts, news: news.rows, msg: url.searchParams.get("msg") || "", fetched }));
+    const taken = new Set(posts.map(p => p.slug));
+    const suggested = ((DRAFTS && DRAFTS.drafts) || []).filter(d => d && d.id && d.title && !taken.has(slugify(d.slug || d.title)));
+    return noStore(adminHome({ k, posts, news: news.rows, msg: url.searchParams.get("msg") || "", fetched, suggested }));
   }
   if (url.pathname === "/admin/post" && request.method === "GET") {
     const slug = url.searchParams.get("slug") || "";
@@ -555,6 +558,11 @@ async function handleAdmin(request, url, env, ctx) {
       return noStore(adminEditor({ k, post, isNew: false, platforms }));
     }
     let post = null;
+    const draftId = url.searchParams.get("draft");
+    if (draftId) {
+      const d = ((DRAFTS && DRAFTS.drafts) || []).find(x => x.id === draftId);
+      if (d) post = { title: d.title, slug: slugify(d.slug || d.title), cat: d.cat, summary: d.summary || "", body: d.body || "", sources: (d.sources || []).map(x => `${x.title} | ${x.url}`).join("\n"), affiliate: d.affiliate || "", author: "GigrAI" };
+    }
     const from = url.searchParams.get("from");
     if (from) {
       const n = await db.getNews(from);
