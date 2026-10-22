@@ -111,7 +111,9 @@ body{margin:0;background:var(--bg);color:var(--soft);font:16px/1.6 "Plus Jakarta
 body:before{content:"";position:fixed;inset:-20% -10% auto;height:520px;background:radial-gradient(closest-side,rgba(47,107,255,.25),transparent),radial-gradient(closest-side at 80% 30%,rgba(139,61,255,.2),transparent);pointer-events:none;z-index:-1}
 a{color:var(--link)}
 .wrap{max-width:780px;margin:0 auto;padding:0 16px}
-header.top{padding:10px 0;display:flex;align-items:center;justify-content:space-between;min-height:68px}
+header.top{position:sticky;top:0;z-index:30;background:rgba(7,9,20,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:8px}
+header.top .hrow{display:flex;align-items:center;justify-content:space-between;min-height:68px;padding-top:env(safe-area-inset-top)}
+html{scroll-padding-top:84px}
 .brand{display:inline-flex;align-items:center;gap:10px;color:var(--text);font-weight:800;font-size:19px;text-decoration:none}
 .brand img{border-radius:10px}
 .crumbs{font-size:14px;color:var(--muted);margin:8px 0 18px}
@@ -148,8 +150,8 @@ thead th{color:var(--text)}tbody th{color:var(--text);width:28%}
 </style>
 </head>
 <body>
+<header class="top"><div class="wrap hrow"><a class="brand" href="/"><img src="/icon.png" alt="" width="34" height="34">GigrAI</a>${menuButton()}</div></header>
 <div class="wrap">
-<header class="top"><a class="brand" href="/"><img src="/icon.png" alt="" width="34" height="34">GigrAI</a>${menuButton()}</header>
 <main>
 ${body}
 </main>
