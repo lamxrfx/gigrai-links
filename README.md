@@ -56,4 +56,5 @@ If one platform's feed fails, the others keep working, and the error shows in Cl
 
 - Search Console: add `remotegigrai.com` as a Domain property (TXT record in Cloudflare DNS), then submit `sitemap.xml`.
 - The sitemap lists the homepage, `/jobs`, popular searches and every live role page. It updates itself as roles open and close.
+- Guides live in `gigrai-links/gigrai-links/guides.js` and appear at `/guides/<slug>`. To add one, copy a block and push; it joins the sitemap automatically.
 - Roles with a full description (Mercor) carry JobPosting data, so they can appear in Google's jobs panel. micro1 roles have no description in their feed, so they get a page but no JobPosting data.

@@ -131,6 +131,14 @@ h3{color:var(--text);font-size:16px;margin:18px 0 4px}
 .list .p{color:var(--muted);white-space:nowrap;font-size:14px}
 footer{margin:56px 0 0;border-top:1px solid rgba(255,255,255,.08);padding:24px 0 40px;font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
 footer a{color:var(--muted)}
+.lead{font-size:18px;color:var(--text)}
+main ol,main ul:not(.list){padding-left:22px}main li{margin:4px 0}
+.tbl{overflow-x:auto;margin:8px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;table-layout:fixed}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+thead th{color:var(--text)}tbody th{color:var(--text);width:28%}
+@media(max-width:480px){table{font-size:13px}th,td{padding:9px 6px}}
+.cta{margin:34px 0 0;padding:20px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -140,7 +148,7 @@ footer a{color:var(--muted)}
 ${body}
 </main>
 <footer>
-<span>© ${new Date().getFullYear()} GigrAI · remotegigrai.com · <a href="/">Search roles</a> · <a href="/jobs">All roles</a> · <a href="/privacy">Privacy &amp; cookies</a></span>
+<span>© ${new Date().getFullYear()} GigrAI · remotegigrai.com · <a href="/">Search roles</a> · <a href="/jobs">All roles</a> · <a href="/guides">Guides</a> · <a href="/privacy">Privacy &amp; cookies</a></span>
 <span>Some links are referral links. It costs you nothing and doesn't change your pay.</span>
 </footer>
 </div>
@@ -198,7 +206,7 @@ export function jobsIndex(feed, origin, platforms) {
   const body = `<nav class="crumbs"><a href="/">GigrAI</a> › All roles</nav>
 <h1>All live remote AI jobs</h1>
 <p>${feed.length} live remote roles training and testing AI, from ${groups.map((g) => esc(g.p.name)).join(" and ")}. Updated every 30 minutes. Every role is free to apply for on the platform's own site. <a href="/">Search and filter roles →</a></p>
-${groups.map((g) => `<h2>${esc(g.p.name)} (${g.jobs.length})</h2><ul class="list">${g.jobs.map((x) => `<li><a href="${jobPath(x)}"><span>${esc(x.title)}</span><span class="p">${esc(pay(x))}</span></a></li>`).join("")}</ul>`).join("\n")}`;
+${groups.map((g) => `<h2 id="${esc(g.p.id)}">${esc(g.p.name)} (${g.jobs.length})</h2><ul class="list">${g.jobs.map((x) => `<li><a href="${jobPath(x)}"><span>${esc(x.title)}</span><span class="p">${esc(pay(x))}</span></a></li>`).join("")}</ul>`).join("\n")}`;
   return html(shell({
     title: `All ${feed.length} live remote AI jobs · GigrAI`,
     desc: `Browse ${feed.length} live remote AI jobs from ${groups.map((g) => g.p.name).join(", ")}, with real pay rates. Free to apply.`,
@@ -214,4 +222,44 @@ export function roleGone(origin) {
     canonical: "", robots: "noindex",
     body: `<h1>This role has closed</h1><p>It's no longer taking applications. There are plenty of live roles though.</p><a class="apply" href="/">Search live roles</a><p><a href="/jobs">Browse all roles →</a></p>`,
   }), 404, 300);
+}
+
+// ---------- /guides and /guides/<slug> ----------
+const longDate = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
+export function guidePage(g, guides, origin) {
+  const canonical = `${origin}/guides/${g.slug}`;
+  const more = guides.filter((x) => x.slug !== g.slug);
+  const body = `<nav class="crumbs"><a href="/">GigrAI</a> › <a href="/guides">Guides</a></nav>
+<article>
+<h1>${esc(g.title)}</h1>
+<p class="note">Updated ${longDate(g.updated)} · GigrAI earns a referral fee if you join a platform through our links. It costs you nothing and doesn't change your pay.</p>
+${g.body}
+</article>
+<div class="cta"><strong style="color:var(--text)">Find your next remote AI role</strong><p style="margin:6px 0 0">Search live roles from every platform in one place, with real pay rates. <a href="/">Search GigrAI →</a></p></div>
+${more.length ? `<h2>More guides</h2><ul class="list">${more.map((x) => `<li><a href="/guides/${x.slug}"><span>${esc(x.title)}</span></a></li>`).join("")}</ul>` : ""}`;
+  return html(shell({
+    title: `${g.title} · GigrAI`, desc: g.desc, canonical, body,
+    ld: [{
+      "@context": "https://schema.org", "@type": "Article", headline: g.title, description: g.desc,
+      datePublished: g.updated, dateModified: g.updated, mainEntityOfPage: canonical,
+      image: "https://remotegigrai.com/og-image-v2.jpg",
+      author: { "@type": "Organization", name: "GigrAI", url: origin + "/" },
+      publisher: { "@type": "Organization", name: "GigrAI", logo: { "@type": "ImageObject", url: origin + "/icon.png" } },
+    }, {
+      "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+        { "@type": "ListItem", position: 1, name: "GigrAI", item: origin + "/" },
+        { "@type": "ListItem", position: 2, name: "Guides", item: origin + "/guides" },
+        { "@type": "ListItem", position: 3, name: g.title, item: canonical },
+      ],
+    }],
+  }), 200, 3600);
+}
+
+export function guidesIndex(guides, origin) {
+  const body = `<nav class="crumbs"><a href="/">GigrAI</a> › Guides</nav>
+<h1>Guides to remote AI work</h1>
+<p>Honest, plain-English guides to getting paid for AI training work: which platforms are legit, how the AI interviews work and how to avoid scams.</p>
+<ul class="list">${guides.map((g) => `<li><a href="/guides/${g.slug}"><span>${esc(g.title)}</span></a></li>`).join("")}</ul>`;
+  return html(shell({ title: "Guides to remote AI work · GigrAI", desc: "Honest guides to remote AI training work: is micro1 legit, how AI interviews work, micro1 vs Mercor and avoiding scams.", canonical: origin + "/guides", body }), 200, 3600);
 }

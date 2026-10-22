@@ -1,5 +1,6 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
-import { rolePage, jobsIndex, roleGone, jobPath } from "./seo.js";
+import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex } from "./seo.js";
+import { GUIDES } from "./guides.js";
 // Serves the static link page from ./public and handles one API route:
 //   POST /api/subscribe  { email, name }  -> adds the person to the MailerLite "GigrAI Jobs" group.
 // Static files are served before this code runs, so only unmatched paths reach it.
@@ -131,6 +132,17 @@ export default {
     }
     if (url.pathname === "/sitemap.xml") return sitemap(url, env, ctx);
 
+    // ---- Guides: /guides and /guides/<slug> ----
+    if (request.method === "GET" && (url.pathname === "/guides" || url.pathname === "/guides/")) {
+      return decorate(guidesIndex(GUIDES, url.origin), url, env, ctx, "/guides");
+    }
+    const gm = request.method === "GET" && url.pathname.match(/^\/guides\/([a-z0-9-]+)\/?$/);
+    if (gm) {
+      const g = GUIDES.find(x => x.slug === gm[1]);
+      if (g) return decorate(guidePage(g, GUIDES, url.origin), url, env, ctx, "/guides");
+      return Response.redirect(new URL("/guides", url).toString(), 301);
+    }
+
     // ---- Role pages for Google: /jobs and /jobs/<id>/<slug> ----
     if (request.method === "GET" && (url.pathname === "/jobs" || url.pathname === "/jobs/")) {
       let feed;
@@ -238,6 +250,8 @@ async function sitemap(url, env, ctx) {
     { loc: `${o}/`, freq: "hourly", pri: "1.0" },
     { loc: `${o}/privacy`, freq: "monthly", pri: "0.3" },
     { loc: `${o}/jobs`, freq: "hourly", pri: "0.9" },
+    { loc: `${o}/guides`, freq: "weekly", pri: "0.7" },
+    ...GUIDES.map(g => ({ loc: `${o}/guides/${g.slug}`, freq: "monthly", pri: "0.8", mod: g.updated })),
     ...SITEMAP_SEARCHES.map(s => ({ loc: `${o}/?q=${encodeURIComponent(s)}`, freq: "daily", pri: "0.7" })),
   ];
   try {
