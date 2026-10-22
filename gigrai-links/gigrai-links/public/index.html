@@ -77,6 +77,7 @@ header.top .wrap{height:68px;display:flex;align-items:center;gap:36px}
 .nav a{display:flex;align-items:center;padding:0 14px;color:var(--muted);font-weight:600;font-size:14.5px;text-decoration:none}
 .nav a[aria-current]{color:var(--text);box-shadow:inset 0 3px 0 #5b8cff}
 .nav a:hover{color:var(--text)}
+.nav-co{margin-left:auto;display:flex;align-items:center;height:100%;padding:0 4px;color:var(--muted);font-weight:600;font-size:14.5px;text-decoration:none;white-space:nowrap}.nav-co:hover{color:var(--text)}.nav-co[aria-current]{color:var(--text);box-shadow:inset 0 3px 0 #5b8cff}.nav-co + .alerts{margin-left:-12px}
 .alerts{margin-left:auto;height:46px;display:flex;align-items:center;gap:8px;padding:0 20px;border-radius:999px;font-weight:700;font-size:14.5px;text-decoration:none}
 .alerts-icon{margin-left:auto;display:none}
 
@@ -250,7 +251,7 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
 /* ---------- mobile ---------- */
 .mnav{display:none}
 @media (max-width:1000px){
-  .nav,.alerts{display:none}
+  .nav,.alerts,.nav-co{display:none}
   .alerts-icon{display:grid}
   .board{display:block}
   .filters{position:fixed;inset:auto 0 0 0;top:auto;z-index:60;max-height:86vh;overflow:auto;padding:20px 20px calc(24px + env(safe-area-inset-bottom));border-radius:28px 28px 0 0;background:#0d1024;border-top:1px solid var(--line-2);transform:translateY(105%);transition:transform .28s ease-out;gap:22px}
@@ -289,12 +290,11 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
     <a class="brand" href="/"><img src="/icon.png" alt="" width="36" height="36">GigrAI</a>
     <nav class="nav" aria-label="Main">
       <a href="#jobs" aria-current="page">Find jobs</a>
-      <a href="#platforms">Platforms</a>
-      <a href="#earnings">Earnings calculator</a>
       <a href="/jobs">All roles</a>
+      <a href="#platforms">Platforms</a>
       <a href="/guides">Guides</a>
-      <a href="#faq">FAQ</a>
     </nav>
+    <a class="nav-co" href="/advertise">For companies</a>
     <a class="alerts btn-grad" href="https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u" target="_blank" rel="noopener" data-track="header-whatsapp">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Job alerts</a>
     <a class="icon-btn alerts-icon" href="https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u" target="_blank" rel="noopener" aria-label="Job alerts on WhatsApp" data-track="header-whatsapp">

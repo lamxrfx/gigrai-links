@@ -87,12 +87,13 @@ const BELL = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke
 export const ARROW = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 export const CHECK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
 
-const NAV = [["/", "Find jobs"], ["/#platforms", "Platforms"], ["/#earnings", "Earnings calculator"], ["/jobs", "All roles"], ["/guides", "Guides"], ["/#faq", "FAQ"]];
+const NAV = [["/", "Find jobs"], ["/jobs", "All roles"], ["/#platforms", "Platforms"], ["/guides", "Guides"]];
 
 function header(active) {
   return `<header class="top"><div class="wrap">
   <a class="brand" href="/"><img src="/icon.png" alt="" width="36" height="36">GigrAI</a>
   <nav class="nav" aria-label="Main">${NAV.map(([h, t]) => `<a href="${h}"${h === active ? ' aria-current="page"' : ""}>${t}</a>`).join("")}</nav>
+  <a class="nav-co" href="/advertise"${active === "/advertise" ? ' aria-current="page"' : ""}>For companies</a>
   <a class="alerts btn-grad" href="${WA}" target="_blank" rel="noopener" data-track="header-whatsapp">${BELL}Job alerts</a>
   <a class="icon-btn alerts-icon" href="${WA}" target="_blank" rel="noopener" aria-label="Job alerts on WhatsApp" data-track="header-whatsapp">${BELL.replace(/17/g, "20")}</a>
   ${menuButton()}
@@ -320,7 +321,12 @@ export function guidesIndex(guides, origin) {
   <h1>Guides to <span class="grad-text">remote AI work</span></h1>
   <p>Honest, plain-English guides to getting paid for AI training work: which platforms are legit, how the AI interviews work and how to avoid scams.</p>
 </section>
-<div class="cards">${guides.map(guideCard).join("")}</div>`;
+<div class="cards">${guides.map(guideCard).join("")}</div>
+<section class="block" aria-labelledby="tools"><h2 id="tools">Tools and answers</h2>
+<div class="cards">
+  <a class="panel glass" href="/#earnings" style="text-decoration:none;color:inherit"><h3>Earnings calculator</h3><p>See what an hourly rate adds up to per week and month.</p></a>
+  <a class="panel glass" href="/#faq" style="text-decoration:none;color:inherit"><h3>FAQ</h3><p>Quick answers: is it free, who can apply, how you get paid.</p></a>
+</div></section>`;
   return html(shell({ title: "Guides to remote AI work · GigrAI", desc: "Honest guides to remote AI training work: is micro1 legit, how AI interviews work, micro1 vs Mercor and avoiding scams.", canonical: origin + "/guides", body, active: "/guides" }), 200, 3600);
 }
 
@@ -401,6 +407,6 @@ ${AD_OPTIONS.map(adOption).join("\n")}
   return html(shell({
     title: "Advertise with GigrAI: reach people looking for remote AI work",
     desc: "Put your AI training roles in front of people actively looking for remote AI work. Featured roles from £49 a week, sponsored Instagram posts and WhatsApp shout-outs.",
-    canonical: origin + "/advertise", body,
+    canonical: origin + "/advertise", body, active: "/advertise",
   }), 200, 3600);
 }

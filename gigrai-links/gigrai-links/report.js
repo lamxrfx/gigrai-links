@@ -123,7 +123,7 @@ ${showCountries ? `<section class="block" aria-labelledby="where"><h2 id="where"
   return pageOf({
     title: "GigrAI media kit: audience, numbers and prices",
     desc: "Reach people looking for remote AI training work through remotegigrai.com, @gigr.ai on Instagram and the GigrAI Jobs WhatsApp channel.",
-    canonical: origin + "/media-kit", body, maxAge: 900,
+    canonical: origin + "/media-kit", body, maxAge: 900, active: "/advertise",
   });
 }
 
