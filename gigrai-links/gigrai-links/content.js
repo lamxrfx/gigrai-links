@@ -125,12 +125,15 @@ async function fetchSource(src) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 9000);
   try {
-    const r = await fetch(src.url, { signal: ctrl.signal, headers: { "user-agent": "GigrAI news reader (+https://remotegigrai.com/news)", accept: "application/rss+xml, application/atom+xml, application/xml, text/xml" } });
+    const r = await fetch(src.url, { signal: ctrl.signal, headers: { "user-agent": "GigrAI news reader (+https://remotegigrai.com/news)", accept: "application/rss+xml, application/atom+xml, application/xml, text/xml, application/json" } });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const xml = await r.text();
+    const raw = await r.text();
     const out = [];
     const oldest = Date.now() - 14 * 864e5;
-    for (const it of parseFeed(xml).slice(0, 40)) {
+    const parsed = src.type === "hn"
+      ? ((JSON.parse(raw).hits) || []).map((h) => ({ title: h.title || "", link: h.url || `https://news.ycombinator.com/item?id=${h.objectID}`, date: h.created_at, summary: "" }))
+      : parseFeed(raw);
+    for (const it of parsed.slice(0, 40)) {
       const t = Date.parse(it.date);
       if (!Number.isFinite(t) || t < oldest || t > Date.now() + 864e5) continue;
       const text = `${it.title} ${it.summary}`;
