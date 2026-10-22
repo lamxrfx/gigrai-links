@@ -1,0 +1,8 @@
+{
+  "_help": "Numbers for the media kit (/media-kit) and contact details for advertisers. Update the follower counts every few weeks. Leave a number as null to hide it. Visitor and click numbers are added automatically from the site's own counts.",
+  "updated": "2026-10-22",
+  "contactEmail": "remotegigr.ai@gmail.com",
+  "instagram": { "handle": "gigr.ai", "followers": 4500 },
+  "whatsapp": { "followers": null },
+  "audience": "Skilled professionals worldwide looking for paid, remote AI training work: writers, coders, researchers, translators, and experts in medicine, law and finance."
+}

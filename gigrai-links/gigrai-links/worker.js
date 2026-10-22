@@ -1,5 +1,9 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
-import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, liveFeatured, featuredHtml } from "./seo.js";
+import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, liveFeatured, allSponsors, featuredHtml } from "./seo.js";
+import { track, isHuman, readStats, signKey, keyOk, daysAgo } from "./stats.js";
+import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
+import MEDIAKIT from "./mediakit.json";
+export { Stats } from "./stats.js";
 import SPONSORED from "./sponsored.json";
 import { menuButton, drawerHtml } from "./nav.js";
 import { GUIDES } from "./guides.js";
@@ -18,6 +22,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // Count a human page view (anonymous daily totals for the media kit)
+    const view = (section) => { if (request.method === "GET" && isHuman(request)) track(env, ctx, request, "view", section, visitSource(request, url)); };
 
     if (url.pathname === "/api/subscribe") {
       if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
@@ -78,6 +84,7 @@ export default {
         src = String(body.src || "");
       } catch {}
       console.log(JSON.stringify({ event: "link_click", link, src: cleanSrc(src), country: request.cf?.country || "??" }));
+      if (isHuman(request)) track(env, ctx, request, "link", link.replace(/[^a-z0-9_-]/gi, "-"), cleanSrc(src));
       return new Response(null, { status: 204 });
     }
 
@@ -86,14 +93,17 @@ export default {
       const id = decodeURIComponent(url.pathname.slice(4));
       if (!/^[a-z0-9]{1,30}-[A-Za-z0-9_-]{1,80}$/.test(id)) return Response.redirect(new URL("/", url).toString(), 302);
       if (id.startsWith("sponsored-")) {
-        const f = liveFeatured(SPONSORED).find(x => "sponsored-" + x.id === id);
-        console.log(JSON.stringify({ event: "apply_click", id, platform: "sponsored", found: !!f, src: cleanSrc(url.searchParams.get("src")), country: request.cf?.country || "??" }));
+        const f = allSponsors(SPONSORED).find(x => "sponsored-" + x.id === id);
+        const src = cleanSrc(url.searchParams.get("src")) || "direct";
+        console.log(JSON.stringify({ event: "apply_click", id, platform: "sponsored", found: !!f, src, country: request.cf?.country || "??" }));
+        if (f && isHuman(request)) { track(env, ctx, request, "sponsor", f.id, src); track(env, ctx, request, "apply", "sponsored", src); }
         return Response.redirect(f ? f.url : new URL("/", url).toString(), 302);
       }
       let feed = [];
       try { feed = await loadFeed(env, ctx); } catch {}
       const job = feed.find(j => j.id === id);
       console.log(JSON.stringify({ event: "apply_click", id, platform: job ? job.platform : "?", found: !!job, src: cleanSrc(url.searchParams.get("src")), country: request.cf?.country || "??" }));
+      if (job && isHuman(request)) track(env, ctx, request, "apply", job.platform, cleanSrc(url.searchParams.get("src")) || "site");
       return Response.redirect(job ? job.url : new URL("/", url).toString(), 302);
     }
 
@@ -135,23 +145,59 @@ export default {
       return text(`google.com, ${pub}, DIRECT, f08c47fec0942fa0\n`, 3600);
     }
     if (url.pathname === "/robots.txt") {
-      return text(`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /go/\nDisallow: /picks\n\nSitemap: ${url.origin}/sitemap.xml\n`, 3600);
+      return text(`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /go/\nDisallow: /picks\nDisallow: /report\n\nSitemap: ${url.origin}/sitemap.xml\n`, 3600);
     }
     if (url.pathname === "/sitemap.xml") return sitemap(url, env, ctx);
 
     if (request.method === "GET" && (url.pathname === "/advertise" || url.pathname === "/advertise/")) {
       let feed = [];
       try { feed = await loadFeed(env, ctx); } catch {}
-      return decorate(advertisePage(url.origin, feed.length, new Set(feed.map(j => j.platform)).size), url, env, ctx, "/advertise");
+      view("advertise");
+      return decorate(advertisePage(url.origin, feed.length, new Set(feed.map(j => j.platform)).size, MEDIAKIT.contactEmail), url, env, ctx, "/advertise");
+    }
+
+    // ---- Media kit for advertisers ----
+    if (request.method === "GET" && (url.pathname === "/media-kit" || url.pathname === "/media-kit/")) {
+      let feed = [];
+      try { feed = await loadFeed(env, ctx); } catch {}
+      view("media-kit");
+      const from = daysAgo(29);
+      const [views, applies] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from })]);
+      return decorate(mediaKitPage({ origin: url.origin, kit: MEDIAKIT, liveRoles: feed.length, platforms: new Set(feed.map(j => j.platform)).size, views, applies }), url, env, ctx, "/media-kit");
+    }
+
+    // ---- Private reports: /report?k=<owner key> and /report/<sponsor id>?k=<sponsor key> ----
+    const rm = request.method === "GET" && url.pathname.match(/^\/report(?:\/([a-z0-9-]{1,40}))?\/?$/);
+    if (rm) {
+      const k = url.searchParams.get("k") || "";
+      const nocache = (res) => { const h = new Headers(res.headers); h.set("cache-control", "private, no-store"); h.set("x-robots-tag", "noindex"); return new Response(res.body, { status: res.status, headers: h }); };
+      if (!rm[1]) {
+        if (!(await keyOk(env, "owner", k))) return nocache(reportsOff(url.origin));
+        const from = daysAgo(29), to = new Date().toISOString().slice(0, 10);
+        const [views, applies] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from })]);
+        if (views) Object.assign(views, { from, to });
+        const sponsors = allSponsors(SPONSORED).filter(s => s.id !== "example");
+        const links = await Promise.all(sponsors.map(async s => `${url.origin}/report/${s.id}?k=${await signKey(env, "sponsor:" + s.id)}`));
+        return nocache(adminPage({ origin: url.origin, views, applies, sponsors, links }));
+      }
+      const sponsor = ((SPONSORED && SPONSORED.featured) || []).find(s => s.id === rm[1]);
+      if (!sponsor || !(await keyOk(env, "sponsor:" + sponsor.id, k))) return nocache(reportsOff(url.origin));
+      const today = new Date().toISOString().slice(0, 10);
+      const from = /^\d{4}-\d{2}-\d{2}$/.test(sponsor.start || "") ? sponsor.start : daysAgo(29);
+      const to = (sponsor.until || today) < today ? sponsor.until : today;
+      const stats = (await readStats(env, { kind: "sponsor", k: sponsor.id, from, to })) || { total: 0, byDay: [], bySrc: [], byCountry: [] };
+      return nocache(sponsorReportPage({ origin: url.origin, sponsor, stats, from, to: to < from ? from : to }));
     }
 
     // ---- Guides: /guides and /guides/<slug> ----
     if (request.method === "GET" && (url.pathname === "/guides" || url.pathname === "/guides/")) {
+      view("guides");
       return decorate(guidesIndex(GUIDES, url.origin), url, env, ctx, "/guides");
     }
     const gm = request.method === "GET" && url.pathname.match(/^\/guides\/([a-z0-9-]+)\/?$/);
     if (gm) {
       const g = GUIDES.find(x => x.slug === gm[1]);
+      if (g) view("guides");
       if (g) return decorate(guidePage(g, GUIDES, url.origin), url, env, ctx, "/guides");
       return Response.redirect(new URL("/guides", url).toString(), 301);
     }
@@ -160,6 +206,7 @@ export default {
     if (request.method === "GET" && (url.pathname === "/jobs" || url.pathname === "/jobs/")) {
       let feed;
       try { feed = await loadFeed(env, ctx); } catch { return Response.redirect(new URL("/", url).toString(), 302); }
+      view("jobs");
       return decorate(jobsIndex(feed, url.origin, PLATFORM_CONFIG.platforms, liveFeatured(SPONSORED)), url, env, ctx, "/jobs");
     }
     const jm = request.method === "GET" && url.pathname.match(/^\/jobs\/([^/]+)(?:\/([^/]*))?\/?$/);
@@ -172,6 +219,7 @@ export default {
       if (!j) return decorate(roleGone(url.origin), url, env, ctx, "/jobs");
       // One address per role: fix old or missing title slugs
       if (url.pathname !== jobPath(j)) return Response.redirect(new URL(jobPath(j), url).toString(), 301);
+      view("role");
       return decorate(rolePage(j, feed, url.origin, PLATFORM_CONFIG.platforms), url, env, ctx, "/jobs");
     }
 
@@ -180,6 +228,7 @@ export default {
     const page = url.pathname.replace(/\/index\.html$/, "/").replace(/\.html$/, "");
     if (request.method === "GET" && (page === "/" || page === "/privacy") &&
         (res.headers.get("content-type") || "").includes("text/html")) {
+      view(page === "/" ? "home" : "privacy");
       return decorate(res, url, env, ctx, page);
     }
     return res;
@@ -271,6 +320,7 @@ async function sitemap(url, env, ctx) {
     { loc: `${o}/jobs`, freq: "hourly", pri: "0.9" },
     { loc: `${o}/guides`, freq: "weekly", pri: "0.7" },
     { loc: `${o}/advertise`, freq: "monthly", pri: "0.4" },
+    { loc: `${o}/media-kit`, freq: "weekly", pri: "0.4" },
     ...GUIDES.map(g => ({ loc: `${o}/guides/${g.slug}`, freq: "monthly", pri: "0.8", mod: g.updated })),
     ...SITEMAP_SEARCHES.map(s => ({ loc: `${o}/?q=${encodeURIComponent(s)}`, freq: "daily", pri: "0.7" })),
   ];
@@ -408,6 +458,19 @@ function eligibility(j, country) {
   if ((j.allow || []).length && !j.allow.includes(country)) return "no";
   return "yes";
 }
+// Where a page view came from: ?src= tag first, otherwise the referring site
+const REF_SRC = [[/instagram\./, "ig"], [/whatsapp\./, "wa"], [/(^|\.)google\./, "google"], [/bing\.com/, "bing"], [/(^|\.)(x|twitter)\.com|^t\.co$/, "x"], [/linkedin\./, "li"], [/facebook\.|fb\.com/, "fb"], [/tiktok\./, "tt"], [/reddit\./, "reddit"]];
+function visitSource(request, url) {
+  const tag = cleanSrc(url.searchParams.get("src"));
+  if (tag) return tag;
+  let host = "";
+  try { host = new URL(request.headers.get("referer") || "").hostname.replace(/^www\./, ""); } catch {}
+  if (!host) return "direct";
+  if (host === url.hostname.replace(/^www\./, "")) return "internal";
+  const hit = REF_SRC.find(([re]) => re.test(host));
+  return hit ? hit[1] : "other";
+}
+
 const cleanSrc = v => String(v || "").toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 20);
 
 // Markdown-ish job description -> tidy plain text (headings "## ", bullets "- " kept), capped for size

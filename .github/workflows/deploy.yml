@@ -49,3 +49,20 @@ jobs:
             echo "::error title=Wrangler deploy failed::${msg}"
             exit 1
           fi
+
+      - name: Set the report-link secret (first time only)
+        working-directory: gigrai-links/gigrai-links
+        continue-on-error: true   # the site is already live; this only affects private report links
+        env:
+          RAW_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          REPORT_SECRET: ${{ secrets.REPORT_SECRET }}
+          CLOUDFLARE_ACCOUNT_ID: ebe9e1de0a84e5d863eabdd716f316df
+          WRANGLER_SEND_METRICS: "false"
+        run: |
+          export CLOUDFLARE_API_TOKEN="$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')"
+          if [ -z "$REPORT_SECRET" ]; then echo "No REPORT_SECRET in GitHub secrets, skipping"; exit 0; fi
+          if npx --yes wrangler@4.42.0 secret list 2>/dev/null | grep -q '"REPORT_SECRET"'; then
+            echo "REPORT_SECRET already set"
+          else
+            printf '%s' "$REPORT_SECRET" | npx --yes wrangler@4.42.0 secret put REPORT_SECRET
+          fi

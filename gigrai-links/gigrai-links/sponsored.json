@@ -1,5 +1,5 @@
 {
-  "_help": "Paid Featured roles. Add one block per advertiser and push. It shows (with a 'Sponsored' label) at the top of the homepage and the All roles page until the 'until' date, then disappears by itself. 'id' = short lowercase name with no spaces (used for click counts: Cloudflare > Observability, search apply_click and the id). 'url' must be the advertiser's own https application page.",
+  "_help": "Paid campaigns. Add one block per advertiser and push. Fields: id = short lowercase name, no spaces (used in report and tracked links); company; url = the advertiser's own https application page; start and until = campaign dates (YYYY-MM-DD); title, pay, blurb = what the Featured card shows; pin = false for Instagram/WhatsApp-only campaigns (not pinned on the site). Pinned roles show with a 'Sponsored' label at the top of the homepage and All roles page from 'start' to 'until', then disappear by themselves. Tracked links for posts: /go/sponsored-<id>?src=ig (Instagram) or ?src=wa (WhatsApp). Report links are listed on your private /report page.",
   "featured": [
     {
       "id": "example",
@@ -8,7 +8,9 @@
       "pay": "$40–60/hr",
       "blurb": "Remote, flexible hours. Free to apply.",
       "url": "https://example.com/apply",
-      "until": "2000-01-01"
+      "until": "2000-01-01",
+      "start": "2000-01-01",
+      "pin": true
     }
   ]
 }
