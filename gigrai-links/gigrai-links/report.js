@@ -17,7 +17,7 @@ const SRC = { ig: "Instagram", wa: "WhatsApp", featured: "Featured on site", sit
 const source = (s) => SRC[s] || (s ? s.charAt(0).toUpperCase() + s.slice(1) : "Other");
 
 // Thresholds: a number only appears in the public media kit once it's worth showing
-const SHOW_VIEWS = 300, SHOW_APPLIES = 30, SHOW_COUNTRIES = 100;
+const SHOW_VIEWS = 300, SHOW_APPLIES = 30, SHOW_COUNTRIES = 20;
 
 const STYLE = `<style>
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
@@ -88,7 +88,7 @@ const STYLE = `<style>
     function show(li){
       document.querySelectorAll(".bars li.on").forEach(function(x){ x.classList.remove("on"); });
       li.classList.add("on");
-      tip.innerHTML = "<b>" + li.dataset.label + "</b>: " + fmt(li.dataset.n) + " " + li.dataset.unit + " &middot; " + li.dataset.pct + "% of total";
+      tip.innerHTML = "<b>" + li.dataset.label + "</b>: " + (li.dataset.n ? fmt(li.dataset.n) + " " + li.dataset.unit + " &middot; " + li.dataset.pct + "% of total" : li.dataset.pct + "% of visitors");
       var r = li.querySelector(".t").getBoundingClientRect();
       tip.style.left = (r.left + r.width / 2 + scrollX) + "px"; tip.style.top = (r.top + scrollY) + "px"; tip.hidden = false;
     }
@@ -122,12 +122,13 @@ const STYLE = `<style>
 })();
 </script>`;
 
-function barList(rows, label, total, unit = "") {
+function barList(rows, label, total, unit = "", pctOnly = false) {
   if (!rows.length) return `<p class="note">No data yet.</p>`;
   const max = Math.max(...rows.map((r) => r.n), 1);
   return `<ul class="bars">${rows.map((r) => {
     const pct = total ? Math.round((r.n / total) * 100) : 0;
     const name = label(r);
+    if (pctOnly) return `<li tabindex="0" data-label="${esc(name)}" data-pct="${pct}" aria-label="${esc(name)}: ${pct}% of ${esc(unit)}"><span>${esc(name)}</span><span class="t" aria-hidden="true"><span class="f" data-w="${Math.max(2, Math.round((r.n / max) * 100))}"></span></span><span class="v">${pct}%</span></li>`;
     return `<li tabindex="0" data-label="${esc(name)}" data-n="${r.n}" data-pct="${pct}" data-unit="${esc(unit)}" aria-label="${esc(name)}: ${fmt(r.n)} ${esc(unit)}, ${pct}% of total"><span>${esc(name)}</span><span class="t" aria-hidden="true"><span class="f" data-w="${Math.max(2, Math.round((r.n / max) * 100))}"></span></span><span class="v">${fmt(r.n)}<small>${pct}%</small></span></li>`;
   }).join("")}</ul>`;
 }
@@ -188,8 +189,8 @@ ${showViews ? rangeSwitch("/media-kit", days) : `<p class="note" style="margin-t
 ${showViews ? `<section class="block" aria-labelledby="pv"><h2 id="pv">Website page views per day</h2><p class="lead">${period}. Hover or tap a day to see its number.</p>
 <div class="panel glass">${dayChart(views.byDay, views.from, views.to, "page views")}</div></section>` : ""}
 
-${showCountries ? `<section class="block" aria-labelledby="where"><h2 id="where">Where our visitors are</h2><p class="lead">Share of website page views, ${period.toLowerCase()}. Hover or tap a country for details.</p>
-<div class="panel glass">${barList(views.byCountry.slice(0, 6), (r) => country(r.cc), views.total, "page views")}</div></section>` : ""}
+${showCountries ? `<section class="block" aria-labelledby="where"><h2 id="where">Where our visitors are</h2><p class="lead">Share of website visits by country, ${period.toLowerCase()}.</p>
+<div class="panel glass">${barList(views.byCountry.slice(0, 6), (r) => country(r.cc), views.total, "page views", true)}</div></section>` : ""}
 
 <section class="block" aria-labelledby="ch"><h2 id="ch">Three ways to reach them</h2>
 <div class="cards">
@@ -255,7 +256,7 @@ ${rangeSwitch("/report", days, `k=${encodeURIComponent(key)}&`)}</section>
   <div class="kpi glass">${countUp(views && views.total)}<span>Page views</span><small>Last ${days} days</small></div>
   <div class="kpi glass">${countUp(applies && applies.total)}<span>Clicks to apply</span><small>Last ${days} days</small></div>
   <div class="kpi glass">${countUp(views && views.total ? Math.round(((applies && applies.total) || 0) / views.total * 1000) / 10 : 0, "%")}<span>Apply rate</span><small>Apply clicks per page view</small></div>
-</div><p class="note" style="margin-top:10px">The media kit shows page views from ${fmt(SHOW_VIEWS)} and clicks from ${fmt(SHOW_APPLIES)} a month. Until then it hides them.</p></section>
+</div><p class="note" style="margin-top:10px">The media kit shows the countries chart (as percentages) from ${fmt(SHOW_COUNTRIES)} page views, and page view and click totals from ${fmt(SHOW_VIEWS)} and ${fmt(SHOW_APPLIES)} a month.</p></section>
 ${views ? `<section class="block"><h2>Page views per day</h2><div class="panel glass">${dayChart(views.byDay, views.from, views.to, "page views")}</div></section>` : ""}
 ${applies ? `<section class="block"><h2>Apply clicks per day</h2><div class="panel glass">${dayChart(applies.byDay, views ? views.from : applies.byDay[0]?.day, views ? views.to : new Date().toISOString().slice(0, 10), "apply clicks")}</div></section>` : ""}
 <div class="two">
