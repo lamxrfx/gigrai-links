@@ -16,6 +16,7 @@ const I = {
   ig: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6"/>',
   mega: '<path d="m3 11 15-6v14L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
   ext: '<path d="M7 17 17 7M9 7h8v8"/>',
+  news: '<path d="M4 5h13v14a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v10a2 2 0 0 1-2 2"/><path d="M8 9h5M8 13h5M8 17h3"/>',
   kit: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
 };
 const svg = (d, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
@@ -27,6 +28,7 @@ const MENU = [
     { href: "/platforms", text: "Platforms", icon: "grid" },
   ] },
   { label: "Learn", items: [
+    { href: "/news", text: "News", icon: "news" },
     { href: "/guides", text: "Guides", icon: "book" },
     { href: "/#earnings", text: "Earnings calculator", icon: "calc" },
     { href: "/#faq", text: "FAQ", icon: "help" },

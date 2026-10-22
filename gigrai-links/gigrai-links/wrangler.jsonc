@@ -10,9 +10,18 @@
   },
   // Anonymous visit and click counts (media kit and sponsor reports). See stats.js
   "durable_objects": {
-    "bindings": [{ "name": "STATS", "class_name": "Stats" }]
+    "bindings": [
+      { "name": "STATS", "class_name": "Stats" },
+      // News headlines and blog posts. See content.js
+      { "name": "CONTENT", "class_name": "Content" }
+    ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Stats"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Stats"] },
+    { "tag": "v2", "new_sqlite_classes": ["Content"] }
+  ],
+  // Pull the latest news headlines every hour (see news-sources.js)
+  "triggers": { "crons": ["7 * * * *"] },
   "observability": {
     "enabled": true
   },

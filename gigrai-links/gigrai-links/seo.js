@@ -87,7 +87,7 @@ const BELL = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke
 export const ARROW = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 export const CHECK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
 
-const NAV = [["/", "Find jobs"], ["/jobs", "All roles"], ["/platforms", "Platforms"], ["/guides", "Guides"]];
+const NAV = [["/", "Find jobs"], ["/jobs", "All roles"], ["/platforms", "Platforms"], ["/guides", "Guides"], ["/news", "News"]];
 
 const CO_NAV = [["/advertise", "Overview"], ["/advertise#options", "Prices"], ["/media-kit", "Media kit"]];
 const CHAT = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>';

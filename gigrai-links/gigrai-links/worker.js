@@ -4,6 +4,11 @@ import { track, isHuman, readStats, signKey, keyOk, daysAgo } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
 export { Stats } from "./stats.js";
+export { Content } from "./content.js";
+import { content, refreshNews } from "./content.js";
+import { newsIndex, postPage, postsRss, adminHome, adminEditor } from "./news.js";
+import { CATEGORIES } from "./news-sources.js";
+import { slugify } from "./seo.js";
 import SPONSORED from "./sponsored.json";
 import { menuButton, drawerHtml } from "./nav.js";
 import { GUIDES } from "./guides.js";
@@ -20,6 +25,11 @@ const json = (body, status = 200) =>
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 export default {
+  // Hourly (see "triggers" in wrangler.jsonc): pull the latest headlines
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(refreshNews(env));
+  },
+
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     // Count a human page view (anonymous daily totals for the media kit)
@@ -145,7 +155,7 @@ export default {
       return text(`google.com, ${pub}, DIRECT, f08c47fec0942fa0\n`, 3600);
     }
     if (url.pathname === "/robots.txt") {
-      return text(`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /go/\nDisallow: /join/\nDisallow: /picks\nDisallow: /report\n\nSitemap: ${url.origin}/sitemap.xml\n`, 3600);
+      return text(`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /go/\nDisallow: /join/\nDisallow: /picks\nDisallow: /report\nDisallow: /admin\n\nSitemap: ${url.origin}/sitemap.xml\n`, 3600);
     }
     if (url.pathname === "/sitemap.xml") return sitemap(url, env, ctx);
 
@@ -190,6 +200,41 @@ export default {
       const to = (sponsor.until || today) < today ? sponsor.until : today;
       const stats = (await readStats(env, { kind: "sponsor", k: sponsor.id, from, to })) || { total: 0, byDay: [], bySrc: [], byCountry: [] };
       return nocache(sponsorReportPage({ origin: url.origin, sponsor, stats, from, to: to < from ? from : to }));
+    }
+
+    // ---- News: /news, /news/rss.xml, /news/<slug> ----
+    if (request.method === "GET" && /^\/news\/?$/.test(url.pathname)) {
+      const db = content(env);
+      if (!db) return Response.redirect(new URL("/", url).toString(), 302);
+      const cat = CATEGORIES.some(c => c.id === url.searchParams.get("cat")) ? url.searchParams.get("cat") : "";
+      const page = Math.max(1, Math.min(50, parseInt(url.searchParams.get("page") || "1", 10) || 1));
+      const perPage = 25;
+      const [posts, list, fetched] = await Promise.all([db.listPosts({ cat, limit: 13 }), db.listNews({ cat, limit: perPage, offset: (page - 1) * perPage }), db.lastFetched()]);
+      // Top up if the hourly job hasn't run for a while
+      if (!fetched || Date.now() - Date.parse(fetched) > 2 * 3600e3) ctx.waitUntil(refreshNews(env));
+      view("news");
+      return decorate(newsIndex({ origin: url.origin, posts, news: list.rows, total: list.total, cat, page, perPage, fetched }), url, env, ctx, "/news");
+    }
+    if (request.method === "GET" && url.pathname === "/news/rss.xml") {
+      const db = content(env);
+      return postsRss(url.origin, db ? await db.listPosts({ limit: 30 }) : []);
+    }
+    const nm = request.method === "GET" && url.pathname.match(/^\/news\/([a-z0-9-]{1,80})\/?$/);
+    if (nm) {
+      const db = content(env);
+      const post = db ? await db.getPost(nm[1]) : null;
+      const preview = url.searchParams.get("preview") === "1" && (await keyOk(env, "owner", url.searchParams.get("k") || ""));
+      if (!post || (post.status !== "published" && !preview)) return Response.redirect(new URL("/news", url).toString(), 302);
+      const more = (await db.listPosts({ limit: 4 })).filter(p => p.slug !== post.slug).slice(0, 3);
+      view("post");
+      const res = postPage({ origin: url.origin, post, more, platforms: PLATFORM_CONFIG.platforms, preview: post.status !== "published" });
+      if (post.status !== "published") { const h = new Headers(res.headers); h.set("cache-control", "private, no-store"); return new Response(res.body, { headers: h }); }
+      return decorate(res, url, env, ctx, "/news");
+    }
+
+    // ---- Private blog editor: /admin?k=<owner key> ----
+    if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
+      return handleAdmin(request, url, env, ctx);
     }
 
     // ---- Platforms page and tracked sign-up links (/join/<platform>?src=...) ----
@@ -339,11 +384,16 @@ async function sitemap(url, env, ctx) {
     { loc: `${o}/jobs`, freq: "hourly", pri: "0.9" },
     { loc: `${o}/guides`, freq: "weekly", pri: "0.7" },
     { loc: `${o}/platforms`, freq: "daily", pri: "0.8" },
+    { loc: `${o}/news`, freq: "hourly", pri: "0.8" },
     { loc: `${o}/advertise`, freq: "monthly", pri: "0.4" },
     { loc: `${o}/media-kit`, freq: "weekly", pri: "0.4" },
     ...GUIDES.map(g => ({ loc: `${o}/guides/${g.slug}`, freq: "monthly", pri: "0.8", mod: g.updated })),
     ...SITEMAP_SEARCHES.map(s => ({ loc: `${o}/?q=${encodeURIComponent(s)}`, freq: "daily", pri: "0.7" })),
   ];
+  try {
+    const db = content(env);
+    if (db) for (const p of await db.listPosts({ limit: 200 })) urls.push({ loc: `${o}/news/${p.slug}`, freq: "weekly", pri: "0.7", mod: (p.updated || "").slice(0, 10) });
+  } catch {}
   try {
     for (const j of await loadFeed(env, ctx)) {
       urls.push({ loc: o + jobPath(j), freq: "daily", pri: "0.6", mod: (j.posted || "").slice(0, 10) });
@@ -478,6 +528,76 @@ function eligibility(j, country) {
   if ((j.allow || []).length && !j.allow.includes(country)) return "no";
   return "yes";
 }
+// ---------------- private blog editor ----------------
+async function handleAdmin(request, url, env, ctx) {
+  const noStore = (res) => { const h = new Headers(res.headers); h.set("cache-control", "private, no-store"); h.set("x-robots-tag", "noindex"); return new Response(res.body, { status: res.status, headers: h }); };
+  const db = content(env);
+  let form = null;
+  if (request.method === "POST") {
+    try { form = await request.formData(); } catch { return new Response("Bad request", { status: 400 }); }
+    const origin = request.headers.get("origin");
+    if (origin && new URL(origin).host !== url.host) return new Response("Forbidden", { status: 403 });
+  }
+  const k = (form ? form.get("k") : url.searchParams.get("k")) || "";
+  if (!db || !(await keyOk(env, "owner", String(k)))) return noStore(reportsOff(url.origin));
+  const back = (msg) => Response.redirect(new URL(`/admin?k=${encodeURIComponent(k)}${msg ? "&msg=" + encodeURIComponent(msg) : ""}`, url).toString(), 303);
+  const platforms = PLATFORM_CONFIG.platforms;
+
+  if (url.pathname === "/admin" && request.method === "GET") {
+    const [posts, news, fetched] = await Promise.all([db.listPosts({ status: "all", limit: 100 }), db.listNews({ limit: 60, includeHidden: true }), db.lastFetched()]);
+    return noStore(adminHome({ k, posts, news: news.rows, msg: url.searchParams.get("msg") || "", fetched }));
+  }
+  if (url.pathname === "/admin/post" && request.method === "GET") {
+    const slug = url.searchParams.get("slug") || "";
+    if (slug) {
+      const post = await db.getPost(slug);
+      if (!post) return back("That post wasn't found.");
+      return noStore(adminEditor({ k, post, isNew: false, platforms }));
+    }
+    let post = null;
+    const from = url.searchParams.get("from");
+    if (from) {
+      const n = await db.getNews(from);
+      if (n) post = { title: n.title, cat: n.cat, summary: "", body: "", sources: `${n.source}: ${n.title} | ${n.link}`, author: "GigrAI" };
+    }
+    return noStore(adminEditor({ k, post, isNew: true, platforms }));
+  }
+  if (url.pathname === "/admin/post" && request.method === "POST") {
+    const f = (n, max) => String(form.get(n) || "").replace(/\r/g, "").trim().slice(0, max);
+    const title = f("title", 160);
+    const status = form.get("status") === "published" ? "published" : "draft";
+    const post = {
+      title, status,
+      slug: slugify(f("slug", 80) || title).slice(0, 80),
+      cat: CATEGORIES.some(c => c.id === form.get("cat")) ? String(form.get("cat")) : "ai-work",
+      summary: f("summary", 300), body: f("body", 40000), sources: f("sources", 4000),
+      affiliate: platforms.some(p => p.id === form.get("affiliate") && p.active) ? String(form.get("affiliate")) : "",
+      author: f("author", 60) || "GigrAI",
+      image: /^(https:\/\/|\/)[^\s"'<>]+$/.test(f("image", 300)) ? f("image", 300) : "",
+    };
+    const original = f("original", 80);
+    if (!title) return noStore(adminEditor({ k, post, isNew: !original, error: "Add a headline first.", platforms }));
+    if (status === "published" && post.body.length < 80) return noStore(adminEditor({ k, post, isNew: !original, error: "The article is very short. Add more before publishing, or save it as a draft.", platforms }));
+    const r = await db.savePost(post, original);
+    if (!r.ok) return noStore(adminEditor({ k, post, isNew: !original, error: r.error, platforms }));
+    return back(status === "published" ? `Published: "${title}" is live at /news/${post.slug}` : `Saved as a draft: "${title}"`);
+  }
+  if (url.pathname === "/admin/delete" && request.method === "POST") {
+    await db.deletePost(String(form.get("slug") || ""));
+    return back("Post deleted.");
+  }
+  if (url.pathname === "/admin/news" && request.method === "POST") {
+    await db.setHidden(String(form.get("id") || ""), form.get("hide") === "1");
+    return back(form.get("hide") === "1" ? "Headline hidden from /news." : "Headline shown on /news again.");
+  }
+  if (url.pathname === "/admin/refresh" && request.method === "POST") {
+    const r = await refreshNews(env);
+    const bad = (r.sources || []).filter(s => !s.ok).map(s => s.id);
+    return back(`Fetched headlines: ${r.added || 0} new.${bad.length ? " Couldn't reach: " + bad.join(", ") + "." : ""}`);
+  }
+  return back("");
+}
+
 // ?days=7|30|90 on the stats pages (default 30)
 const pickDays = (url) => ([7, 30, 90].includes(+url.searchParams.get("days")) ? +url.searchParams.get("days") : 30);
 
