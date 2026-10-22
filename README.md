@@ -13,6 +13,7 @@ Hosted on **Cloudflare Workers** (project `gigrai-links`). Every push to `main` 
 | `gigrai-links/gigrai-links/public/platforms.json` | **The one list of platforms.** Platform rows on the page and job feeds both come from here. |
 | `gigrai-links/gigrai-links/public/index.html` | The homepage: search, filters, role details (`?role=<id>`), saved, calculator, platforms, FAQ. |
 | `gigrai-links/gigrai-links/public/picks/index.html` | `/picks`: builds ready-to-paste WhatsApp posts (not linked anywhere). |
+| `gigrai-links/gigrai-links/seo.js` | Pages for Google: `/jobs` (every live role) and `/jobs/<id>/<slug>` (one role, with JobPosting data for Google's jobs panel). Closed roles return 404. |
 | `gigrai-links/gigrai-links/worker.js` | Server code: `/api/jobs` (live search), `/api/job` (one role + description), `/go/<id>` (tracked apply redirect), `/api/click` (tap counter), `/api/subscribe` (email signup, switched off). |
 | `gigrai-links/gigrai-links/wrangler.jsonc` | Cloudflare settings. |
 
@@ -50,3 +51,9 @@ If one platform's feed fails, the others keep working, and the error shows in Cl
 - Search pre-filled for posts and Stories: `remotegigrai.com/?q=photographer`
 - Taps: Cloudflare → Observability, search `link_click`
 - What people search for: Cloudflare → Observability, search `job_search`
+
+## Google Search
+
+- Search Console: add `remotegigrai.com` as a Domain property (TXT record in Cloudflare DNS), then submit `sitemap.xml`.
+- The sitemap lists the homepage, `/jobs`, popular searches and every live role page. It updates itself as roles open and close.
+- Roles with a full description (Mercor) carry JobPosting data, so they can appear in Google's jobs panel. micro1 roles have no description in their feed, so they get a page but no JobPosting data.

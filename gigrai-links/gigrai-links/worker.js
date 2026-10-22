@@ -1,4 +1,5 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
+import { rolePage, jobsIndex, roleGone, jobPath } from "./seo.js";
 // Serves the static link page from ./public and handles one API route:
 //   POST /api/subscribe  { email, name }  -> adds the person to the MailerLite "GigrAI Jobs" group.
 // Static files are served before this code runs, so only unmatched paths reach it.
@@ -130,6 +131,25 @@ export default {
     }
     if (url.pathname === "/sitemap.xml") return sitemap(url, env, ctx);
 
+    // ---- Role pages for Google: /jobs and /jobs/<id>/<slug> ----
+    if (request.method === "GET" && (url.pathname === "/jobs" || url.pathname === "/jobs/")) {
+      let feed;
+      try { feed = await loadFeed(env, ctx); } catch { return Response.redirect(new URL("/", url).toString(), 302); }
+      return decorate(jobsIndex(feed, url.origin, PLATFORM_CONFIG.platforms), url, env, ctx, "/jobs");
+    }
+    const jm = request.method === "GET" && url.pathname.match(/^\/jobs\/([^/]+)(?:\/([^/]*))?\/?$/);
+    if (jm) {
+      const id = decodeURIComponent(jm[1]);
+      if (!/^[a-z0-9]{1,30}-[A-Za-z0-9_-]{1,80}$/.test(id)) return decorate(roleGone(url.origin), url, env, ctx, "/jobs");
+      let feed;
+      try { feed = await loadFeed(env, ctx); } catch { return new Response("Live roles are unavailable right now. Please try again shortly.", { status: 503, headers: { "retry-after": "600" } }); }
+      const j = feed.find(x => x.id === id);
+      if (!j) return decorate(roleGone(url.origin), url, env, ctx, "/jobs");
+      // One address per role: fix old or missing title slugs
+      if (url.pathname !== jobPath(j)) return Response.redirect(new URL(jobPath(j), url).toString(), 301);
+      return decorate(rolePage(j, feed, url.origin, PLATFORM_CONFIG.platforms), url, env, ctx, "/jobs");
+    }
+
     const res = await env.ASSETS.fetch(request);
     // Pages listed in wrangler.jsonc "run_worker_first" get Google tags and link previews added here
     const page = url.pathname.replace(/\/index\.html$/, "/").replace(/\.html$/, "");
@@ -173,7 +193,7 @@ async function decorate(res, url, env, ctx, page) {
         meta = {
           title: `${j.title}${pay ? ` · ${pay}` : ""} · GigrAI`,
           desc: `${pay ? pay + " · " : ""}Remote · via ${j.via}. See the full details and apply free on GigrAI.`,
-          canonical: `${url.origin}/?role=${encodeURIComponent(j.id)}`,
+          canonical: url.origin + jobPath(j), // Google indexes the role's own page
         };
       }
     } catch {}
@@ -217,11 +237,12 @@ async function sitemap(url, env, ctx) {
   const urls = [
     { loc: `${o}/`, freq: "hourly", pri: "1.0" },
     { loc: `${o}/privacy`, freq: "monthly", pri: "0.3" },
+    { loc: `${o}/jobs`, freq: "hourly", pri: "0.9" },
     ...SITEMAP_SEARCHES.map(s => ({ loc: `${o}/?q=${encodeURIComponent(s)}`, freq: "daily", pri: "0.7" })),
   ];
   try {
     for (const j of await loadFeed(env, ctx)) {
-      urls.push({ loc: `${o}/?role=${encodeURIComponent(j.id)}`, freq: "daily", pri: "0.5", mod: (j.posted || "").slice(0, 10) });
+      urls.push({ loc: o + jobPath(j), freq: "daily", pri: "0.6", mod: (j.posted || "").slice(0, 10) });
     }
   } catch {}
   const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
