@@ -120,7 +120,7 @@ const FOOTER = `<footer class="foot"><div class="wrap">
   <div class="f-bottom">
     <span>© __YEAR__ GigrAI · remotegigrai.com</span>
     <span>Some links are referral links. It costs you nothing and doesn't change your pay.</span>
-    <span><a href="/jobs">Browse all roles</a> · <a href="/guides">Guides</a> · <a href="/advertise">Advertise</a> · <a href="/privacy">Privacy &amp; cookies</a></span>
+    <span><a href="/jobs">Browse all roles</a> · <a href="/guides">Guides</a> · <a href="/advertise">Advertise</a> · <a href="/media-kit">Media kit</a> · <a href="/privacy">Privacy &amp; cookies</a></span>
   </div>
 </div></footer>`;
 
