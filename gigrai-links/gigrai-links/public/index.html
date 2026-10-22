@@ -108,13 +108,31 @@ header.top .wrap{height:68px;display:flex;align-items:center;gap:36px}
 
 /* ---------- layout ---------- */
 .board{display:flex;gap:40px;align-items:flex-start;padding-bottom:40px}
-.filters{flex:0 0 250px;display:flex;flex-direction:column;gap:26px;position:sticky;top:92px}
-.filters h2{margin:0;font-size:18px;font-weight:800}
-.fgroup{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
-.fgroup legend{float:left;width:100%;margin-bottom:2px;font-size:15px;font-weight:700}
+.filters{flex:0 0 272px;display:flex;flex-direction:column;gap:0;position:sticky;top:92px;max-height:calc(100vh - 110px);overflow:auto;padding:6px 20px 8px;border-radius:24px;background:var(--glass);border:1px solid var(--line);scrollbar-width:thin}
+.filters h2{margin:0;font-size:18px;font-weight:800;display:flex;align-items:center;gap:8px}
+.fhead{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:58px}
+.fbadge{min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:#5b8cff;color:#fff;font-size:12px;font-weight:800;display:inline-grid;place-items:center}
+.fclear{margin-left:auto;background:none;border:0;color:#9fdcf0;font:inherit;font-size:14px;font-weight:700;cursor:pointer;padding:8px 4px}
+.fclear:hover{text-decoration:underline}
+.fclose{display:none}
+.fgroup{border:0;margin:0;padding:18px 0;display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--line)}
+.fgroup legend{float:left;width:100%;margin-bottom:2px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.switch{justify-content:space-between;gap:14px!important;cursor:pointer}
+.switch span{display:flex;flex-direction:column;gap:2px}.switch b{color:var(--text);font-weight:600}.switch small{color:var(--muted);font-size:12.5px}
+.fgroup .switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch i{flex:0 0 44px;height:26px;border-radius:999px;background:rgba(255,255,255,.14);position:relative;transition:background .2s}
+.switch i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#f2f4ff;transition:transform .2s}
+.switch input:checked + i{background:linear-gradient(90deg,#22d3ee,#5b8cff)}
+.switch input:checked + i::after{transform:translateX(18px)}
+.switch input:focus-visible + i{outline:3px solid #22d3ee;outline-offset:2px}
+.activef{display:flex;flex-wrap:wrap;gap:8px}.activef:empty{display:none}
+.activef button{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 12px 0 14px;border-radius:999px;border:1px solid rgba(91,140,255,.45);background:rgba(91,140,255,.14);color:var(--text);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.activef button:hover{background:rgba(91,140,255,.24)}
+.activef button svg{opacity:.8}
+.activef .clr{border-color:var(--line);background:none;color:#9fdcf0}
 .fgroup label{display:flex;align-items:center;gap:12px;font-size:14.5px;color:var(--soft);cursor:pointer;min-height:28px}
 .fgroup input{width:19px;height:19px;accent-color:#5b8cff;margin:0;flex:0 0 auto}
-.pay-out{font-size:22px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--text)}
+.pay-out{font-size:19px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--text)}
 .pay-range{position:relative;height:36px}
 .pay-track{position:absolute;left:11px;right:11px;top:50%;height:6px;margin-top:-3px;border-radius:999px;background:rgba(255,255,255,.1)}
 .pay-fill{position:absolute;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,#22d3ee,#2f6bff 55%,#8b3dff)}
@@ -126,8 +144,8 @@ header.top .wrap{height:68px;display:flex;align-items:center;gap:36px}
 .pay-range input[type=range]:focus-visible::-webkit-slider-thumb{outline:3px solid #22d3ee;outline-offset:2px}
 .pay-range input[type=range]:focus-visible::-moz-range-thumb{outline:3px solid #22d3ee;outline-offset:2px}
 .pay-ends{display:flex;justify-content:space-between;color:var(--muted);font-size:12.5px;margin-top:-4px}
-.pay-chips{display:flex;flex-wrap:wrap;gap:6px}
-.pay-chips button{height:34px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--soft);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.pay-chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pay-chips button{height:34px;padding:0 4px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--soft);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
 .pay-chips button[aria-pressed="true"]{background:#f2f4ff;color:#070914;border-color:#f2f4ff}
 .mini{width:20px;height:20px;border-radius:6px;object-fit:cover;background:#fff;vertical-align:middle;margin-right:6px}
 .src{display:inline-flex;align-items:center}
@@ -136,7 +154,7 @@ header.top .wrap{height:68px;display:flex;align-items:center;gap:36px}
 .fsel select{appearance:none;-webkit-appearance:none;width:100%;height:46px;padding:0 36px 0 14px;border-radius:12px;background:var(--glass);border:1px solid var(--line);font-size:14.5px;font-weight:600;cursor:pointer}
 .fsel select option{background:#121633}
 .fsel::after{content:"";position:absolute;right:16px;top:50%;width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-70%) rotate(45deg);pointer-events:none}
-.factions{display:flex;gap:10px}
+.factions{display:none}
 .btn-light{height:46px;padding:0 22px;border-radius:999px;border:0;background:var(--text);color:#0b0e1d;font-weight:700;cursor:pointer}
 .btn-ghost{height:46px;padding:0 22px;border-radius:999px;border:1px solid var(--line-2);background:transparent;font-weight:600;cursor:pointer}
 .btn-ghost:hover{background:var(--glass)}
@@ -271,9 +289,12 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
   .nav,.alerts,.nav-co{display:none}
   .alerts-icon{display:grid}
   .board{display:block}
-  .filters{position:fixed;inset:auto 0 0 0;top:auto;z-index:60;max-height:86vh;overflow:auto;padding:20px 20px calc(24px + env(safe-area-inset-bottom));border-radius:28px 28px 0 0;background:#0d1024;border-top:1px solid var(--line-2);transform:translateY(105%);transition:transform .28s ease-out;gap:22px}
+  .filters{position:fixed;inset:auto 0 0 0;top:auto;z-index:60;max-height:88vh;overflow:auto;overscroll-behavior:contain;padding:0 20px;border:0;border-radius:28px 28px 0 0;background:#0d1024;border-top:1px solid var(--line-2);transform:translateY(105%);transition:transform .28s ease-out}
+  .fhead{position:sticky;top:0;z-index:2;background:#0d1024;padding:14px 0 10px;margin:0}
+  .fclose{display:grid}
+  .factions{display:flex;position:sticky;bottom:0;z-index:2;background:linear-gradient(rgba(13,16,36,0),#0d1024 30%);padding:18px 0 calc(16px + env(safe-area-inset-bottom));margin-top:4px}
+  .factions .btn-light{flex:1;height:54px;font-size:16px}
   .filters.open{transform:none;box-shadow:0 -30px 60px rgba(0,0,0,.6)}
-  .sheet-head{display:flex;justify-content:space-between;align-items:center}
   .scrim{position:fixed;inset:0;z-index:55;background:rgba(3,4,10,.6);opacity:0;pointer-events:none;transition:opacity .2s}
   .scrim.open{opacity:1;pointer-events:auto}
   .platforms{grid-template-columns:1fr}
@@ -365,9 +386,9 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
     <div class="board">
       <div class="scrim" id="scrim"></div>
       <aside class="filters" id="filters" aria-label="Filters">
-        <div class="sheet-head"><h2>Filters</h2>
-          <button class="icon-btn" type="button" id="closeFilters" aria-label="Close filters"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-        <h2 class="desk-only" style="display:none">Filters</h2>
+        <div class="fhead"><h2>Filters<span class="fbadge" id="fBadge" hidden></span></h2>
+          <button class="fclear" type="button" id="resetFilters" hidden>Clear all</button>
+          <button class="icon-btn fclose" type="button" id="closeFilters" aria-label="Close filters"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
         <fieldset class="fgroup mob-only">
           <legend>Where you live</legend>
           <div class="fsel"><label class="sr" for="whereM">Where you live</label><select id="whereM"></select></div>
@@ -387,9 +408,9 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
           <div class="fsel"><label class="sr" for="field">Field</label><select id="field"><option value="">All fields</option></select></div>
         </fieldset>
         <fieldset class="fgroup"><legend class="sr">More</legend>
-          <label><input type="checkbox" id="hot"> High demand only</label>
+          <label class="switch"><span><b>High demand only</b><small>Roles the platform needs filled fast</small></span><input type="checkbox" id="hot" role="switch"><i aria-hidden="true"></i></label>
         </fieldset>
-        <div class="factions"><button class="btn-light" type="button" id="applyFilters">Show roles</button><button class="btn-ghost" type="button" id="resetFilters">Reset</button></div>
+        <div class="factions"><button class="btn-light" type="button" id="applyFilters">Show roles</button></div>
       </aside>
 
       <div class="results">
@@ -401,6 +422,7 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
             <button type="button" data-sort="saved" aria-pressed="false">Saved <span id="nSaved">0</span></button>
           </div>
         </div>
+        <div class="activef" id="activeF" aria-label="Active filters"></div>
         <div class="grid" id="grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
         <button class="more" type="button" id="more" hidden>Show more roles</button>
       </div>
@@ -688,7 +710,7 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
     $("filters").dispatchEvent(new Event("change"));
   }));
   paintPay();
-  $("payTop").addEventListener("change", e => { S.pay = +e.target.value; S.maxpay = 0; setPay(S.pay, PAY_TOP); search(); });
+  $("payTop").addEventListener("change", e => { S.pay = +e.target.value; S.maxpay = 0; setPay(S.pay, PAY_TOP); filterUI(); activeChips(); search(); });
   const desktop = () => matchMedia("(min-width: 1001px)").matches;
   function readFilters() {
     S.pay = +$("payMin").value || 0;
@@ -698,12 +720,61 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
     const all = [...document.querySelectorAll("input[name=via]")], on = all.filter(x => x.checked).map(x => x.value);
     S.via = on.length === all.length ? [] : on;
   }
-  $("filters").addEventListener("change", () => { if (desktop()) { readFilters(); search(); } });
-  $("applyFilters").addEventListener("click", () => { readFilters(); search(); closeSheet(); document.getElementById("count").scrollIntoView({ behavior: "smooth", block: "start" }); });
+  /* What the filter controls currently say (may be ahead of the results on phones, until "Show roles") */
+  function draft() {
+    const all = [...document.querySelectorAll("input[name=via]")], on = all.filter(x => x.checked).map(x => x.value);
+    const hi = +$("payMax").value;
+    return { pay: +$("payMin").value || 0, maxpay: hi >= PAY_TOP ? 0 : hi, field: $("field").value, hot: $("hot").checked, via: on.length === all.length ? [] : on };
+  }
+  const nActive = d => (d.pay || d.maxpay ? 1 : 0) + (d.field ? 1 : 0) + (d.hot ? 1 : 0) + (d.via.length ? 1 : 0);
+  function filterUI() {
+    const n = nActive(draft());
+    $("fBadge").hidden = !n; $("fBadge").textContent = n;
+    $("resetFilters").hidden = !n;
+  }
+  // Removable chips above the results for every filter that's on
+  const X = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+  function activeChips() {
+    const c = [];
+    if (S.pay || S.maxpay) c.push(["pay", S.maxpay ? `$${S.pay}–$${S.maxpay}/hr` : `$${S.pay}+/hr`]);
+    if (S.field) c.push(["field", S.field]);
+    if (S.hot) c.push(["hot", "High demand"]);
+    if (S.via.length) c.push(["via", S.via.map(v => { const i = document.querySelector(`input[name=via][value="${v}"]`); return i ? i.parentElement.textContent.replace(/\d+\s*$/, "").trim() : v; }).join(", ")]);
+    $("activeF").innerHTML = c.map(([k, t]) => `<button type="button" data-clear="${k}" aria-label="Remove filter: ${esc(t)}">${esc(t)}${X}</button>`).join("") + (c.length > 1 ? '<button type="button" class="clr" data-clear="all">Clear all</button>' : "");
+  }
+  $("activeF").addEventListener("click", e => {
+    const b = e.target.closest("button[data-clear]"); if (!b) return;
+    const k = b.dataset.clear;
+    if (k === "pay" || k === "all") setPay(0, PAY_TOP);
+    if (k === "field" || k === "all") $("field").value = "";
+    if (k === "hot" || k === "all") $("hot").checked = false;
+    if (k === "via" || k === "all") document.querySelectorAll("input[name=via]").forEach(x => x.checked = true);
+    readFilters(); filterUI(); activeChips(); search();
+  });
+  // Phones: the "Show roles" button says how many roles the filters will give
+  let countT, countSeq = 0;
+  function previewCount() {
+    clearTimeout(countT);
+    countT = setTimeout(async () => {
+      const d = draft(), my = ++countSeq;
+      const p = new URLSearchParams({ q: S.q, page: 1, limit: 1, src: SRC });
+      if (S.country) p.set("country", S.country);
+      if (d.pay) p.set("minpay", d.pay); if (d.maxpay) p.set("maxpay", d.maxpay);
+      if (d.field) p.set("field", d.field); if (d.hot) p.set("hot", "1"); if (d.via.length === 1) p.set("via", d.via[0]);
+      try {
+        const r = await (await fetch("/api/jobs?" + p)).json();
+        if (my === countSeq && r.ok) $("applyFilters").textContent = r.total ? `Show ${r.total} role${r.total === 1 ? "" : "s"}` : "No roles match: try widening";
+      } catch (_) {}
+    }, 250);
+  }
+  $("filters").addEventListener("input", () => { filterUI(); if (!desktop()) previewCount(); });
+  $("filters").addEventListener("change", () => { filterUI(); if (desktop()) { readFilters(); activeChips(); search(); } else previewCount(); });
+  $("applyFilters").addEventListener("click", () => { readFilters(); activeChips(); search(); closeSheet(); document.getElementById("count").scrollIntoView({ behavior: "smooth", block: "start" }); });
   $("resetFilters").addEventListener("click", () => {
     setPay(0, PAY_TOP); $("field").value = ""; $("hot").checked = false;
     document.querySelectorAll("input[name=via]").forEach(x => x.checked = true);
-    readFilters(); search();
+    filterUI();
+    if (desktop()) { readFilters(); activeChips(); search(); } else previewCount();
   });
   function setSort(v, quiet) {
     S.sort = v; document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.sort === v)));
@@ -730,7 +801,7 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
   $("more").addEventListener("click", () => { S.page++; run(true); });
 
   /* filter sheet (phone) */
-  const openSheet = () => { $("filters").classList.add("open"); $("scrim").classList.add("open"); $("openFilters").setAttribute("aria-expanded", "true"); $("closeFilters").focus(); };
+  const openSheet = () => { previewCount(); filterUI(); $("filters").classList.add("open"); $("scrim").classList.add("open"); $("openFilters").setAttribute("aria-expanded", "true"); $("closeFilters").focus(); };
   const closeSheet = () => { $("filters").classList.remove("open"); $("scrim").classList.remove("open"); $("openFilters").setAttribute("aria-expanded", "false"); };
   $("openFilters").addEventListener("click", openSheet);
   $("closeFilters").addEventListener("click", closeSheet);
