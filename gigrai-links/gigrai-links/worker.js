@@ -33,6 +33,11 @@ export default {
 
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // Always use the secure https:// address (Google had indexed the http:// one)
+    if (url.protocol === "http:" && !/^(localhost|127\.)/.test(url.hostname)) {
+      url.protocol = "https:";
+      return Response.redirect(url.toString(), 301);
+    }
     // Count a human page view (anonymous daily totals for the media kit)
     const view = (section) => { if (request.method === "GET" && isHuman(request)) track(env, ctx, request, "view", section, visitSource(request, url)); };
 

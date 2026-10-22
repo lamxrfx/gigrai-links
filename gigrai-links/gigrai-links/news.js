@@ -138,7 +138,7 @@ export function postPage({ origin, post, more, platforms, preview }) {
   const ld = {
     "@context": "https://schema.org", "@type": "NewsArticle", headline: post.title, description: post.summary || "",
     datePublished: when, dateModified: post.updated, author: { "@type": "Organization", name: post.author || "GigrAI", url: origin },
-    publisher: { "@type": "Organization", name: "GigrAI", logo: { "@type": "ImageObject", url: origin + "/icon.png" } },
+    publisher: { "@type": "Organization", name: "GigrAI", logo: { "@type": "ImageObject", url: origin + "/favicon-512.png", width: 512, height: 512 } },
     mainEntityOfPage: origin + "/news/" + post.slug, ...(post.image ? { image: [post.image] } : {}),
   };
   const body = `${STYLE}${crumbs([["/", "GigrAI"], ["/news", "News"], ["", catName(post.cat)]])}

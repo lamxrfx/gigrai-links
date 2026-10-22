@@ -160,8 +160,10 @@ ${canonical ? `<link rel="canonical" href="${esc(canonical)}">` : ""}
 <meta property="og:image" content="https://remotegigrai.com/og-image-v2.jpg">
 ${canonical ? `<meta property="og:url" content="${esc(canonical)}">` : ""}
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="/icon.png">
-<link rel="apple-touch-icon" href="/icon.png">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png">
+<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -320,7 +322,7 @@ ${more.length ? `<section class="block" aria-labelledby="mg"><h2 id="mg">More gu
       datePublished: g.updated, dateModified: g.updated, mainEntityOfPage: canonical,
       image: "https://remotegigrai.com/og-image-v2.jpg",
       author: { "@type": "Organization", name: "GigrAI", url: origin + "/" },
-      publisher: { "@type": "Organization", name: "GigrAI", logo: { "@type": "ImageObject", url: origin + "/icon.png" } },
+      publisher: { "@type": "Organization", name: "GigrAI", logo: { "@type": "ImageObject", url: origin + "/favicon-512.png", width: 512, height: 512 } },
     }, {
       "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
         { "@type": "ListItem", position: 1, name: "GigrAI", item: origin + "/" },
