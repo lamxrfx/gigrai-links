@@ -655,12 +655,26 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
   });
   function setSort(v, quiet) {
     S.sort = v; document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.sort === v)));
+    document.querySelectorAll(".mnav a").forEach(x => x.classList.remove("on"));
     $("mJobs").classList.toggle("on", v !== "saved"); $("mSaved").classList.toggle("on", v === "saved");
     if (!quiet) { S.page = 1; run(false); }
   }
   document.querySelector(".seg").addEventListener("click", e => { const b = e.target.closest("button[data-sort]"); if (b) setSort(b.dataset.sort); });
   $("mSaved").addEventListener("click", () => setSort("saved"));
   $("mJobs").addEventListener("click", () => { if (S.sort === "saved") setSort("new"); });
+  // Bottom bar (phones): scroll explicitly so every button works from any view, and light up the one tapped
+  document.querySelectorAll(".mnav a").forEach(a => a.addEventListener("click", e => {
+    const id = a.getAttribute("href").slice(1), target = document.getElementById(id);
+    if (!target) return;
+    e.preventDefault();
+    const go = () => {
+      const top = target.getBoundingClientRect().top + window.scrollY - (document.querySelector("header.top")?.offsetHeight || 0) - 8;
+      window.scrollTo({ top: Math.max(0, top), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    };
+    requestAnimationFrame(go); // after Saved/Jobs have re-drawn the list
+    try { history.replaceState(null, "", "#" + id); } catch (_) {}
+    document.querySelectorAll(".mnav a").forEach(x => x.classList.toggle("on", x === a));
+  }));
   $("more").addEventListener("click", () => { S.page++; run(true); });
 
   /* filter sheet (phone) */
