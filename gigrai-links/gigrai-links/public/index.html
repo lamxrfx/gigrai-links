@@ -114,6 +114,21 @@ header.top .wrap{height:68px;display:flex;align-items:center;gap:36px}
 .fgroup legend{float:left;width:100%;margin-bottom:2px;font-size:15px;font-weight:700}
 .fgroup label{display:flex;align-items:center;gap:12px;font-size:14.5px;color:var(--soft);cursor:pointer;min-height:28px}
 .fgroup input{width:19px;height:19px;accent-color:#5b8cff;margin:0;flex:0 0 auto}
+.pay-out{font-size:22px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums;color:var(--text)}
+.pay-range{position:relative;height:36px}
+.pay-track{position:absolute;left:11px;right:11px;top:50%;height:6px;margin-top:-3px;border-radius:999px;background:rgba(255,255,255,.1)}
+.pay-fill{position:absolute;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,#22d3ee,#2f6bff 55%,#8b3dff)}
+.fgroup .pay-range input[type=range]{position:absolute;left:0;top:0;width:100%;height:36px;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none;accent-color:auto}
+.pay-range input[type=range]::-webkit-slider-runnable-track{background:none;border:0;height:36px}
+.pay-range input[type=range]::-moz-range-track{background:none;border:0}
+.pay-range input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:auto;width:24px;height:24px;margin-top:6px;border-radius:50%;background:#f2f4ff;border:3px solid #5b8cff;box-shadow:0 4px 14px -4px rgba(0,0,0,.8);cursor:grab}
+.pay-range input[type=range]::-moz-range-thumb{pointer-events:auto;width:18px;height:18px;border-radius:50%;background:#f2f4ff;border:3px solid #5b8cff;cursor:grab}
+.pay-range input[type=range]:focus-visible::-webkit-slider-thumb{outline:3px solid #22d3ee;outline-offset:2px}
+.pay-range input[type=range]:focus-visible::-moz-range-thumb{outline:3px solid #22d3ee;outline-offset:2px}
+.pay-ends{display:flex;justify-content:space-between;color:var(--muted);font-size:12.5px;margin-top:-4px}
+.pay-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pay-chips button{height:34px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--soft);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+.pay-chips button[aria-pressed="true"]{background:#f2f4ff;color:#070914;border-color:#f2f4ff}
 .mini{width:20px;height:20px;border-radius:6px;object-fit:cover;background:#fff;vertical-align:middle;margin-right:6px}
 .src{display:inline-flex;align-items:center}
 .count{margin-left:auto;min-width:34px;padding:2px 8px;border-radius:999px;background:var(--ok-bg);color:var(--ok-fg);font-size:12px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums}
@@ -358,11 +373,15 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
           <div class="fsel"><label class="sr" for="whereM">Where you live</label><select id="whereM"></select></div>
         </fieldset>
         <fieldset class="fgroup" id="fPlatforms"><legend>Platform</legend></fieldset>
-        <fieldset class="fgroup"><legend>Top hourly rate</legend>
-          <label><input type="radio" name="pay" value="0" checked> Any pay</label>
-          <label><input type="radio" name="pay" value="50"> $50+</label>
-          <label><input type="radio" name="pay" value="100"> $100+</label>
-          <label><input type="radio" name="pay" value="150"> $150+</label>
+        <fieldset class="fgroup pay"><legend>Hourly pay</legend>
+          <output class="pay-out" id="payOut" for="payMin payMax" aria-live="polite">Any pay</output>
+          <div class="pay-range" id="payRange">
+            <div class="pay-track"><span class="pay-fill" id="payFill"></span></div>
+            <input type="range" id="payMin" min="0" max="250" step="5" value="0" aria-label="Minimum hourly pay">
+            <input type="range" id="payMax" min="0" max="250" step="5" value="250" aria-label="Maximum hourly pay">
+          </div>
+          <div class="pay-ends" aria-hidden="true"><span>$0</span><span>$250+</span></div>
+          <div class="pay-chips" role="group" aria-label="Quick picks"><button type="button" data-pay="0">Any</button><button type="button" data-pay="50">$50+</button><button type="button" data-pay="100">$100+</button><button type="button" data-pay="150">$150+</button></div>
         </fieldset>
         <fieldset class="fgroup"><legend>Field</legend>
           <div class="fsel"><label class="sr" for="field">Field</label><select id="field"><option value="">All fields</option></select></div>
@@ -489,7 +508,7 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
   $("where").innerHTML = opts; $("whereM").innerHTML = opts;
   const addCountry = (v, n) => { if (!v || COUNTRIES.some(c => c[0] === v)) return; COUNTRIES.push([v, n]); const o = `<option value="${v}">Open to: ${n}</option>`; $("where").insertAdjacentHTML("beforeend", o); $("whereM").insertAdjacentHTML("beforeend", o); };
 
-  const S = { q: "", country: store.get("gg_country", null), pay: 0, field: "", via: [], hot: false, sort: "new", page: 1, pages: 1, total: 0 };
+  const S = { q: "", country: store.get("gg_country", null), pay: 0, maxpay: 0, field: "", via: [], hot: false, sort: "new", page: 1, pages: 1, total: 0 };
   if (S.country === null) S.country = "";
   $("where").value = $("whereM").value = S.country;
   // No saved choice yet: default to the visitor's own country, or Anywhere if we can't tell
@@ -568,6 +587,7 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
     const p = new URLSearchParams({ q: S.q, page: S.page, sort: S.sort === "pay" ? "pay" : "new", src: SRC });
     if (S.country) p.set("country", S.country);
     if (S.pay) p.set("minpay", S.pay);
+    if (S.maxpay) p.set("maxpay", S.maxpay);
     if (S.field) p.set("field", S.field);
     if (S.hot) p.set("hot", "1");
     if (S.via.length === 1) p.set("via", S.via[0]);
@@ -640,10 +660,40 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
   function setCountry(v) { S.country = v; $("where").value = $("whereM").value = v; store.set("gg_country", v); }
   $("where").addEventListener("change", e => { setCountry(e.target.value); search(); });
   $("whereM").addEventListener("change", e => setCountry(e.target.value));
-  $("payTop").addEventListener("change", e => { S.pay = +e.target.value; document.querySelector(`input[name=pay][value="${S.pay}"]`).checked = true; search(); });
+  /* pay slider: two handles (min and max). 250 on the max handle means "no upper limit" */
+  const PAY_TOP = 250;
+  function paintPay() {
+    let lo = +$("payMin").value, hi = +$("payMax").value;
+    if (lo > hi) { if (document.activeElement === $("payMax")) { lo = hi; $("payMin").value = lo; } else { hi = lo; $("payMax").value = hi; } }
+    $("payFill").style.left = (lo / PAY_TOP * 100) + "%"; $("payFill").style.right = (100 - hi / PAY_TOP * 100) + "%";
+    const top = hi >= PAY_TOP;
+    $("payOut").textContent = !lo && top ? "Any pay" : top ? `$${lo}+ /hr` : `$${lo} – $${hi} /hr`;
+    document.querySelectorAll(".pay-chips button").forEach(b => b.setAttribute("aria-pressed", String(top && +b.dataset.pay === lo)));
+    $("payMin").style.zIndex = lo > PAY_TOP / 2 ? 3 : 1; $("payMax").style.zIndex = 2; // keep both handles grabbable
+    $("payMin").setAttribute("aria-valuetext", `$${lo} an hour`); $("payMax").setAttribute("aria-valuetext", top ? "no maximum" : `$${hi} an hour`);
+  }
+  function setPay(lo, hi) { $("payMin").value = lo; $("payMax").value = hi; paintPay(); }
+  ["payMin", "payMax"].forEach(id => $(id).addEventListener("input", paintPay));
+  // Tap anywhere on the bar: move the nearest handle there
+  $("payRange").addEventListener("pointerdown", e => {
+    if (e.target.matches("input")) return;
+    const r = $("payRange").getBoundingClientRect(), pad = 11;
+    const v = Math.round(Math.max(0, Math.min(1, (e.clientX - r.left - pad) / (r.width - pad * 2))) * PAY_TOP / 5) * 5;
+    const lo = +$("payMin").value, hi = +$("payMax").value;
+    if (Math.abs(v - lo) <= Math.abs(v - hi) && v <= hi) $("payMin").value = v; else $("payMax").value = v;
+    paintPay(); $("filters").dispatchEvent(new Event("change"));
+  });
+  document.querySelectorAll(".pay-chips button").forEach(b => b.addEventListener("click", () => {
+    setPay(+b.dataset.pay, PAY_TOP);
+    $("filters").dispatchEvent(new Event("change"));
+  }));
+  paintPay();
+  $("payTop").addEventListener("change", e => { S.pay = +e.target.value; S.maxpay = 0; setPay(S.pay, PAY_TOP); search(); });
   const desktop = () => matchMedia("(min-width: 1001px)").matches;
   function readFilters() {
-    S.pay = +(document.querySelector("input[name=pay]:checked") || {}).value || 0; $("payTop").value = String(S.pay);
+    S.pay = +$("payMin").value || 0;
+    S.maxpay = +$("payMax").value >= PAY_TOP ? 0 : +$("payMax").value;
+    $("payTop").value = [0, 50, 100, 150].includes(S.pay) && !S.maxpay ? String(S.pay) : "0";
     S.field = $("field").value; S.hot = $("hot").checked;
     const all = [...document.querySelectorAll("input[name=via]")], on = all.filter(x => x.checked).map(x => x.value);
     S.via = on.length === all.length ? [] : on;
@@ -651,7 +701,7 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
   $("filters").addEventListener("change", () => { if (desktop()) { readFilters(); search(); } });
   $("applyFilters").addEventListener("click", () => { readFilters(); search(); closeSheet(); document.getElementById("count").scrollIntoView({ behavior: "smooth", block: "start" }); });
   $("resetFilters").addEventListener("click", () => {
-    document.querySelector("input[name=pay][value='0']").checked = true; $("field").value = ""; $("hot").checked = false;
+    setPay(0, PAY_TOP); $("field").value = ""; $("hot").checked = false;
     document.querySelectorAll("input[name=via]").forEach(x => x.checked = true);
     readFilters(); search();
   });

@@ -726,6 +726,7 @@ async function handleJobs(url, env, ctx) {
   }
   const hot = url.searchParams.get("hot") === "1";
   const minpay = Math.max(0, Math.min(500, parseInt(url.searchParams.get("minpay") || "0", 10) || 0));
+  const maxpay = Math.max(0, Math.min(1000, parseInt(url.searchParams.get("maxpay") || "0", 10) || 0));
   const field = (url.searchParams.get("field") || "").slice(0, 60);
   const sort = url.searchParams.get("sort") === "pay" ? "pay" : "new";
   const via = (url.searchParams.get("via") || "").slice(0, 40);
@@ -737,6 +738,7 @@ async function handleJobs(url, env, ctx) {
     (!groups.length || matches(j, groups)) &&
     (!hot || j.hot) &&
     (!minpay || (j.max || j.min || 0) >= minpay) &&
+    (!maxpay || ((j.min || j.max) && (j.min || j.max) <= maxpay)) &&
     (!via || j.platform === via) &&
     (!country || eligibility(j, country) !== "no"));
   // field counts for the dropdown (before the field filter is applied)
