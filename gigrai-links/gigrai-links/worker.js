@@ -53,13 +53,13 @@ async function mailerliteFields(env) {
   fieldsReady = true;
 }
 
-export default {
+const app = {
   // Hourly (see "triggers" in wrangler.jsonc): pull the latest headlines
   async scheduled(event, env, ctx) {
     ctx.waitUntil(refreshNews(env));
   },
 
-  async fetch(request, env, ctx) {
+  async route(request, env, ctx) {
     const url = new URL(request.url);
     setChat(env.CHAT !== "off");
     // Always use the secure https:// address (Google had indexed the http:// one)
@@ -429,6 +429,28 @@ export default {
   },
 };
 
+// Security headers on every page and API response from the worker (static files get them from public/_headers)
+const CSP = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'";
+function secure(res, url) {
+  const r = new Response(res.body, res); // copy, so redirect/asset headers can be changed
+  const h = r.headers;
+  h.set("x-content-type-options", "nosniff");
+  h.set("x-frame-options", "SAMEORIGIN");
+  h.set("permissions-policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+  if (!h.has("content-security-policy")) h.set("content-security-policy", CSP);
+  if (url.protocol === "https:") h.set("strict-transport-security", "max-age=31536000; includeSubDomains");
+  // private pages carry the owner key in the address, so never send it on as a referrer
+  h.set("referrer-policy", /^\/(report|admin)/.test(url.pathname) ? "no-referrer" : "strict-origin-when-cross-origin");
+  return r;
+}
+
+export default {
+  scheduled: (event, env, ctx) => app.scheduled(event, env, ctx),
+  async fetch(request, env, ctx) {
+    return secure(await app.route(request, env, ctx), new URL(request.url));
+  },
+};
+
 // ---------------- Google AdSense, Search Console and link previews ----------------
 const text = (body, maxAge = 300) => new Response(body, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": `public, max-age=${maxAge}` } });
 
@@ -596,7 +618,7 @@ const ADAPTERS = {
       if (!j || !j.listingId || !j.title) return null;
       if (j.status !== "active" || j.deletedAt || j.disableApplications || j.isPrivate) return null;
       if (!/^[A-Za-z0-9_-]+$/.test(j.listingId)) return null;
-      const url = `https://work.mercor.com/jobs/${j.listingId}/${slug(j.title)}?referralCode=${encodeURIComponent(code)}&utm_source=referral`;
+      const url = `https://work.mercor.com/jobs/${encodeURIComponent(j.listingId)}/${slug(j.title)}?referralCode=${encodeURIComponent(code)}&utm_source=referral`;
       const hourly = (j.payRateFrequency || "hourly") === "hourly";
       const lo = +j.rateMin > 0 ? +j.rateMin : null, hi = +j.rateMax > 0 ? +j.rateMax : null;
       const tags = [];

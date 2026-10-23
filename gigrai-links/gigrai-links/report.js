@@ -278,8 +278,8 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
 @media(max-width:700px){.hud2{margin-top:4px}.hud2.min{display:block}.hudx{display:none}.hud.min .hudbody{display:block}.hud{position:static;width:auto;max-height:none;margin-top:10px;background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:4px 2px}}
 @media(prefers-reduced-motion:reduce){.pulse{animation:none}}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" integrity="sha384-Ukv1p/xTma6P4/2bY5KzWBw+ydSpXmhCMtyciIQVDJ1RmOxtCYNMF1uXT9T63H67" crossorigin="anonymous"></script>
 <script>
 (function(){
   var HIST=${data}, CC=${ccJson}, ISO="${ISO_NUM}", KEY=${JSON.stringify(key)}, mode="live", live=[];
