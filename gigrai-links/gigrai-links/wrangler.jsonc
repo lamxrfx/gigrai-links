@@ -38,7 +38,7 @@
     "GOOGLE_SITE_VERIFICATION": "",
     // Email job alerts: "off" until the ICO fee is paid and MailerLite has the business address.
     // Set to "on" to switch every "Job alerts" button to the email sign-up (WhatsApp stays as an option).
-    "EMAIL_SIGNUP": "off",
+    "EMAIL_SIGNUP": "on",
     // GigrAI assistant chat bubble: "on" or "off"
     "CHAT": "on",
     // Who writes the replies: "workers-ai" (free) or "anthropic" (Claude, needs the ANTHROPIC_API_KEY secret)
