@@ -17,6 +17,7 @@ const SRC = { ig: "Instagram", wa: "WhatsApp", featured: "Featured on site", sit
 const source = (s) => SRC[s] || (s ? s.charAt(0).toUpperCase() + s.slice(1) : "Other");
 
 // Thresholds: a number only appears in the public media kit once it's worth showing
+const BOT_KINDS = { search: "Search engines (Google, Bing…)", preview: "Link previews (WhatsApp, Instagram…)", ai: "AI crawlers (ChatGPT, Claude…)", seo: "SEO tools (Ahrefs, Semrush…)", ads: "Google AdSense checker", script: "Scripts and test tools", prefetch: "Browser preloading", "no-ua": "No browser details", other: "Other bots" };
 const SHOW_VIEWS = 300, SHOW_APPLIES = 30, SHOW_COUNTRIES = 100;
 
 const STYLE = `<style>
@@ -265,6 +266,7 @@ function liveMap(key, period, geo, ccViews = []) {
 .mapwrap{position:relative;padding:10px;-webkit-user-select:none;user-select:none}#map{display:block;width:100%;height:auto}#map{cursor:grab;overflow:hidden;border-radius:14px}#map:active{cursor:grabbing}#map .land{fill:#1a1f3d;stroke:#2c3363;stroke-width:.6;vector-effect:non-scaling-stroke;cursor:pointer;transition:fill .15s}#map .land:hover{fill:#232a52}#map .land.on{fill:#2a3368}#map .dot{cursor:pointer}#map .lbl{fill:#eef1ff;font-weight:700;paint-order:stroke;stroke:#0b0e1d;stroke-linejoin:round;pointer-events:none}
 .mapctl{position:absolute;top:18px;right:18px;display:flex;flex-direction:column;gap:6px}.mapctl button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line-2);background:rgba(13,16,36,.85);color:#fff;font:700 18px/1 inherit;font-family:inherit;cursor:pointer}.mapctl button.wide{width:auto;padding:0 8px;font-size:12px}.mapctl [hidden]{display:none}
 .maptip{position:absolute;pointer-events:none;padding:7px 10px;border-radius:10px;background:#f2f4ff;color:#0b0e1d;font-size:13px;font-weight:700;white-space:nowrap;transform:translate(-50%,-120%)}
+.flaglist{list-style:none;margin:0;padding:0;display:grid;gap:8px}.flaglist li{display:grid;gap:2px;padding:10px 12px;border-radius:12px;background:rgba(255,193,7,.07);border:1px solid rgba(255,193,7,.25)}.flaglist span{color:var(--muted);font-size:13px}
 .chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}.chips li{padding:6px 11px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:13px}.chips li b{margin-left:5px}
 h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
 @media(prefers-reduced-motion:reduce){.pulse{animation:none}}
@@ -359,7 +361,7 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
 </script>`;
 }
 
-export function adminPage({ origin, views, applies, sponsors, links, days = 30, allTime = false, key = "", enquiries = [], geo = [], ccViews = [] }) {
+export function adminPage({ origin, views, applies, sponsors, links, days = 30, allTime = false, key = "", enquiries = [], geo = [], ccViews = [], bots = null, flags = [] }) {
   const period = allTime ? "All time" : `Last ${days} days`;
   const sponsorBlocks = sponsors.length ? sponsors.map((s, i) => `<div class="rlink glass">
   <b>${esc(s.company || s.id)}</b> <span class="meta">${esc(s.start || "?")} to ${esc(s.until || "?")}${s.pin === false ? " · posts only" : " · pinned on site"} · ${fmt(s._unique || 0)} unique clicks${s._cap ? ` of ${fmt(s._cap)} paid for (£${(Math.min(s._unique || 0, s._cap) * s.cpc).toFixed(2)} of £${s.budget})${(s._unique || 0) >= s._cap ? " · <b>budget used, unpinned</b>" : ""}` : ""}</span>
@@ -384,6 +386,8 @@ ${applies ? `<section class="block"><h2>Apply clicks per day</h2><div class="pan
 <section class="block"><h2>Apply clicks by platform</h2><div class="panel glass">${applies ? barList(applies.byKey, (r) => r.k === "-" ? "Unknown" : r.k, applies.total, "apply clicks") : ""}</div></section>
 <section class="block"><h2>Apply clicks by channel</h2><div class="panel glass">${applies ? barList(applies.bySrc, (r) => source(r.src), applies.total, "apply clicks") : ""}</div></section>
 </div>
+<section class="block"><h2>Bots filtered out</h2><div class="panel glass">${bots && bots.total ? `<p class="note" style="margin:0 0 12px"><b>${fmt(bots.total)}</b> bot visits ignored (${esc(period.toLowerCase())}). None of these are in your visitor numbers above.</p>${barList(bots.byKey, (r) => BOT_KINDS[r.k] || "Other bots", bots.total, "bot visits")}` : `<p class="note" style="margin:0">No bot visits recorded for this period yet. Counting started 23 Oct 2026.</p>`}</div></section>
+<section class="block"><h2>Unusual activity</h2><div class="panel glass">${flags.length ? `<p class="note" style="margin:0 0 12px">Visitors who did more than 60 things in one minute, which is faster than most people browse. They're still counted. Have a look and judge for yourself.</p><ul class="flaglist">${flags.map((f) => `<li><b>${esc(f.city || "Unknown town")}, ${esc(country(f.cc))}</b><span>${longDate(f.day)} · ${esc(f.first)}${f.last && f.last !== f.first ? "–" + esc(f.last) : ""} UTC · up to ${fmt(f.peak)} actions a minute</span></li>`).join("")}</ul>` : `<p class="note" style="margin:0">Nothing unusual. We flag any visitor doing more than 60 things a minute.</p>`}</div></section>
 <section class="block"><h2>Booking requests</h2>${enquiries.length ? `<div class="rlinks">${enquiries.map((q) => { const e = q.data, v = e.vet || {}; return `<div class="rlink glass">
   <b>${esc(e.company)} · ${esc(e.option)}${e.budget ? ` · £${fmt(e.budget)} budget` : ""}</b>
   <span class="meta">${esc(q.ref)} · ${longDate(q.created.slice(0, 10))} · start ${esc(e.start)} · ${esc(e.name)} &lt;<a href="mailto:${esc(e.email)}?subject=${encodeURIComponent("Your GigrAI booking " + q.ref)}">${esc(e.email)}</a>&gt;</span>

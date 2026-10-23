@@ -1,6 +1,6 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
 import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat } from "./seo.js";
-import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals } from "./stats.js";
+import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, flagged } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
 import DRAFTS from "./drafts.json";
@@ -68,7 +68,11 @@ export default {
       return Response.redirect(url.toString(), 301);
     }
     // Count a human page view (anonymous daily totals for the media kit)
-    const view = (section) => { if (request.method === "GET" && isHuman(request)) { track(env, ctx, request, "view", section, visitSource(request, url)); presence(env, ctx, request, section, true); } };
+    const view = (section) => {
+      if (request.method !== "GET") return;
+      if (isHuman(request)) { track(env, ctx, request, "view", section, visitSource(request, url)); presence(env, ctx, request, section, true); }
+      else track(env, ctx, request, "bot", botKind(request), section); // counted separately, never in the visitor numbers
+    };
 
     // Email job alerts sign-up -> MailerLite (double opt-in). Only open when EMAIL_SIGNUP is "on".
     if (url.pathname === "/api/subscribe") {
@@ -261,7 +265,7 @@ export default {
         let days = pickDays(url);
         let from = allTime ? "2000-01-01" : daysAgo(days - 1);
         const to = new Date().toISOString().slice(0, 10);
-        const [views, applies, geo, ccViews] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to), countryTotals(env, "view", from, to)]);
+        const [views, applies, geo, ccViews, bots, flags] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to), countryTotals(env, "view", from, to), readStats(env, { kind: "bot", from }), flagged(env, from, to)]);
         if (allTime) { // from the day counting started
           from = (views && views.since) || to;
           days = Math.max(1, Math.round((Date.parse(to) - Date.parse(from)) / 864e5) + 1);
@@ -273,7 +277,7 @@ export default {
         sponsors.forEach(s => { s._unique = used[s.id] || 0; s._cap = clickCap(s); });
         const db = content(env);
         const enquiries = db ? await db.listEnquiries(30) : [];
-        return nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews }));
+        return nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags }));
       }
       const sponsor = ((SPONSORED && SPONSORED.featured) || []).find(s => s.id === rm[1]);
       if (!sponsor || !(await keyOk(env, "sponsor:" + sponsor.id, k))) return nocache(reportsOff(url.origin));

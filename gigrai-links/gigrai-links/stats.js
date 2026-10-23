@@ -8,6 +8,8 @@ const clean = (v, n = 40) => String(v || "").toLowerCase().replace(/[^a-z0-9_-]/
 const today = () => new Date().toISOString().slice(0, 10);
 export const daysAgo = (n) => new Date(Date.now() - n * 864e5).toISOString().slice(0, 10);
 
+const BURST = 60; // actions per minute from one visitor before we flag it
+
 export class Stats extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
@@ -23,6 +25,9 @@ export class Stats extends DurableObject {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS live (v TEXT PRIMARY KEY, ts INTEGER NOT NULL, cc TEXT, city TEXT, lat REAL, lon REAL, page TEXT)`);
     // Page views per town per day, for the map (no visitor details)
     this.sql.exec(`CREATE TABLE IF NOT EXISTS geo (day TEXT NOT NULL, cc TEXT NOT NULL, city TEXT NOT NULL, lat REAL, lon REAL, n INTEGER NOT NULL, PRIMARY KEY (day, cc, city))`);
+    // Unusually busy visitors (lots of actions in one minute), shown on the numbers page for a human to judge
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS burst (minute TEXT NOT NULL, v TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY (minute, v))`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS flags (day TEXT NOT NULL, v TEXT NOT NULL, cc TEXT, city TEXT, peak INTEGER NOT NULL, first TEXT, last TEXT, PRIMARY KEY (day, v))`);
     this.sql.exec(`INSERT OR IGNORE INTO meta (key, value) VALUES ('since', ?)`, today());
   }
 
@@ -38,6 +43,15 @@ export class Stats extends DurableObject {
       this.sql.exec(`INSERT INTO geo (day, cc, city, lat, lon, n) VALUES (?, ?, ?, ?, ?, 1)
         ON CONFLICT (day, cc, city) DO UPDATE SET n = n + 1`, today(), cc, city || "-", lat, lon);
     }
+    // Burst check: more than BURST actions in one minute from one visitor gets flagged
+    const minute = new Date(now).toISOString().slice(0, 16);
+    const b = [...this.sql.exec(`INSERT INTO burst (minute, v, n) VALUES (?, ?, 1) ON CONFLICT (minute, v) DO UPDATE SET n = n + 1 RETURNING n`, minute, clean(v, 32))][0].n;
+    if (b > BURST) {
+      const t = new Date(now).toISOString().slice(11, 16);
+      this.sql.exec(`INSERT INTO flags (day, v, cc, city, peak, first, last) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (day, v) DO UPDATE SET peak = MAX(peak, excluded.peak), last = excluded.last`, today(), clean(v, 32), cc, city, b, t, t);
+    }
+    if (Math.random() < 0.02) this.sql.exec(`DELETE FROM burst WHERE minute < ?`, new Date(now - 10 * 60e3).toISOString().slice(0, 16));
     if (Math.random() < 0.02) this.sql.exec(`DELETE FROM live WHERE ts < ?`, now - 15 * 60e3);
     if (Math.random() < 0.001) this.sql.exec(`DELETE FROM geo WHERE day < ?`, daysAgo(400));
   }
@@ -57,6 +71,11 @@ export class Stats extends DurableObject {
   // Totals per country (all of them) between two days, for the map
   countryTotals(kind, from, to = today()) {
     return [...this.sql.exec(`SELECT cc, SUM(n) AS n FROM hits WHERE kind = ? AND day >= ? AND day <= ? GROUP BY cc ORDER BY n DESC`, kind, from, to)];
+  }
+
+  // Flagged busy visitors between two days (newest first)
+  flagged(from, to = today()) {
+    return [...this.sql.exec(`SELECT day, cc, city, peak, first, last FROM flags WHERE day >= ? AND day <= ? ORDER BY day DESC, peak DESC LIMIT 50`, from, to)];
   }
 
   // Page views by town between two days, for the map
@@ -115,6 +134,21 @@ export class Stats extends DurableObject {
 // ---- helpers used by worker.js ----
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|discord|headless|lighthouse|pingdom|monitor|curl|wget|python|go-http|node-fetch|axios|mediapartners|google|bing|yandex|baidu|bytespider|petal|semrush|ahrefs|mj12|dotbot|gptbot|claude|anthropic|perplexity|amazonbot|applebot|scrapy|phantom|selenium|puppeteer|playwright/i;
 
+// What kind of bot is this? (for the "bots filtered" counter)
+export function botKind(request) {
+  const ua = request.headers.get("user-agent") || "";
+  const purpose = request.headers.get("purpose") || request.headers.get("sec-purpose") || "";
+  if (!ua) return "no-ua";
+  if (/prefetch|prerender/i.test(purpose)) return "prefetch";
+  if (/mediapartners|adsbot/i.test(ua)) return "ads";
+  if (/gptbot|chatgpt|oai-search|claude|anthropic|perplexity|bytespider|amazonbot|ccbot|cohere|meta-externalagent|diffbot/i.test(ua)) return "ai";
+  if (/facebookexternalhit|facebookcatalog|whatsapp|telegram|discord|slack|twitterbot|linkedinbot|skype|pinterest|redditbot|embedly|preview|vkshare|snapchat|instagram/i.test(ua)) return "preview";
+  if (/googlebot|google|bingbot|bing|yandex|baidu|duckduck|applebot|petal|seznam|sogou|naver/i.test(ua)) return "search";
+  if (/semrush|ahrefs|mj12|dotbot|rogerbot|screaming frog|serpstat|dataforseo|blexbot/i.test(ua)) return "seo";
+  if (/curl|wget|python|go-http|node|axios|scrapy|headless|puppeteer|playwright|selenium|phantom|lighthouse|monitor|pingdom|uptime|java\/|okhttp|libwww|httpclient/i.test(ua)) return "script";
+  return "other";
+}
+
 export function isHuman(request) {
   const ua = request.headers.get("user-agent") || "";
   if (!ua || BOT.test(ua) || !/mozilla/i.test(ua)) return false;
@@ -165,6 +199,11 @@ export async function liveNow(env) {
 export async function countryTotals(env, kind, from, to) {
   if (!env.STATS) return [];
   try { return await stub(env).countryTotals(kind, from, to); } catch (e) { console.error("country read failed", String(e)); return []; }
+}
+
+export async function flagged(env, from, to) {
+  if (!env.STATS) return [];
+  try { return await stub(env).flagged(from, to); } catch (e) { console.error("flag read failed", String(e)); return []; }
 }
 
 export async function geoReport(env, from, to) {
