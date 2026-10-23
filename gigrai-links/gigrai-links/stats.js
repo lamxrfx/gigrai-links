@@ -54,6 +54,11 @@ export class Stats extends DurableObject {
     };
   }
 
+  // Totals per country (all of them) between two days, for the map
+  countryTotals(kind, from, to = today()) {
+    return [...this.sql.exec(`SELECT cc, SUM(n) AS n FROM hits WHERE kind = ? AND day >= ? AND day <= ? GROUP BY cc ORDER BY n DESC`, kind, from, to)];
+  }
+
   // Page views by town between two days, for the map
   geoReport(from, to = today()) {
     return [...this.sql.exec(`SELECT cc, city, AVG(lat) AS lat, AVG(lon) AS lon, SUM(n) AS n FROM geo WHERE day >= ? AND day <= ? GROUP BY cc, city ORDER BY n DESC LIMIT 600`, from, to)];
@@ -155,6 +160,11 @@ export function presence(env, ctx, request, page, isView) {
 export async function liveNow(env) {
   if (!env.STATS) return null;
   try { return await stub(env).liveNow(5); } catch (e) { console.error("live read failed", String(e)); return null; }
+}
+
+export async function countryTotals(env, kind, from, to) {
+  if (!env.STATS) return [];
+  try { return await stub(env).countryTotals(kind, from, to); } catch (e) { console.error("country read failed", String(e)); return []; }
 }
 
 export async function geoReport(env, from, to) {

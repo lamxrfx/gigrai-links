@@ -246,7 +246,11 @@ ${billing && billing.billable >= billing.cap ? `<p class="note" style="padding:1
 // ---------- /report?k=... (Lamar only) ----------
 // World map: who's on the site now (refreshes itself) and where visits came from in the chosen range.
 // Drawn in the browser with d3 + a world outline from jsDelivr (this page is private, so no tracking concerns).
-function liveMap(key, period, geo) {
+// ISO country letters -> the number codes the world map uses (e.g. GB826)
+const ISO_NUM = "AD020AE784AF004AG028AI660AL008AM051AO024AQ010AR032AS016AT040AU036AW533AX248AZ031BA070BB052BD050BE056BF854BG100BH048BI108BJ204BL652BM060BN096BO068BQ535BR076BS044BT064BV074BW072BY112BZ084CA124CC166CD180CF140CG178CH756CI384CK184CL152CM120CN156CO170CR188CU192CV132CW531CX162CY196CZ203DE276DJ262DK208DM212DO214DZ012EC218EE233EG818EH732ER232ES724ET231FI246FJ242FK238FM583FO234FR250GA266GB826GD308GE268GF254GG831GH288GI292GL304GM270GN324GP312GQ226GR300GS239GT320GU316GW624GY328HK344HM334HN340HR191HT332HU348ID360IE372IL376IM833IN356IO086IQ368IR364IS352IT380JE832JM388JO400JP392KE404KG417KH116KI296KM174KN659KP408KR410KW414KY136KZ398LA418LB422LC662LI438LK144LR430LS426LT440LU442LV428LY434MA504MC492MD498ME499MF663MG450MH584MK807ML466MM104MN496MO446MP580MQ474MR478MS500MT470MU480MV462MW454MX484MY458MZ508NA516NC540NE562NF574NG566NI558NL528NO578NP524NR520NU570NZ554OM512PA591PE604PF258PG598PH608PK586PL616PM666PN612PR630PS275PT620PW585PY600QA634RE638RO642RS688RU643RW646SA682SB090SC690SD729SE752SG702SH654SI705SJ744SK703SL694SM674SN686SO706SR740SS728ST678SV222SX534SY760SZ748TC796TD148TF260TG768TH764TJ762TK772TL626TM795TN788TO776TR792TT780TV798TW158TZ834UA804UG800UM581US840UY858UZ860VA336VC670VE862VG092VI850VN704VU548WF876WS882XK983YE887YT175ZA710ZM894ZW716";
+function liveMap(key, period, geo, ccViews = []) {
+  const cc = {}; for (const r of ccViews) { const c = String(r.cc || "").toUpperCase(); if (/^[A-Z]{2}$/.test(c) && c !== "XX") cc[c] = (cc[c] || 0) + r.n; }
+  const ccJson = JSON.stringify(cc);
   const data = JSON.stringify((geo || []).filter(g => g.lat !== null && g.lon !== null).map(g => [Math.round(g.lat * 10) / 10, Math.round(g.lon * 10) / 10, g.n, g.city || "", g.cc])).replace(/</g, "\\u003c");
   return `<section class="block" id="live"><div class="live-head"><h2><span class="pulse"></span>On the site now: <b id="liveN">…</b></h2>
 <div class="seg" role="tablist"><button type="button" class="on" data-m="live">Live now</button><button type="button" data-m="hist">${esc(period)}</button></div></div>
@@ -269,7 +273,11 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
 <script>
 (function(){
-  var HIST=${data}, KEY=${JSON.stringify(key)}, mode="live", live=[];
+  var HIST=${data}, CC=${ccJson}, ISO="${ISO_NUM}", KEY=${JSON.stringify(key)}, mode="live", live=[];
+  var NUM2CC={}; for(var i=0;i<ISO.length;i+=5)NUM2CC[ISO.slice(i+2,i+5)]=ISO.slice(i,i+2);
+  var ccMax=d3.max(Object.values(CC))||1, ccShade=d3.scaleSqrt().domain([0,ccMax]).range([0,1]);
+  function viewsOf(f){var c=NUM2CC[f.id];return c?(CC[c]||0):0}
+  function colour(){gLand.selectAll(".land").style("fill",function(f){if(mode!=="hist")return null;var v=viewsOf(f);return v?d3.interpolateRgb("#2a2470","#a46bff")(ccShade(v)):null})}
   var svg=d3.select("#map"), proj=d3.geoNaturalEarth1().scale(175).translate([480,250]), path=d3.geoPath(proj);
   var defs=svg.append("defs"), gView=svg.append("g"), gLand=gView.append("g"), gDots=gView.append("g"), tip=document.getElementById("mapTip"), wrap=document.querySelector(".mapwrap");
   var names; try{names=new Intl.DisplayNames(["en"],{type:"region"})}catch(e){}
@@ -292,7 +300,7 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
 
   fetch("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json").then(function(r){return r.json()}).then(function(w){
     gLand.selectAll("path").data(topojson.feature(w,w.objects.countries).features.filter(function(f){return f.id!=="010"})).join("path").attr("class","land").attr("d",path)
-      .on("mousemove",function(e,f){if(e.pointerType!=="touch")showTip(e,f.properties.name)})
+      .on("mousemove",function(e,f){if(e.pointerType!=="touch")showTip(e,f.properties.name+(mode==="hist"?" · "+viewsOf(f).toLocaleString("en-GB")+" views":""))})
       .on("mouseleave",function(){tip.hidden=true})
       .on("click",function(e,f){
         e.stopPropagation();
@@ -301,9 +309,9 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
         var bb=path.bounds(f),dx=bb[1][0]-bb[0][0],dy=bb[1][1]-bb[0][1],cx=(bb[0][0]+bb[1][0])/2,cy=(bb[0][1]+bb[1][1])/2;
         var k=Math.max(1,Math.min(24,.8/Math.max(dx/960,dy/470)));
         flyTo(d3.zoomIdentity.translate(480,235).scale(k).translate(-cx,-cy));
-        showTip(e,f.properties.name);
+        showTip(e,f.properties.name+(mode==="hist"?" · "+viewsOf(f).toLocaleString("en-GB")+" views":""));
       });
-    gDots.raise();
+    gDots.raise();colour();
   }).catch(function(){});
 
   // Dots keep a sensible size on screen as you zoom; town names appear when zoomed in
@@ -330,8 +338,8 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
       .on("mouseleave",function(){tip.hidden=true})
       .on("click",function(e,r){e.stopPropagation();showTip(e,(r[3]?r[3]+", ":"")+cn(r[4])+" · "+r[2].toLocaleString("en-GB")+(mode==="live"?" now":" views"))});
     gDots.selectAll("g.dot").order();
-    size();
-    document.getElementById("mapNote").textContent=(mode==="live"?(live.length?"Visitors active in the last 5 minutes, by town. Updates every 20 seconds.":"Nobody on the site in the last 5 minutes. This updates every 20 seconds."):(HIST.length?"Page views by town (${esc(period).toLowerCase()}). Bigger glow = more visits.":"No town data for this range yet. The map started collecting today."))+" Tap a country to zoom in, pinch or scroll to zoom, drag to move.";
+    size();colour();
+    document.getElementById("mapNote").textContent=(mode==="live"?(live.length?"Visitors active in the last 5 minutes, by town. Updates every 20 seconds.":"Nobody on the site in the last 5 minutes. This updates every 20 seconds."):("Brighter countries = more page views (${esc(period).toLowerCase()}), "+Object.values(CC).reduce(function(a,b){return a+b},0).toLocaleString("en-GB")+" in total."+(HIST.length?" Dots show towns, recorded since 23 Oct 2026.":"")))+" Tap a country to zoom in, pinch or scroll to zoom, drag to move.";
   }
   function chips(id,rows,label){document.getElementById(id).innerHTML=rows.length?rows.map(function(r){return "<li>"+label(r)+"<b>"+r.n+"</b></li>"}).join(""):"<li>None right now</li>"}
   function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
@@ -351,7 +359,7 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
 </script>`;
 }
 
-export function adminPage({ origin, views, applies, sponsors, links, days = 30, allTime = false, key = "", enquiries = [], geo = [] }) {
+export function adminPage({ origin, views, applies, sponsors, links, days = 30, allTime = false, key = "", enquiries = [], geo = [], ccViews = [] }) {
   const period = allTime ? "All time" : `Last ${days} days`;
   const sponsorBlocks = sponsors.length ? sponsors.map((s, i) => `<div class="rlink glass">
   <b>${esc(s.company || s.id)}</b> <span class="meta">${esc(s.start || "?")} to ${esc(s.until || "?")}${s.pin === false ? " · posts only" : " · pinned on site"} · ${fmt(s._unique || 0)} unique clicks${s._cap ? ` of ${fmt(s._cap)} paid for (£${(Math.min(s._unique || 0, s._cap) * s.cpc).toFixed(2)} of £${s.budget})${(s._unique || 0) >= s._cap ? " · <b>budget used, unpinned</b>" : ""}` : ""}</span>
@@ -362,7 +370,7 @@ export function adminPage({ origin, views, applies, sponsors, links, days = 30, 
   const body = `<section class="hero sm"><span class="eyebrow"><i></i>Private · only for you</span><h1>GigrAI <span class="grad-text">numbers</span></h1>
 <p>${period}. Counting started ${views ? longDate(views.since) : "-"}. Bookmark this page and don't share the link.</p>
 ${rangeSwitch("/report", days, `k=${encodeURIComponent(key)}&`, allTime)}</section>
-${liveMap(key, period, geo)}
+${liveMap(key, period, geo, ccViews)}
 <section class="block"><div class="kpis">
   <div class="kpi glass">${countUp(views && views.total)}<span>Page views</span><small>${period}</small></div>
   <div class="kpi glass">${countUp(applies && applies.total)}<span>Clicks to apply</span><small>${period}</small></div>
