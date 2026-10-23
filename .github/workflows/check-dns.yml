@@ -1,0 +1,17 @@
+# Shows the domain's email (MX/SPF) records as an annotation. Runs when this file changes.
+name: Check email DNS
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/check-dns.yml"]
+  workflow_dispatch: {}
+jobs:
+  dns:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - run: |
+          MX=$(dig +short MX remotegigrai.com @1.1.1.1 | tr '\n' ' ')
+          TXT=$(dig +short TXT remotegigrai.com @1.1.1.1 | grep -i spf | tr '\n' ' ')
+          NS=$(dig +short NS remotegigrai.com @1.1.1.1 | tr '\n' ' ')
+          echo "::notice title=Email DNS::MX: ${MX:-none}%0ASPF: ${TXT:-none}%0ANS: ${NS:-none}"
