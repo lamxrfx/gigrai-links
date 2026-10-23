@@ -386,7 +386,11 @@ export default {
     if (gm) {
       const g = GUIDES.find(x => x.slug === gm[1]);
       if (g) view("guides");
-      if (g) return decorate(guidePage(g, GUIDES, url.origin), url, env, ctx, "/guides");
+      if (g) {
+        let roles = [];
+        try { roles = guideRoles(g, await loadFeed(env, ctx)); } catch {}
+        return decorate(guidePage(g, GUIDES, url.origin, roles, PLATFORM_CONFIG.platforms), url, env, ctx, "/guides");
+      }
       return Response.redirect(new URL("/guides", url).toString(), 301);
     }
 
@@ -681,6 +685,23 @@ async function notifyEnquiry(env, ref, e, vet) {
     "MIME-Version: 1.0", "Content-Type: text/plain; charset=utf-8", "Content-Transfer-Encoding: base64", "", b64(body).replace(/.{76}/g, "$&\r\n"),
   ].join("\r\n");
   await env.NOTIFY.send(new EmailMessage(from, to, raw));
+}
+
+// 3 live roles for the end of a guide: the guide's platform first, roles most people can do, best pay
+const EXPERT = /doctor|nurs|physician|medical|clinic|lawyer|attorney|legal|paralegal|dentist|pharmac|phd|professor|surgeon|radiolog|psychiatr/i;
+const EASY = /generalist|writ|editor|annotat|evaluat|rater|review|tester|english|content|research|quality|data label/i;
+function guideRoles(g, feed) {
+  const want = ["micro1", "mercor", "ethos"].filter(p => g.slug.includes(p));
+  const paid = feed.filter(j => j.min || j.max);
+  const score = (j) => (want.includes(j.platform) ? 2 : 0) + (EASY.test(j.title) ? 3 : 0) - (EXPERT.test(j.title) ? 4 : 0) + (j.hot ? 1 : 0) + Math.min(2, (j.max || j.min || 0) / 50);
+  const out = [], seen = new Set();
+  for (const j of paid.slice().sort((a, b) => score(b) - score(a))) {
+    const key = j.title.toLowerCase().replace(/\s*\d+$/, "");
+    if (seen.has(key)) continue; // no near-duplicate titles
+    seen.add(key); out.push(j);
+    if (out.length === 3) break;
+  }
+  return out;
 }
 
 // ---------------- GigrAI assistant ----------------

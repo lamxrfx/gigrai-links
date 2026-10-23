@@ -175,7 +175,8 @@ a.card{text-decoration:none;color:var(--text)}
   .role{grid-template-columns:1fr}
   .apply-card{display:none}
   .mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;gap:12px;align-items:center;padding:12px max(16px,env(safe-area-inset-left)) calc(12px + env(safe-area-inset-bottom));background:rgba(9,11,26,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line)}
-  .mbar .pay{font-size:20px;flex:0 0 auto}
+  .mbar .pay{font-size:20px;flex:0 0 auto;display:flex;flex-direction:column;line-height:1.15}
+  .mbar .pay .free{font-size:12px;font-weight:700;color:#9ff0c5}
   .mbar .btn{flex:1;height:52px}
   body.has-mbar footer.foot .wrap{padding-bottom:calc(100px + env(safe-area-inset-bottom))}
 }

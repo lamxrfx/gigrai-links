@@ -171,7 +171,7 @@ ${canonical ? `<meta property="og:url" content="${esc(canonical)}">` : ""}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/site.css?v=5">
+<link rel="stylesheet" href="/site.css?v=6">
 ${ld.filter(Boolean).map((o) => `<script type="application/ld+json">${ldJson(o)}</script>`).join("\n")}
 </head>
 <body${bodyClass ? ` class="${bodyClass}"` : ""}>
@@ -253,7 +253,7 @@ export function rolePage(j, feed, origin, platforms) {
   </aside>
 </div>
 ${similar.length ? `<section class="block" aria-labelledby="sim"><h2 id="sim">Similar remote roles</h2><p class="lead">More live roles like this one.</p><div class="cards">${similar.map((x) => roleCard(x, platforms)).join("")}</div></section>` : ""}
-<div class="mbar">${payHtml(j) ? `<div class="pay">${payHtml(j)}</div>` : ""}<a class="btn btn-grad" href="${applyHref}" rel="nofollow sponsored" target="_blank">Apply free ${ARROW}</a></div>`;
+<div class="mbar">${payHtml(j) ? `<div class="pay">${payHtml(j)}<small class="free">Free to join</small></div>` : `<div class="pay"><small class="free">Free to join</small></div>`}<a class="btn btn-grad" href="${applyHref}" rel="nofollow sponsored" target="_blank">Apply on ${esc(j.via)} ${ARROW}</a></div>`;
 
   const desc = `${p ? p + " · " : ""}Remote ${j.title} role via ${j.via}. See the details and apply free on GigrAI.`.slice(0, 160);
   return html(shell({
@@ -306,7 +306,7 @@ function guideCard(g) {
   return `<a class="card" href="/guides/${g.slug}"><span class="tag new" style="align-self:flex-start">Guide</span><span class="c-name">${esc(g.title)}</span><p class="c-desc">${esc(g.desc)}</p><span class="go">Read the guide →</span></a>`;
 }
 
-export function guidePage(g, guides, origin) {
+export function guidePage(g, guides, origin, roles = [], platforms = []) {
   const canonical = `${origin}/guides/${g.slug}`;
   const more = guides.filter((x) => x.slug !== g.slug);
   const body = `${crumbs([["/", "GigrAI"], ["/guides", "Guides"], ["", g.title]])}
@@ -317,6 +317,7 @@ export function guidePage(g, guides, origin) {
     <p class="fine">GigrAI earns a referral fee if you join a platform through our links. It costs you nothing and doesn't change your pay.</p>
   </header>
   <div class="prose">${g.body}</div>
+  ${roles.length ? `<section class="block" aria-labelledby="gr"><h2 id="gr">Live roles you can apply for now</h2><p class="lead">Open right now, with the pay shown. Free to apply.</p><div class="cards">${roles.map((x) => roleCard(x, platforms)).join("")}</div></section>` : ""}
   <div class="cta-panel"><h2>Find your next remote AI role</h2><p>Search live roles from every platform in one place, with real pay rates.</p><a class="btn btn-grad" href="/">Search GigrAI ${ARROW}</a></div>
 </article>
 ${more.length ? `<section class="block" aria-labelledby="mg"><h2 id="mg">More guides</h2><p class="lead">Plain-English guides to getting paid for AI work.</p><div class="cards">${more.map(guideCard).join("")}</div></section>` : ""}`;
