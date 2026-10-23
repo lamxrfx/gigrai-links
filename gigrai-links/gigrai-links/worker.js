@@ -257,9 +257,15 @@ export default {
       const nocache = (res) => { const h = new Headers(res.headers); h.set("cache-control", "private, no-store"); h.set("x-robots-tag", "noindex"); return new Response(res.body, { status: res.status, headers: h }); };
       if (!rm[1]) {
         if (!(await keyOk(env, "owner", k))) return nocache(reportsOff(url.origin));
-        const days = pickDays(url);
-        const from = daysAgo(days - 1), to = new Date().toISOString().slice(0, 10);
+        const allTime = url.searchParams.get("days") === "all";
+        let days = pickDays(url);
+        let from = allTime ? "2000-01-01" : daysAgo(days - 1);
+        const to = new Date().toISOString().slice(0, 10);
         const [views, applies, geo] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to)]);
+        if (allTime) { // from the day counting started
+          from = (views && views.since) || to;
+          days = Math.max(1, Math.round((Date.parse(to) - Date.parse(from)) / 864e5) + 1);
+        }
         if (views) Object.assign(views, { from, to });
         const sponsors = allSponsors(SPONSORED).filter(s => s.id !== "example");
         const links = await Promise.all(sponsors.map(async s => `${url.origin}/report/${s.id}?k=${await signKey(env, "sponsor:" + s.id)}`));
@@ -267,7 +273,7 @@ export default {
         sponsors.forEach(s => { s._unique = used[s.id] || 0; s._cap = clickCap(s); });
         const db = content(env);
         const enquiries = db ? await db.listEnquiries(30) : [];
-        return nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, key: k, enquiries, geo }));
+        return nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo }));
       }
       const sponsor = ((SPONSORED && SPONSORED.featured) || []).find(s => s.id === rm[1]);
       if (!sponsor || !(await keyOk(env, "sponsor:" + sponsor.id, k))) return nocache(reportsOff(url.origin));

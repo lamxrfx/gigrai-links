@@ -152,7 +152,7 @@ function dayChart(byDay, from, to, unit = "clicks") {
 // A number that counts up when the page opens (plain text without JavaScript)
 const countUp = (n, suffix = "") => `<b data-count="${Number(n) || 0}"${suffix ? ` data-suffix="${esc(suffix)}"` : ""}>${fmt(n)}${esc(suffix)}</b>`;
 const RANGES = [7, 30, 90];
-const rangeSwitch = (base, days, extra = "") => `<nav class="range noprint" aria-label="Time period">${RANGES.map((d) => `<a href="${base}?${extra}days=${d}"${d === days ? ' aria-current="true"' : ""}>${d} days</a>`).join("")}</nav>`;
+const rangeSwitch = (base, days, extra = "", allTime = null) => `<nav class="range noprint" aria-label="Time period">${RANGES.map((d) => `<a href="${base}?${extra}days=${d}"${d === days && !allTime ? ' aria-current="true"' : ""}>${d} days</a>`).join("")}${allTime !== null ? `<a href="${base}?${extra}days=all"${allTime ? ' aria-current="true"' : ""}>All time</a>` : ""}</nav>`;
 
 const pageOf = (opts) => html(shell({ ...opts, body: STYLE + opts.body }), opts.status || 200, opts.maxAge ?? 0);
 
@@ -246,10 +246,10 @@ ${billing && billing.billable >= billing.cap ? `<p class="note" style="padding:1
 // ---------- /report?k=... (Lamar only) ----------
 // World map: who's on the site now (refreshes itself) and where visits came from in the chosen range.
 // Drawn in the browser with d3 + a world outline from jsDelivr (this page is private, so no tracking concerns).
-function liveMap(key, days, geo) {
+function liveMap(key, period, geo) {
   const data = JSON.stringify((geo || []).filter(g => g.lat !== null && g.lon !== null).map(g => [Math.round(g.lat * 10) / 10, Math.round(g.lon * 10) / 10, g.n, g.city || "", g.cc])).replace(/</g, "\\u003c");
   return `<section class="block" id="live"><div class="live-head"><h2><span class="pulse"></span>On the site now: <b id="liveN">…</b></h2>
-<div class="seg" role="tablist"><button type="button" class="on" data-m="live">Live now</button><button type="button" data-m="hist">Last ${days} days</button></div></div>
+<div class="seg" role="tablist"><button type="button" class="on" data-m="live">Live now</button><button type="button" data-m="hist">${esc(period)}</button></div></div>
 <div class="panel glass mapwrap"><svg id="map" viewBox="0 0 960 470" role="img" aria-label="World map of visitors"></svg><div class="mapctl"><button type="button" id="mapIn" aria-label="Zoom in">+</button><button type="button" id="mapOut" aria-label="Zoom out">−</button><button type="button" id="mapReset" class="wide" hidden>Reset</button></div><div class="maptip" id="mapTip" hidden></div>
 <p class="note" id="mapNote">Visitors active in the last 5 minutes, by town. Updates every 20 seconds.</p></div>
 <div class="two"><section><h3 class="mini">Countries now</h3><ul class="chips" id="liveCC"></ul></section><section><h3 class="mini">Pages now</h3><ul class="chips" id="livePages"></ul></section></div>
@@ -331,7 +331,7 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
       .on("click",function(e,r){e.stopPropagation();showTip(e,(r[3]?r[3]+", ":"")+cn(r[4])+" · "+r[2].toLocaleString("en-GB")+(mode==="live"?" now":" views"))});
     gDots.selectAll("g.dot").order();
     size();
-    document.getElementById("mapNote").textContent=(mode==="live"?(live.length?"Visitors active in the last 5 minutes, by town. Updates every 20 seconds.":"Nobody on the site in the last 5 minutes. This updates every 20 seconds."):(HIST.length?"Page views by town, last ${days} days. Bigger glow = more visits.":"No town data for this range yet. The map started collecting today."))+" Tap a country to zoom in, pinch or scroll to zoom, drag to move.";
+    document.getElementById("mapNote").textContent=(mode==="live"?(live.length?"Visitors active in the last 5 minutes, by town. Updates every 20 seconds.":"Nobody on the site in the last 5 minutes. This updates every 20 seconds."):(HIST.length?"Page views by town (${esc(period).toLowerCase()}). Bigger glow = more visits.":"No town data for this range yet. The map started collecting today."))+" Tap a country to zoom in, pinch or scroll to zoom, drag to move.";
   }
   function chips(id,rows,label){document.getElementById(id).innerHTML=rows.length?rows.map(function(r){return "<li>"+label(r)+"<b>"+r.n+"</b></li>"}).join(""):"<li>None right now</li>"}
   function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
@@ -351,7 +351,8 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
 </script>`;
 }
 
-export function adminPage({ origin, views, applies, sponsors, links, days = 30, key = "", enquiries = [], geo = [] }) {
+export function adminPage({ origin, views, applies, sponsors, links, days = 30, allTime = false, key = "", enquiries = [], geo = [] }) {
+  const period = allTime ? "All time" : `Last ${days} days`;
   const sponsorBlocks = sponsors.length ? sponsors.map((s, i) => `<div class="rlink glass">
   <b>${esc(s.company || s.id)}</b> <span class="meta">${esc(s.start || "?")} to ${esc(s.until || "?")}${s.pin === false ? " · posts only" : " · pinned on site"} · ${fmt(s._unique || 0)} unique clicks${s._cap ? ` of ${fmt(s._cap)} paid for (£${(Math.min(s._unique || 0, s._cap) * s.cpc).toFixed(2)} of £${s.budget})${(s._unique || 0) >= s._cap ? " · <b>budget used, unpinned</b>" : ""}` : ""}</span>
   <span class="meta">Report link to send them:</span><code>${esc(links[i])}</code>
@@ -359,12 +360,12 @@ export function adminPage({ origin, views, applies, sponsors, links, days = 30, 
   <span class="meta">Link for WhatsApp:</span><code>${esc(origin)}/go/sponsored-${esc(s.id)}?src=wa</code>
 </div>`).join("") : `<p class="note">No campaigns yet. Add one to sponsored.json and its links appear here.</p>`;
   const body = `<section class="hero sm"><span class="eyebrow"><i></i>Private · only for you</span><h1>GigrAI <span class="grad-text">numbers</span></h1>
-<p>Last ${days} days. Counting started ${views ? longDate(views.since) : "-"}. Bookmark this page and don't share the link.</p>
-${rangeSwitch("/report", days, `k=${encodeURIComponent(key)}&`)}</section>
-${liveMap(key, days, geo)}
+<p>${period}. Counting started ${views ? longDate(views.since) : "-"}. Bookmark this page and don't share the link.</p>
+${rangeSwitch("/report", days, `k=${encodeURIComponent(key)}&`, allTime)}</section>
+${liveMap(key, period, geo)}
 <section class="block"><div class="kpis">
-  <div class="kpi glass">${countUp(views && views.total)}<span>Page views</span><small>Last ${days} days</small></div>
-  <div class="kpi glass">${countUp(applies && applies.total)}<span>Clicks to apply</span><small>Last ${days} days</small></div>
+  <div class="kpi glass">${countUp(views && views.total)}<span>Page views</span><small>${period}</small></div>
+  <div class="kpi glass">${countUp(applies && applies.total)}<span>Clicks to apply</span><small>${period}</small></div>
   <div class="kpi glass">${countUp(views && views.total ? Math.round(((applies && applies.total) || 0) / views.total * 1000) / 10 : 0, "%")}<span>Apply rate</span><small>Apply clicks per page view</small></div>
 </div><p class="note" style="margin-top:10px">The media kit shows the countries chart from ${fmt(SHOW_COUNTRIES)} page views, and page view and click totals from ${fmt(SHOW_VIEWS)} and ${fmt(SHOW_APPLIES)} a month.</p></section>
 ${views ? `<section class="block"><h2>Page views per day</h2><div class="panel glass">${dayChart(views.byDay, views.from, views.to, "page views")}</div></section>` : ""}
