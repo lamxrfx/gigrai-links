@@ -255,8 +255,10 @@ export default {
     // Live visitors for the map on the private numbers page
     if (request.method === "GET" && url.pathname === "/report-live") {
       if (!(await keyOk(env, "owner", url.searchParams.get("k") || ""))) return json({ ok: false }, 404);
-      const d = await liveNow(env);
-      return json(d ? { ok: true, ...d } : { ok: false });
+      const day = new Date().toISOString().slice(0, 10);
+      const [d, tv, ta] = await Promise.all([liveNow(env), readStats(env, { kind: "view", from: day }), readStats(env, { kind: "apply", from: day })]);
+      const today = { views: tv ? tv.total : 0, applies: ta ? ta.total : 0, countries: tv ? tv.byCountry.slice(0, 6) : [] };
+      return json(d ? { ok: true, ...d, today } : { ok: false });
     }
     const rm = request.method === "GET" && url.pathname.match(/^\/report(?:\/([a-z0-9-]{1,40})(\.csv)?)?\/?$/);
     if (rm) {
