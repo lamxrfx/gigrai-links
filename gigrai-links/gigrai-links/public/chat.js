@@ -9,9 +9,7 @@
   var css = ''
     + '.ggc-b{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:var(--ggc-y,20px);z-index:45;display:flex;align-items:center;gap:8px;height:52px;padding:0 18px 0 14px;border:0;border-radius:999px;cursor:pointer;color:#fff;font:700 14px/1 "Plus Jakarta Sans",system-ui,sans-serif;background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);box-shadow:0 14px 30px -10px rgba(47,107,255,.9)}'
     + '.ggc-b svg{width:22px;height:22px}.ggc-b:focus-visible,.ggc-x:focus-visible,.ggc-send:focus-visible{outline:2px solid #7fdcf0;outline-offset:3px}'
-    + '@media(max-width:700px){.ggc-b{width:52px;padding:0;justify-content:center}.ggc-b span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}}'
-    + '.mnav .ggc-nb{height:50px;min-width:50px;padding:0 14px;border:0;border-radius:999px;display:flex;align-items:center;justify-content:center;background:transparent;color:#7fdcf0;cursor:pointer}.mnav .ggc-nb svg{width:20px;height:20px}'
-    + 'html.ggc-innav .ggc-b{display:none!important}'
+    + '.ggc-b .s{display:none}@media(max-width:700px){.ggc-b{height:46px;padding:0 15px 0 12px;font-size:13.5px}.ggc-b .l{display:none}.ggc-b .s{display:inline}}'
     + '.ggc-p{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:var(--ggc-y,20px);z-index:90;width:min(390px,calc(100vw - 32px));height:min(600px,calc(100dvh - var(--ggc-y,20px) - 24px));display:none;flex-direction:column;border-radius:22px;overflow:hidden;background:#0d1024;border:1px solid rgba(255,255,255,.18);box-shadow:0 30px 60px -20px rgba(0,0,0,.9);color:#eef1ff;font:400 15px/1.5 "Plus Jakarta Sans",system-ui,sans-serif}'
     + '.ggc-p.on{display:flex}'
     + '@media(max-width:520px){.ggc-p{right:0;left:0;bottom:0;width:auto;height:min(88dvh,640px);border-radius:22px 22px 0 0;padding-bottom:env(safe-area-inset-bottom)}}'
@@ -42,7 +40,7 @@
   var ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg>';
   var btn = document.createElement("button");
   btn.className = "ggc-b"; btn.type = "button"; btn.setAttribute("aria-label", "Ask the GigrAI assistant");
-  btn.innerHTML = ICON + "<span>Ask GigrAI</span>";
+  btn.innerHTML = ICON + '<span class="l">Ask GigrAI</span><span class="s">Ask AI</span>';
   var p = document.createElement("div");
   p.className = "ggc-p"; p.setAttribute("role", "dialog"); p.setAttribute("aria-label", "GigrAI assistant");
   p.innerHTML = '<div class="ggc-h"><div class="ggc-dot">' + ICON + '</div><div><b>GigrAI assistant</b><small>AI helper · can make mistakes</small></div><button class="ggc-x" type="button" aria-label="Close">×</button></div>'
@@ -52,16 +50,8 @@
   document.body.appendChild(btn); document.body.appendChild(p);
   var list = p.querySelector(".ggc-l"), sug = p.querySelector(".ggc-s"), form = p.querySelector("form"), ta = p.querySelector("textarea"), send = p.querySelector(".ggc-send");
 
-  // Homepage on phones: the assistant gets its own button in the bottom bar (a floating bubble would cover Apply buttons)
-  var mnav = document.querySelector(".mnav"), nb = null;
-  if (mnav) {
-    nb = document.createElement("button");
-    nb.type = "button"; nb.className = "ggc-nb"; nb.setAttribute("aria-label", "Ask the GigrAI assistant"); nb.innerHTML = ICON;
-    mnav.appendChild(nb);
-  }
-  // Otherwise sit above any phone bottom bar
+  // Sit above any phone bottom bar (same bubble on every page)
   function place() {
-    document.documentElement.classList.toggle("ggc-innav", !!(mnav && getComputedStyle(mnav).display !== "none"));
     var y = 20, bars = document.querySelectorAll(".mnav,.mbar");
     for (var i = 0; i < bars.length; i++) {
       var r = bars[i].getBoundingClientRect();
@@ -138,9 +128,8 @@
     render(); setTimeout(function () { if (matchMedia("(min-width:521px)").matches) ta.focus(); }, 50);
     try { sessionStorage.setItem(KEY + "-open", "1"); } catch (e) {}
   }
-  function close() { p.classList.remove("on"); btn.style.display = ""; (document.documentElement.classList.contains("ggc-innav") && nb ? nb : btn).focus(); try { sessionStorage.removeItem(KEY + "-open"); } catch (e) {} }
+  function close() { p.classList.remove("on"); btn.style.display = ""; btn.focus(); try { sessionStorage.removeItem(KEY + "-open"); } catch (e) {} }
   btn.addEventListener("click", open);
-  if (nb) nb.addEventListener("click", open);
   p.querySelector(".ggc-x").addEventListener("click", close);
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && p.classList.contains("on")) close(); });
   form.addEventListener("submit", function (e) { e.preventDefault(); ask(ta.value); });
