@@ -1,5 +1,5 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
-import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap } from "./seo.js";
+import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat } from "./seo.js";
 import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
@@ -12,6 +12,7 @@ import { CATEGORIES } from "./news-sources.js";
 import { slugify, AD_OPTIONS } from "./seo.js";
 import { vetLink } from "./vet.js";
 import { EmailMessage } from "cloudflare:email";
+import { systemPrompt, askAi, parseAsk } from "./chat.js";
 import SPONSORED from "./sponsored.json";
 import { menuButton, drawerHtml } from "./nav.js";
 import { GUIDES } from "./guides.js";
@@ -60,6 +61,7 @@ export default {
 
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    setChat(env.CHAT !== "off");
     // Always use the secure https:// address (Google had indexed the http:// one)
     if (url.protocol === "http:" && !/^(localhost|127\.)/.test(url.hostname)) {
       url.protocol = "https:";
@@ -180,6 +182,9 @@ export default {
     if (url.pathname === "/new" || url.pathname.startsWith("/new/")) {
       return Response.redirect(new URL("/" + url.search, url).toString(), 301);
     }
+
+    // GigrAI assistant (see chat.js). POST { messages: [{role, content}], country }
+    if (url.pathname === "/api/chat" && request.method === "POST") return handleChat(request, url, env, ctx);
 
     // One role with its description: GET /api/job?id=mercor-list_xxx&country=GBR
     // Visitor's country from Cloudflare (no location prompt): GET /api/where
@@ -432,6 +437,7 @@ async function decorate(res, url, env, ctx, page) {
   let rw = new HTMLRewriter().on("head", {
     element(el) {
       if (env.EMAIL_SIGNUP === "on") el.append(`<script src="/alerts.js?v=1" defer></script>`, { html: true });
+      if (env.CHAT !== "off") el.append(`<script src="/chat.js?v=1" defer></script>`, { html: true });
       if (verify) el.append(`<meta name="google-site-verification" content="${verify}">`, { html: true });
       if (client) {
         el.append(`<meta name="google-adsense-account" content="${client}">`, { html: true });
@@ -641,6 +647,82 @@ async function notifyEnquiry(env, ref, e, vet) {
     "MIME-Version: 1.0", "Content-Type: text/plain; charset=utf-8", "Content-Transfer-Encoding: base64", "", b64(body).replace(/.{76}/g, "$&\r\n"),
   ].join("\r\n");
   await env.NOTIFY.send(new EmailMessage(from, to, raw));
+}
+
+// ---------------- GigrAI assistant ----------------
+const CHAT_HITS = new Map();
+function chatTooMany(request) {
+  const ip = request.headers.get("cf-connecting-ip") || "?";
+  const now = Date.now(), list = (CHAT_HITS.get(ip) || []).filter(t => now - t < 3600e3);
+  list.push(now); CHAT_HITS.set(ip, list);
+  if (CHAT_HITS.size > 5000) CHAT_HITS.clear();
+  return list.filter(t => now - t < 60e3).length > 6 || list.length > 40; // 6 a minute, 40 an hour
+}
+
+function chatRoles(feed, text, country) {
+  const { words, minpay } = parseAsk(text);
+  const groups = words.map(expand);
+  const forMe = country && /my country|where i live|near me|my area|open to me|can i apply|from (the )?(uk|us|usa|india|nigeria|canada|kenya|philippines)/i.test(text);
+  const top = /highest|top pay|best pay|best paid|most money|pays? (the )?most|latest|newest|any roles|show me (some )?roles/i.test(text);
+  const scored = [];
+  for (const j of feed) {
+    if (country && eligibility(j, country) === "no") continue;
+    if (forMe && eligibility(j, country) !== "yes") continue;
+    if (minpay && (j.max || j.min || 0) < minpay) continue;
+    const title = j.title.toLowerCase();
+    const score = groups.reduce((n, alts) => n + (alts.some(a => title.includes(a)) ? 2 : matches(j, [alts]) ? 1 : 0), 0); // title matches count double
+    if (groups.length && !score) continue;
+    if (!groups.length && !minpay && !forMe && !top) continue; // nothing to search for (e.g. "is this legit?")
+    scored.push({ j, score });
+  }
+  scored.sort((a, b) => b.score - a.score || (b.j.max || b.j.min || 0) - (a.j.max || a.j.min || 0) || (b.j.posted || "").localeCompare(a.j.posted || ""));
+  return scored.slice(0, 4).map(({ j }) => ({
+    id: j.id, title: j.title, via: j.via, pay: money(j), path: jobPath(j),
+    elig: country ? eligibility(j, country) : "", hot: !!j.hot,
+  }));
+}
+
+async function handleChat(request, url, env, ctx) {
+  if (env.CHAT === "off") return json({ ok: false, error: "The assistant is switched off." }, 404);
+  const origin = request.headers.get("origin");
+  if (!origin || new URL(origin).host !== url.host) return json({ ok: false, error: "Forbidden" }, 403);
+  if (chatTooMany(request)) return json({ ok: false, error: "You've sent a lot of messages. Please wait a few minutes and try again." }, 429);
+  let d;
+  try { d = JSON.parse((await request.text()).slice(0, 12000)); } catch { return json({ ok: false, error: "Bad request" }, 400); }
+  const msgs = (Array.isArray(d.messages) ? d.messages : []).slice(-8)
+    .filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string" && m.content.trim())
+    .map(m => ({ role: m.role, content: m.content.trim().slice(0, 600) }));
+  while (msgs.length && msgs[0].role !== "user") msgs.shift();
+  if (!msgs.length || msgs[msgs.length - 1].role !== "user") return json({ ok: false, error: "Please type a question." }, 400);
+  const iso2 = String(request.cf?.country || "").toUpperCase();
+  const country = /^[A-Z]{3}$/.test(d.country || "") ? d.country : (ISO3[iso2] || "");
+  const question = msgs[msgs.length - 1].content;
+
+  let feed = [];
+  try { feed = await loadFeed(env, ctx); } catch {}
+  // Search with the latest message; if it has nothing to search for, use the one before ("any that pay more?")
+  let roles = chatRoles(feed, question, country);
+  if (!roles.length && msgs.length >= 3 && /\b(more|other|another|else|similar|those|them|higher|better|cheaper|instead)\b/i.test(question)) roles = chatRoles(feed, msgs[msgs.length - 3].content + " " + question, country);
+
+  const cap = Math.max(0, parseInt(env.CHAT_DAILY_CAP || "150", 10) || 0);
+  const used = (await countMany(env, "chat", [{ k: "reply", from: new Date().toISOString().slice(0, 10) }])).reply || 0;
+  const src = cleanSrc(url.searchParams.get("src"));
+  const fallback = roles.length
+    ? "I can't write a full answer right now, but here are live roles that match what you asked."
+    : "I can't answer right now. Try the job search at /jobs, our guides at /guides, or ask on our WhatsApp channel.";
+  if (cap && used >= cap) {
+    track(env, ctx, request, "chat", "capped", src);
+    return json({ ok: true, reply: fallback, roles, limited: true });
+  }
+  try {
+    const { reply, provider } = await askAi(env, systemPrompt({ roles, country: country ? countryName(country) : "", total: feed.length }), msgs);
+    track(env, ctx, request, "chat", "reply", src);
+    return json({ ok: true, reply: reply.trim().slice(0, 1500), roles, provider });
+  } catch (e) {
+    console.error("chat failed", String(e));
+    track(env, ctx, request, "chat", "failed", src);
+    return json({ ok: true, reply: fallback, roles, limited: true });
+  }
 }
 
 // Pinned sponsors, minus pay-per-click ones whose budget is used up

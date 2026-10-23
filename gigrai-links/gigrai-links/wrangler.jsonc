@@ -23,6 +23,8 @@
   // Emails us new booking requests from /advertise (Cloudflare Email Routing; the address must be a verified destination)
   "send_email": [{ "name": "NOTIFY", "destination_address": "remotegigr.ai@gmail.com" }],
   // Pull the latest news headlines every hour (see news-sources.js)
+  // Free AI for the GigrAI assistant (see chat.js)
+  "ai": { "binding": "AI" },
   "triggers": { "crons": ["7 * * * *"] },
   "observability": {
     "enabled": true
@@ -36,7 +38,14 @@
     "GOOGLE_SITE_VERIFICATION": "",
     // Email job alerts: "off" until the ICO fee is paid and MailerLite has the business address.
     // Set to "on" to switch every "Job alerts" button to the email sign-up (WhatsApp stays as an option).
-    "EMAIL_SIGNUP": "off"
+    "EMAIL_SIGNUP": "off",
+    // GigrAI assistant chat bubble: "on" or "off"
+    "CHAT": "on",
+    // Who writes the replies: "workers-ai" (free) or "anthropic" (Claude, needs the ANTHROPIC_API_KEY secret)
+    "CHAT_PROVIDER": "workers-ai",
+    // Most AI replies a day for the whole site (keeps Workers AI inside its free daily allowance).
+    // After that, people still get matching roles, just without a written answer.
+    "CHAT_DAILY_CAP": "150"
   }
   // REPORT_SECRET is a secret (set by the GitHub deploy workflow) that signs private report links
   // MAILERLITE_TOKEN is a secret set in the Cloudflare dashboard (not stored here)

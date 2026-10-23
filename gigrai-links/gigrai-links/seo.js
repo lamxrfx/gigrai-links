@@ -141,6 +141,10 @@ const FOOTER = `<footer class="foot"><div class="wrap">
   </div>
 </div></footer>`;
 
+// The assistant bubble (public/chat.js). worker.js switches it off when CHAT is "off".
+let chatOn = true;
+export const setChat = (on) => { chatOn = !!on; };
+
 export function shell({ title, desc, canonical, body, ld = [], robots = "index,follow,max-image-preview:large", active = "", page = "", bodyClass = "", image = "" }) {
   return `<!doctype html>
 <html lang="en">
@@ -177,6 +181,7 @@ ${body}
 </div></main>
 ${FOOTER.replace("__YEAR__", String(new Date().getFullYear()))}
 ${drawerHtml()}
+${chatOn && !/noindex/.test(robots) ? '<script src="/chat.js?v=1" defer></script>' : ""}
 </body>
 </html>`;
 }
