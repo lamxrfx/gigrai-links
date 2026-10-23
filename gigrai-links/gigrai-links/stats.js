@@ -28,7 +28,24 @@ export class Stats extends DurableObject {
     // Unusually busy visitors (lots of actions in one minute), shown on the numbers page for a human to judge
     this.sql.exec(`CREATE TABLE IF NOT EXISTS burst (minute TEXT NOT NULL, v TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY (minute, v))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS flags (day TEXT NOT NULL, v TEXT NOT NULL, cc TEXT, city TEXT, peak INTEGER NOT NULL, first TEXT, last TEXT, PRIMARY KEY (day, v))`);
+    // Apply clicks per role (which roles people actually click), plus the role's title for the report
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS roleclicks (day TEXT NOT NULL, id TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY (day, id))`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS roles (id TEXT PRIMARY KEY, title TEXT, via TEXT, path TEXT, pay TEXT, last TEXT)`);
     this.sql.exec(`INSERT OR IGNORE INTO meta (key, value) VALUES ('since', ?)`, today());
+  }
+
+  roleClick(id, title, via, path, pay) {
+    id = String(id).slice(0, 120);
+    this.sql.exec(`INSERT INTO roleclicks (day, id, n) VALUES (?, ?, 1) ON CONFLICT (day, id) DO UPDATE SET n = n + 1`, today(), id);
+    this.sql.exec(`INSERT INTO roles (id, title, via, path, pay, last) VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT (id) DO UPDATE SET title = excluded.title, via = excluded.via, path = excluded.path, pay = excluded.pay, last = excluded.last`,
+      id, String(title || "").slice(0, 160), String(via || "").slice(0, 40), String(path || "").slice(0, 300), String(pay || "").slice(0, 40), today());
+    if (Math.random() < 0.001) this.sql.exec(`DELETE FROM roleclicks WHERE day < ?`, daysAgo(400));
+  }
+
+  topRoles(from, to = today(), limit = 25) {
+    return [...this.sql.exec(`SELECT c.id, SUM(c.n) AS n, r.title, r.via, r.path, r.pay, r.last FROM roleclicks c LEFT JOIN roles r ON r.id = c.id
+      WHERE c.day >= ? AND c.day <= ? GROUP BY c.id ORDER BY n DESC LIMIT ?`, from, to, limit)];
   }
 
   // A visitor did something (page view, search, opened a role)
@@ -204,6 +221,16 @@ export async function liveNow(env) {
 export async function countryTotals(env, kind, from, to) {
   if (!env.STATS) return [];
   try { return await stub(env).countryTotals(kind, from, to); } catch (e) { console.error("country read failed", String(e)); return []; }
+}
+
+export function roleClick(env, ctx, request, job, path, pay) {
+  if (!env.STATS || OWNER.has(request)) return;
+  try { ctx.waitUntil(stub(env).roleClick(job.id, job.title, job.via, path, pay).catch(() => {})); } catch {}
+}
+
+export async function topRoles(env, from, to) {
+  if (!env.STATS) return [];
+  try { return await stub(env).topRoles(from, to, 25); } catch (e) { console.error("roles read failed", String(e)); return []; }
 }
 
 export async function flagged(env, from, to) {

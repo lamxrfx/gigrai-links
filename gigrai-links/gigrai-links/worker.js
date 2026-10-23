@@ -1,6 +1,6 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
 import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat } from "./seo.js";
-import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, flagged, markOwner, isOwner } from "./stats.js";
+import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, flagged, markOwner, isOwner, roleClick, topRoles } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
 import DRAFTS from "./drafts.json";
@@ -181,7 +181,7 @@ const app = {
       try { feed = await loadFeed(env, ctx); } catch {}
       const job = feed.find(j => j.id === id);
       console.log(JSON.stringify({ event: "apply_click", id, platform: job ? job.platform : "?", found: !!job, src: cleanSrc(url.searchParams.get("src")), country: request.cf?.country || "??" }));
-      if (job && isHuman(request)) track(env, ctx, request, "apply", job.platform, cleanSrc(url.searchParams.get("src")) || "site");
+      if (job && isHuman(request)) { track(env, ctx, request, "apply", job.platform, cleanSrc(url.searchParams.get("src")) || "site"); roleClick(env, ctx, request, job, jobPath(job), money(job)); }
       return Response.redirect(job ? job.url : new URL("/", url).toString(), 302);
     }
 
@@ -285,7 +285,7 @@ const app = {
         let days = pickDays(url);
         let from = allTime ? "2000-01-01" : daysAgo(days - 1);
         const to = new Date().toISOString().slice(0, 10);
-        const [views, applies, geo, ccViews, bots, flags] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to), countryTotals(env, "view", from, to), readStats(env, { kind: "bot", from }), flagged(env, from, to)]);
+        const [views, applies, geo, ccViews, bots, flags, roles] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to), countryTotals(env, "view", from, to), readStats(env, { kind: "bot", from }), flagged(env, from, to), topRoles(env, from, to)]);
         if (allTime) { // from the day counting started
           from = (views && views.since) || to;
           days = Math.max(1, Math.round((Date.parse(to) - Date.parse(from)) / 864e5) + 1);
@@ -301,7 +301,7 @@ const app = {
         const countMe = url.searchParams.get("count") === "1";
         const chose = /(?:^|;\s*)gg_count=1(?:;|$)/.test(request.headers.get("cookie") || "");
         const hidden = countMe ? false : (isOwner(request) || url.searchParams.get("count") === "0" || (!nt && !chose));
-        const page = nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags, hidden }));
+        const page = nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags, hidden, roles }));
         const secure = url.protocol === "https:" ? "; Secure" : "";
         if (countMe) {
           page.headers.append("set-cookie", `gg_nt=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure}`);
