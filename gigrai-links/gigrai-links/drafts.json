@@ -1,4 +1,25 @@
 {
   "_help": "Suggested posts written by the weekly Claude scheduled task. They appear in the private editor (/admin) under 'Suggested drafts'. Nothing here is published until you open it in the editor and press Publish.",
-  "drafts": []
+  "drafts": [
+    {
+      "id": "2026-10-23-ai-training-expert-pay-400-an-hour",
+      "created": "2026-10-23T05:36:38.755Z",
+      "title": "AI training pay hits $400 an hour for experts, but the work can vanish overnight",
+      "slug": "ai-training-expert-pay-400-an-hour",
+      "cat": "ai-work",
+      "summary": "AI firms such as micro1, Mercor and Handshake AI are paying doctors, lawyers and scientists up to $400 an hour, but the work is often patchy and contracts can end with little warning.",
+      "body": "Expert AI training work has moved well beyond quick tagging jobs. New reporting from Bloomberg this month shows AI companies offering doctors, lawyers and scientists hourly rates that rival their day jobs, with some postings reaching $400 an hour. The headline numbers are eye-catching, but the same reporting shows the work can be patchy and can end without much warning.\n\n## What the top rates look like\n\nBloomberg looked at recruiter postings and spoke to people doing this work. A few figures stood out:\n\n- **micro1** postings included software engineers at up to $120 an hour, condensed matter physics experts at $170 an hour and civil rights attorneys at $400 an hour.\n- **Mercor** told Bloomberg its average pay is now $110 an hour, though it said it had no data on what share of tasks pay that much.\n- **Handshake AI** has advertised physician roles at up to $200 an hour and lawyer roles at $90 to $110 an hour, according to PYMNTS, which also lists a Mercor legal role at $60 to $150 an hour.\n\nLinkedIn reportedly named data annotators the fourth-fastest-growing job in the US this year.\n\n## Most data work still pays far less\n\nNot everyone is earning expert rates. Bloomberg contrasts a radiologist who earns in an hour roughly what a stay-at-home mum doing general data work earns in a week. Researcher Antonio Casilli told Bloomberg that experts are *\"just the cherry on top\"*, with most data work still done by low-paid workers.\n\nThe research platform Prolific said experts now make up 30% of its participants, but did not say how much of the work they actually get.\n\n## The work can stop suddenly\n\nThe pay is only half the story. PYMNTS describes a Princeton PhD who took a $70-an-hour Mercor role in January, worked anywhere from 4 to 20 hours a week, and then had the contract ended in mid-March through a Slack message sent to a group of 810 people.\n\nThere are other risks to weigh too:\n\n- Hours vary. Projects open and close quickly, and nobody is guaranteed a set number of hours.\n- Mercor reportedly faces at least seven class action lawsuits filed in April after a data breach. The suits allege that interview recordings, facial biometric data and screenshots were exposed. Mercor has called the claims speculative and says only a limited group of experts had sensitive data leaked.\n- Funding is still flowing. Bloomberg reports Mercor has discussed new funding at a $20 billion valuation and that micro1 is valued at $4 billion, so demand looks set to continue for now.\n\n## What it means for you\n\nIf you have a professional qualification, this is a good time to put it to work, as long as you go in with your eyes open:\n\n1. **Lead with your specialism.** The highest rates go to people with deep expertise in law, medicine, science or engineering. Make it the first thing on your profile.\n2. **Treat it as extra income, not a salary.** Contracts can end overnight, so keep your main income steady and spread your work across two or three platforms.\n3. **Check what you're sharing.** Some platforms record interviews or screens. Read the privacy terms and only share what you need to.\n4. **Judge a role by its hourly rate and its hours.** A high rate means little if a project only lasts a fortnight. Ask how long it is expected to run.\n5. **Stay alert to fakes.** High advertised rates attract scammers. Real platforms never ask you to pay to join or to buy equipment from them, so apply through the official site.\n\nYou can search current expert and generalist AI training roles, filtered by pay, on GigrAI.",
+      "sources": [
+        {
+          "title": "Bloomberg Law: Doctors and Lawyers Are Joining AI's $400-an-Hour Gig Economy",
+          "url": "https://news.bloomberglaw.com/esg/doctors-and-lawyers-are-joining-ais-400-an-hour-gig-economy"
+        },
+        {
+          "title": "PYMNTS: AI Labs Pay Lawyers $400 an Hour to Train Models",
+          "url": "https://www.pymnts.com/news/artificial-intelligence/2026/ai-labs-pay-lawyers-400-an-hour-to-train-models/"
+        }
+      ],
+      "affiliate": "micro1"
+    }
+  ]
 }
