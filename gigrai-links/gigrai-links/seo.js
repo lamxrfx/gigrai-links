@@ -142,8 +142,9 @@ const FOOTER = `<footer class="foot"><div class="wrap">
 </div></footer>`;
 
 // The assistant bubble (public/chat.js). worker.js switches it off when CHAT is "off".
-let chatOn = true;
+let chatOn = true, emailOn = false;
 export const setChat = (on) => { chatOn = !!on; };
+export const setEmail = (on) => { emailOn = !!on; }; // email job alerts (public/alerts.js), EMAIL_SIGNUP in wrangler.jsonc
 
 export function shell({ title, desc, canonical, body, ld = [], robots = "index,follow,max-image-preview:large", active = "", page = "", bodyClass = "", image = "" }) {
   return `<!doctype html>
@@ -182,6 +183,7 @@ ${body}
 ${FOOTER.replace("__YEAR__", String(new Date().getFullYear()))}
 ${drawerHtml()}
 ${chatOn && !/noindex/.test(robots) ? '<script src="/chat.js?v=8" defer></script>' : ""}
+${emailOn ? '<script src="/alerts.js?v=3" defer></script>' : ""}
 </body>
 </html>`;
 }

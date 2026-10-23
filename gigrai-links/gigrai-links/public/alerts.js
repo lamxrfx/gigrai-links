@@ -1,6 +1,7 @@
 /* Email job alerts. Loaded on every page only when EMAIL_SIGNUP is "on" in wrangler.jsonc.
    Turns every "Job alerts" / WhatsApp prompt into an email sign-up, with WhatsApp kept as a small option. */
 (function () {
+  if (window.__ggAlertsLoaded) return; window.__ggAlertsLoaded = 1; // may be included twice on some pages
   var WA = "https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u";
   var TRIGGERS = ["header-whatsapp", "menu-whatsapp", "news-whatsapp", "post-whatsapp", "search-empty-whatsapp", "email-alerts"];
   var FIELDS = ["Writing", "Coding", "Research", "Medical", "Finance", "Legal", "Languages", "Maths", "Design", "Data"];

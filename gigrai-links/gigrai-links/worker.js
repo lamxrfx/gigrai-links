@@ -1,5 +1,5 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
-import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat } from "./seo.js";
+import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat, setEmail } from "./seo.js";
 import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, flagged, markOwner, isOwner, roleClick, topRoles, meta } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
@@ -62,6 +62,7 @@ const app = {
   async route(request, env, ctx) {
     const url = new URL(request.url);
     setChat(env.CHAT !== "off");
+    setEmail(env.EMAIL_SIGNUP === "on");
     // Always use the secure https:// address (Google had indexed the http:// one)
     if (url.protocol === "http:" && !/^(localhost|127\.)/.test(url.hostname)) {
       url.protocol = "https:";
@@ -519,7 +520,7 @@ async function decorate(res, url, env, ctx, page) {
 
   let rw = new HTMLRewriter().on("head", {
     element(el) {
-      if (env.EMAIL_SIGNUP === "on") el.append(`<script src="/alerts.js?v=1" defer></script>`, { html: true });
+      if (env.EMAIL_SIGNUP === "on") el.append(`<script src="/alerts.js?v=3" defer></script>`, { html: true });
       if (env.CHAT !== "off") el.append(`<script src="/chat.js?v=8" defer></script>`, { html: true });
       if (verify) el.append(`<meta name="google-site-verification" content="${verify}">`, { html: true });
       if (client) {
