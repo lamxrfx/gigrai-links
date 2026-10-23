@@ -250,7 +250,7 @@ function liveMap(key, days, geo) {
   const data = JSON.stringify((geo || []).filter(g => g.lat !== null && g.lon !== null).map(g => [Math.round(g.lat * 10) / 10, Math.round(g.lon * 10) / 10, g.n, g.city || "", g.cc])).replace(/</g, "\\u003c");
   return `<section class="block" id="live"><div class="live-head"><h2><span class="pulse"></span>On the site now: <b id="liveN">…</b></h2>
 <div class="seg" role="tablist"><button type="button" class="on" data-m="live">Live now</button><button type="button" data-m="hist">Last ${days} days</button></div></div>
-<div class="panel glass mapwrap"><svg id="map" viewBox="0 0 960 470" role="img" aria-label="World map of visitors"></svg><div class="maptip" id="mapTip" hidden></div>
+<div class="panel glass mapwrap"><svg id="map" viewBox="0 0 960 470" role="img" aria-label="World map of visitors"></svg><div class="mapctl"><button type="button" id="mapIn" aria-label="Zoom in">+</button><button type="button" id="mapOut" aria-label="Zoom out">−</button><button type="button" id="mapReset" class="wide" hidden>Reset</button></div><div class="maptip" id="mapTip" hidden></div>
 <p class="note" id="mapNote">Visitors active in the last 5 minutes, by town. Updates every 20 seconds.</p></div>
 <div class="two"><section><h3 class="mini">Countries now</h3><ul class="chips" id="liveCC"></ul></section><section><h3 class="mini">Pages now</h3><ul class="chips" id="livePages"></ul></section></div>
 </section>
@@ -258,7 +258,8 @@ function liveMap(key, days, geo) {
 .live-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}.live-head h2{margin:0;display:flex;align-items:center;gap:10px}
 .pulse{width:10px;height:10px;border-radius:50%;background:#34d399;box-shadow:0 0 0 0 rgba(52,211,153,.7);animation:pl 1.8s infinite}@keyframes pl{70%{box-shadow:0 0 0 12px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
 .seg{display:inline-flex;padding:4px;border-radius:999px;border:1px solid var(--line-2);background:var(--glass)}.seg button{border:0;background:none;color:var(--muted);font:inherit;font-weight:700;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer}.seg button.on{background:var(--grad);color:#fff}
-.mapwrap{position:relative;padding:10px}#map{display:block;width:100%;height:auto}#map .land{fill:#1a1f3d;stroke:#2c3363;stroke-width:.5}#map .dot{cursor:pointer}
+.mapwrap{position:relative;padding:10px;-webkit-user-select:none;user-select:none}#map{display:block;width:100%;height:auto}#map{cursor:grab;overflow:hidden;border-radius:14px}#map:active{cursor:grabbing}#map .land{fill:#1a1f3d;stroke:#2c3363;stroke-width:.6;vector-effect:non-scaling-stroke;cursor:pointer;transition:fill .15s}#map .land:hover{fill:#232a52}#map .land.on{fill:#2a3368}#map .dot{cursor:pointer}#map .lbl{fill:#eef1ff;font-weight:700;paint-order:stroke;stroke:#0b0e1d;stroke-linejoin:round;pointer-events:none}
+.mapctl{position:absolute;top:18px;right:18px;display:flex;flex-direction:column;gap:6px}.mapctl button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line-2);background:rgba(13,16,36,.85);color:#fff;font:700 18px/1 inherit;font-family:inherit;cursor:pointer}.mapctl button.wide{width:auto;padding:0 8px;font-size:12px}.mapctl [hidden]{display:none}
 .maptip{position:absolute;pointer-events:none;padding:7px 10px;border-radius:10px;background:#f2f4ff;color:#0b0e1d;font-size:13px;font-weight:700;white-space:nowrap;transform:translate(-50%,-120%)}
 .chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}.chips li{padding:6px 11px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:13px}.chips li b{margin-left:5px}
 h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
@@ -270,28 +271,67 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
 (function(){
   var HIST=${data}, KEY=${JSON.stringify(key)}, mode="live", live=[];
   var svg=d3.select("#map"), proj=d3.geoNaturalEarth1().scale(175).translate([480,250]), path=d3.geoPath(proj);
-  var gLand=svg.append("g"), gDots=svg.append("g"), tip=document.getElementById("mapTip");
+  var defs=svg.append("defs"), gView=svg.append("g"), gLand=gView.append("g"), gDots=gView.append("g"), tip=document.getElementById("mapTip"), wrap=document.querySelector(".mapwrap");
   var names; try{names=new Intl.DisplayNames(["en"],{type:"region"})}catch(e){}
   function cn(c){c=String(c||"").toUpperCase();try{return /^[A-Z]{2}$/.test(c)&&c!=="XX"?names.of(c):"Unknown"}catch(e){return c}}
-  var defs=svg.append("defs");
   [["gLive","#22d3ee"],["gHist","#8b3dff"]].forEach(function(g){var r=defs.append("radialGradient").attr("id",g[0]);r.append("stop").attr("offset","0%").attr("stop-color",g[1]).attr("stop-opacity",.95);r.append("stop").attr("offset","100%").attr("stop-color",g[1]).attr("stop-opacity",0)});
+  function showTip(e,text){var b=wrap.getBoundingClientRect();tip.hidden=false;tip.style.left=(e.clientX-b.left)+"px";tip.style.top=(e.clientY-b.top)+"px";tip.textContent=text}
+
+  // Zoom and pan: scroll or pinch to zoom, drag to move, tap a country to fly to it
+  var K=1, picked=null;
+  var zoom=d3.zoom().scaleExtent([1,40]).translateExtent([[-40,-40],[1000,510]])
+    .filter(function(e){ if(e.type==="wheel")return true; if(e.touches)return e.touches.length>1||K>1.01; return !e.button; })
+    .on("zoom",function(e){K=e.transform.k;gView.attr("transform",e.transform);size();svg.style("touch-action",K>1.01?"none":"pan-y");document.getElementById("mapReset").hidden=K<1.01;});
+  svg.call(zoom).on("dblclick.zoom",null);svg.style("touch-action","pan-y");
+  function flyTo(t){svg.transition().duration(650).call(zoom.transform,t)}
+  function reset(){picked=null;gLand.selectAll(".land").classed("on",false);flyTo(d3.zoomIdentity)}
+  function zoomBy(f){svg.transition().duration(300).call(zoom.scaleBy,f)}
+  document.getElementById("mapIn").onclick=function(){zoomBy(2)};
+  document.getElementById("mapOut").onclick=function(){zoomBy(.5)};
+  document.getElementById("mapReset").onclick=reset;
+
   fetch("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json").then(function(r){return r.json()}).then(function(w){
-    gLand.selectAll("path").data(topojson.feature(w,w.objects.countries).features.filter(function(f){return f.id!=="010"})).join("path").attr("class","land").attr("d",path);
+    gLand.selectAll("path").data(topojson.feature(w,w.objects.countries).features.filter(function(f){return f.id!=="010"})).join("path").attr("class","land").attr("d",path)
+      .on("mousemove",function(e,f){if(e.pointerType!=="touch")showTip(e,f.properties.name)})
+      .on("mouseleave",function(){tip.hidden=true})
+      .on("click",function(e,f){
+        e.stopPropagation();
+        if(picked===f){reset();return}
+        picked=f;gLand.selectAll(".land").classed("on",function(x){return x===f});
+        var bb=path.bounds(f),dx=bb[1][0]-bb[0][0],dy=bb[1][1]-bb[0][1],cx=(bb[0][0]+bb[1][0])/2,cy=(bb[0][1]+bb[1][1])/2;
+        var k=Math.max(1,Math.min(24,.8/Math.max(dx/960,dy/470)));
+        flyTo(d3.zoomIdentity.translate(480,235).scale(k).translate(-cx,-cy));
+        showTip(e,f.properties.name);
+      });
+    gDots.raise();
   }).catch(function(){});
+
+  // Dots keep a sensible size on screen as you zoom; town names appear when zoomed in
+  function size(){
+    gDots.selectAll("g.dot").each(function(r){
+      var g=d3.select(this),base=+g.attr("data-r");
+      g.select(".halo").attr("r",base/Math.pow(K,.75));
+      g.select(".core").attr("r",(mode==="live"?2.6:1.8)/Math.pow(K,.9));
+      g.select("text").attr("font-size",11/K).attr("stroke-width",3/K).attr("x",5/K).attr("y",-5/K).style("display",K>=3&&r[3]?null:"none");
+    });
+  }
   function draw(){
     var rows=(mode==="live"?live:HIST).slice().sort(function(a,b){return b[2]-a[2]}), max=d3.max(rows,function(r){return r[2]})||1, rs=d3.scaleSqrt().domain([0,max]).range([4,mode==="live"?26:34]);
     var sel=gDots.selectAll("g.dot").data(rows,function(r){return r[0]+","+r[1]+","+r[3]});
     sel.exit().remove();
     var en=sel.enter().append("g").attr("class","dot");
-    en.append("circle").attr("class","halo");en.append("circle").attr("class","core");
+    en.append("circle").attr("class","halo");en.append("circle").attr("class","core");en.append("text").attr("class","lbl");
     en.merge(sel).each(function(r){
-      var p=proj([r[1],r[0]]);if(!p)return;var g=d3.select(this).attr("transform","translate("+p[0]+","+p[1]+")");
-      g.select(".halo").attr("r",rs(r[2])).attr("fill","url(#"+(mode==="live"?"gLive":"gHist")+")");
-      g.select(".core").attr("r",mode==="live"?2.6:1.8).attr("fill",mode==="live"?"#e6fbff":"#d9c6ff");
-    }).on("mousemove",function(e,r){var b=document.querySelector(".mapwrap").getBoundingClientRect();tip.hidden=false;tip.style.left=(e.clientX-b.left)+"px";tip.style.top=(e.clientY-b.top)+"px";tip.textContent=(r[3]?r[3]+", ":"")+cn(r[4])+" · "+r[2].toLocaleString("en-GB")+(mode==="live"?" now":" views")})
+      var p=proj([r[1],r[0]]);if(!p)return;var g=d3.select(this).attr("transform","translate("+p[0]+","+p[1]+")").attr("data-r",rs(r[2]));
+      g.select(".halo").attr("fill","url(#"+(mode==="live"?"gLive":"gHist")+")");
+      g.select(".core").attr("fill",mode==="live"?"#e6fbff":"#d9c6ff");
+      g.select("text").text(r[3]?r[3]+" · "+r[2]:"");
+    }).on("mousemove",function(e,r){showTip(e,(r[3]?r[3]+", ":"")+cn(r[4])+" · "+r[2].toLocaleString("en-GB")+(mode==="live"?" now":" views"))})
       .on("mouseleave",function(){tip.hidden=true})
-      .on("click",function(e,r){e.stopPropagation();var b=document.querySelector(".mapwrap").getBoundingClientRect();tip.hidden=false;tip.style.left=(e.clientX-b.left)+"px";tip.style.top=(e.clientY-b.top)+"px";tip.textContent=(r[3]?r[3]+", ":"")+cn(r[4])+" · "+r[2].toLocaleString("en-GB")+(mode==="live"?" now":" views")});
-    document.getElementById("mapNote").textContent=mode==="live"?(live.length?"Visitors active in the last 5 minutes, by town. Updates every 20 seconds.":"Nobody on the site in the last 5 minutes. This updates every 20 seconds."):(HIST.length?"Page views by town, last ${days} days. Bigger glow = more visits.":"No town data for this range yet. The map started collecting today.");
+      .on("click",function(e,r){e.stopPropagation();showTip(e,(r[3]?r[3]+", ":"")+cn(r[4])+" · "+r[2].toLocaleString("en-GB")+(mode==="live"?" now":" views"))});
+    gDots.selectAll("g.dot").order();
+    size();
+    document.getElementById("mapNote").textContent=(mode==="live"?(live.length?"Visitors active in the last 5 minutes, by town. Updates every 20 seconds.":"Nobody on the site in the last 5 minutes. This updates every 20 seconds."):(HIST.length?"Page views by town, last ${days} days. Bigger glow = more visits.":"No town data for this range yet. The map started collecting today."))+" Tap a country to zoom in, pinch or scroll to zoom, drag to move.";
   }
   function chips(id,rows,label){document.getElementById(id).innerHTML=rows.length?rows.map(function(r){return "<li>"+label(r)+"<b>"+r.n+"</b></li>"}).join(""):"<li>None right now</li>"}
   function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
