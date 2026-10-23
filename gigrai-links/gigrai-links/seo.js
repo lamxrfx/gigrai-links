@@ -441,6 +441,85 @@ export function featuredHtml(list) {
 <div class="gf" aria-label="Featured roles">${list.map((f) => `<a href="/go/sponsored-${esc(f.id)}?src=featured" target="_blank" rel="sponsored noopener"><span class="gl">Sponsored · Featured role</span><span class="gt">${esc(f.title)}</span><span class="gm">${[f.company && "via " + f.company, f.pay, f.blurb].filter(Boolean).map(esc).join(" · ")}</span></a>`).join("")}</div>`;
 }
 
+// ---------- booking form (on /advertise) ----------
+export function bookingForm(email = "") {
+  const opts = AD_OPTIONS.map((o) => `<option value="${esc(o.name)}">${esc(o.name)}: ${esc(o.price)}${o.per ? " " + esc(o.per) : ""}</option>`).join("");
+  const today = new Date().toISOString().slice(0, 10);
+  return `<section class="block" id="book" aria-labelledby="bk"><h2 id="bk">Book your spot</h2>
+<p class="lead">Tell us about your role and we'll confirm your dates and send a payment link within one working day. No payment is taken now.</p>
+<form class="bform glass" id="bform" novalidate>
+<style>
+.bform{padding:24px;border-radius:var(--r-lg);display:grid;gap:16px}
+.bform .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.bform label{display:grid;gap:6px;font-size:13.5px;font-weight:700;color:var(--soft)}
+.bform label small{font-weight:500;color:var(--muted)}
+.bform input,.bform select,.bform textarea{width:100%;height:50px;border-radius:14px;border:1px solid var(--line);background:#0d1024;color:var(--text);font:inherit;font-size:15.5px;padding:0 14px}
+.bform textarea{height:auto;min-height:96px;padding:12px 14px;resize:vertical}
+.bform input:focus-visible,.bform select:focus-visible,.bform textarea:focus-visible{outline:3px solid #22d3ee;outline-offset:1px}
+.bform .agree{display:flex;gap:10px;align-items:flex-start;font-weight:500;color:var(--soft);font-size:14px;line-height:1.5}.bform .agree input{width:20px;height:20px;margin-top:2px;accent-color:#5b8cff;flex:0 0 auto}
+.bform .ppc{display:none}.bform.is-ppc .ppc{display:grid}
+.bform button{height:56px;border:0;border-radius:999px;background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);color:#fff;font:inherit;font-size:16px;font-weight:800;cursor:pointer}
+.bform button[disabled]{opacity:.6;cursor:wait}
+.bform .msg{margin:0;min-height:20px;font-size:14.5px}.bform .msg.err{color:#ffb3b3}
+.bform .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.bdone{padding:28px;border-radius:var(--r-lg);text-align:center;display:grid;gap:10px}.bdone b{font-size:22px}
+@media (max-width:640px){.bform .row{grid-template-columns:1fr}.bform{padding:18px}}
+</style>
+<div class="row">
+  <label>Company<input name="company" required maxlength="100" autocomplete="organization"></label>
+  <label>Your name<input name="name" required maxlength="80" autocomplete="name"></label>
+</div>
+<div class="row">
+  <label>Work email<input name="email" type="email" required maxlength="200" autocomplete="email"></label>
+  <label>Company website<input name="website_url" type="url" maxlength="300" placeholder="https://"></label>
+</div>
+<div class="row">
+  <label>Role title<input name="role" required maxlength="120" placeholder="e.g. AI Trainer (Maths)"></label>
+  <label>Application link <small>where applicants should go</small><input name="url" type="url" required maxlength="500" placeholder="https://"></label>
+</div>
+<div class="row">
+  <label>Pay <small>optional, e.g. $40–60/hr</small><input name="pay" maxlength="60"></label>
+  <label>Option<select name="option" required>${opts}</select></label>
+</div>
+<div class="row">
+  <label>Start date<input name="start" type="date" required min="${today}"></label>
+  <label class="ppc">Budget (£) <small>pay per click, minimum £100</small><input name="budget" type="number" min="100" step="10" placeholder="100"></label>
+</div>
+<label>Anything else? <small>optional: who you're looking for, countries, deadlines</small><textarea name="notes" maxlength="1500"></textarea></label>
+<div class="hp" aria-hidden="true"><label>Leave empty<input name="website" tabindex="-1" autocomplete="off"></label></div>
+<label class="agree"><input type="checkbox" name="agree" required><span>The role is real and <b>free to apply for</b>, and I'm happy for it to be labelled Sponsored. I understand GigrAI may decline roles that aren't a good fit.</span></label>
+<button type="submit">Send booking request</button>
+<p class="msg" aria-live="polite"></p>
+<p class="note" style="margin:0;font-size:13px">Prefer to talk first? ${email ? `Email <a href="mailto:${esc(email)}">${esc(email)}</a> or ` : ""}message <a href="${DM}" target="_blank" rel="noopener">@gigr.ai</a> on Instagram.</p>
+</form>
+<script>
+(function(){
+  var f = document.getElementById("bform"); if (!f) return;
+  var sel = f.option, ppc = function(){ f.classList.toggle("is-ppc", /per click/i.test(sel.value)); };
+  sel.addEventListener("change", ppc); ppc();
+  // pre-select an option from a link like /advertise?option=Pay%20per%20click#book
+  try { var o = new URLSearchParams(location.search).get("option"); if (o) { sel.value = o; ppc(); } } catch (_) {}
+  f.addEventListener("submit", async function(e){
+    e.preventDefault();
+    var msg = f.querySelector(".msg"), btn = f.querySelector("button[type=submit]");
+    msg.className = "msg"; msg.textContent = "";
+    var bad = [].slice.call(f.querySelectorAll("[required]")).find(function(x){ return x.type === "checkbox" ? !x.checked : !x.value.trim() || !x.checkValidity(); });
+    if (bad) { msg.className = "msg err"; msg.textContent = bad.type === "checkbox" ? "Please tick the box to confirm the role meets our standards." : "Please check: " + (bad.closest("label").firstChild.textContent.trim()) + "."; bad.focus(); return; }
+    if (f.classList.contains("is-ppc") && !(+f.budget.value >= 100)) { msg.className = "msg err"; msg.textContent = "Pay per click starts from a £100 budget."; f.budget.focus(); return; }
+    btn.disabled = true; btn.textContent = "Sending…";
+    var data = {}; new FormData(f).forEach(function(v, k){ data[k] = v; }); data.agree = f.agree.checked;
+    try {
+      var r = await fetch("/api/enquiry", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data) });
+      var d = await r.json();
+      if (!d.ok) throw new Error(d.error || "Something went wrong. Please try again.");
+      f.outerHTML = '<div class="bdone glass" role="status"><b>Thanks, request received ✅</b><p style="margin:0;color:var(--muted)">We\\'ll reply to your email within one working day to confirm dates and send a payment link. Your reference: <b>' + d.ref + '</b></p></div>';
+    } catch (err) { msg.className = "msg err"; msg.textContent = err.message; btn.disabled = false; btn.textContent = "Send booking request"; }
+  });
+})();
+</script>
+</section>`;
+}
+
 // ---------- /advertise ----------
 // Advertising options: shared by /advertise and /media-kit
 export const AD_OPTIONS = [
@@ -464,7 +543,7 @@ export function advertisePage(origin, liveRoles, platformCount, email = "") {
   <span class="eyebrow"><i></i>For AI companies and platforms</span>
   <h1>Advertise with <span class="grad-text">GigrAI</span></h1>
   <p>GigrAI is a free search engine for remote AI jobs. Everyone who visits is actively looking for AI training work, so your roles reach the right people at the moment they're ready to apply.</p>
-  <div class="jump"><a class="btn btn-grad" href="${dm}" target="_blank" rel="noopener" style="color:#fff">Message @gigr.ai ${ARROW}</a>${mailLink(email, "Email us")}<a class="ghost" href="/media-kit">Media kit</a><a class="ghost" href="#options">See prices</a></div>
+  <div class="jump"><a class="btn btn-grad" href="#book" style="color:#fff">Book your spot ${ARROW}</a><a class="ghost" href="#options">See prices</a><a class="ghost" href="/media-kit">Media kit</a></div>
 </section>
 
 <section class="block" aria-labelledby="who"><h2 id="who">Who you'll reach</h2><p class="lead">See our latest follower, visitor and click numbers in the <a href="/media-kit">media kit</a>.</p>
@@ -481,7 +560,7 @@ ${AD_OPTIONS.map(adOption).join("\n")}
 
 <section class="block" aria-labelledby="hw"><h2 id="hw">How it works</h2><p class="lead">Live within days. We handle the copy and design.</p>
 <ol class="steps">
-  <li class="glass"><b>Message us</b><span>On Instagram${email ? " or by email" : ""}, with your role link and the option you'd like.</span></li>
+  <li class="glass"><b>Book below</b><span>Tell us about your role and pick an option. It takes two minutes.</span></li>
   <li class="glass"><b>We confirm</b><span>Your dates, and send you a payment link.</span></li>
   <li class="glass"><b>You go live</b><span>On the agreed date. We write and design the posts.</span></li>
   <li class="glass"><b>Track your results</b><span>With a private live report showing every click to your application page, by day, channel and country.</span></li>
@@ -494,7 +573,7 @@ ${AD_OPTIONS.map(adOption).join("\n")}
   <li class="glass">${CHECK}<span>We may decline roles that aren't a good fit for our audience.</span></li>
 </ul></section>
 
-<div class="cta-panel"><h2>Ready to reach AI talent?</h2><p>Send us your role link and we'll reply within a day.</p><div class="jump"><a class="btn btn-grad" href="${dm}" target="_blank" rel="noopener">Message us on Instagram ${ARROW}</a>${mailLink(email)}</div></div>`;
+${bookingForm(email)}`;
   return html(shell({
     title: "Advertise with GigrAI: reach people looking for remote AI work",
     desc: "Put your AI training roles in front of people actively looking for remote AI work. Featured roles from £49 a week, sponsored Instagram posts and WhatsApp shout-outs.",

@@ -9,7 +9,9 @@ export { Content } from "./content.js";
 import { content, refreshNews } from "./content.js";
 import { newsIndex, postPage, postsRss, adminHome, adminEditor } from "./news.js";
 import { CATEGORIES } from "./news-sources.js";
-import { slugify } from "./seo.js";
+import { slugify, AD_OPTIONS } from "./seo.js";
+import { vetLink } from "./vet.js";
+import { EmailMessage } from "cloudflare:email";
 import SPONSORED from "./sponsored.json";
 import { menuButton, drawerHtml } from "./nav.js";
 import { GUIDES } from "./guides.js";
@@ -110,6 +112,36 @@ export default {
       console.error("MailerLite error", res.status, (await res.text()).slice(0, 500));
       if (res.status === 422) return json({ ok: false, error: "Please enter a valid email." }, 400);
       return json({ ok: false, error: "Something went wrong. Please try again." }, 502);
+    }
+
+    // Advertiser booking request from /advertise -> saved, link checked, emailed to us
+    if (url.pathname === "/api/enquiry" && request.method === "POST") {
+      const origin = request.headers.get("origin");
+      if (!origin || new URL(origin).host !== url.host) return json({ ok: false, error: "Forbidden" }, 403);
+      if (tooMany(request)) return json({ ok: false, error: "Too many tries. Please wait a minute and try again." }, 429);
+      let d;
+      try { d = JSON.parse((await request.text()).slice(0, 8000)); } catch { return json({ ok: false, error: "Bad request" }, 400); }
+      if (d.website) return json({ ok: true, ref: "GA-OK" }); // honeypot
+      const t = (k, n) => String(d[k] || "").replace(/[\r\n]+/g, k === "notes" ? "\n" : " ").trim().slice(0, n);
+      const e = {
+        company: t("company", 100), name: t("name", 80), email: t("email", 200).toLowerCase(), site: t("website_url", 300),
+        role: t("role", 120), url: t("url", 500), pay: t("pay", 60), option: t("option", 60),
+        start: /^\d{4}-\d{2}-\d{2}$/.test(d.start || "") ? d.start : "", budget: Math.max(0, Math.min(100000, +d.budget || 0)), notes: t("notes", 1500),
+      };
+      if (!e.company || !e.name || !e.role || !e.url || !e.start) return json({ ok: false, error: "Please fill in all the required fields." }, 400);
+      if (!EMAIL_RE.test(e.email)) return json({ ok: false, error: "Please enter a valid work email." }, 400);
+      if (d.agree !== true) return json({ ok: false, error: "Please tick the box to confirm the role meets our standards." }, 400);
+      if (!AD_OPTIONS.some(o => o.name === e.option)) return json({ ok: false, error: "Please choose an option." }, 400);
+      if (/per click/i.test(e.option) && e.budget < 100) return json({ ok: false, error: "Pay per click starts from a £100 budget." }, 400);
+      if (e.site && !/^https?:\/\//i.test(e.site)) e.site = "https://" + e.site;
+      const vet = await vetLink(e.url, e.site);
+      if (vet.result === "fail") return json({ ok: false, error: "We can't accept that application link: " + vet.reasons.join(" ") }, 400);
+      const ref = "GA-" + [...crypto.getRandomValues(new Uint8Array(3))].map(b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+      const db = content(env);
+      if (db) await db.addEnquiry(ref, { ...e, vet, country: request.cf?.country || "" });
+      ctx.waitUntil(notifyEnquiry(env, ref, e, vet).catch(err => console.error("notify failed", String(err))));
+      console.log(JSON.stringify({ event: "enquiry", ref, option: e.option, vet: vet.result }));
+      return json({ ok: true, ref });
     }
 
     // Link-tap counter: shows up in Cloudflare > gigrai-links > Observability (search "link_click")
@@ -220,7 +252,9 @@ export default {
         const links = await Promise.all(sponsors.map(async s => `${url.origin}/report/${s.id}?k=${await signKey(env, "sponsor:" + s.id)}`));
         const used = await countMany(env, "sponsor_u", sponsors.map(s => ({ k: s.id, from: s.start || "2000-01-01" })));
         sponsors.forEach(s => { s._unique = used[s.id] || 0; s._cap = clickCap(s); });
-        return nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, key: k }));
+        const db = content(env);
+        const enquiries = db ? await db.listEnquiries(30) : [];
+        return nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, key: k, enquiries }));
       }
       const sponsor = ((SPONSORED && SPONSORED.featured) || []).find(s => s.id === rm[1]);
       if (!sponsor || !(await keyOk(env, "sponsor:" + sponsor.id, k))) return nocache(reportsOff(url.origin));
@@ -586,6 +620,29 @@ function eligibility(j, country) {
   if ((j.allow || []).length && !j.allow.includes(country)) return "no";
   return "yes";
 }
+// Email us about a new booking request (Cloudflare Email Routing, to our own verified inbox)
+async function notifyEnquiry(env, ref, e, vet) {
+  if (!env.NOTIFY) return;
+  const from = "bookings@remotegigrai.com", to = env.NOTIFY_TO || "remotegigr.ai@gmail.com";
+  const flag = vet.result === "pass" ? "Link check: passed" : `Link check: NEEDS A LOOK\n- ${vet.warns.join("\n- ")}`;
+  const body = [
+    `New booking request ${ref}`, "",
+    `Company: ${e.company}`, `Contact: ${e.name} <${e.email}>`, `Website: ${e.site || "-"}`, "",
+    `Option: ${e.option}${e.budget ? ` (budget £${e.budget})` : ""}`, `Start: ${e.start}`,
+    `Role: ${e.role}`, `Pay: ${e.pay || "-"}`, `Link: ${e.url}`, vet.finalUrl && vet.finalUrl !== e.url ? `Ends up at: ${vet.finalUrl}` : "",
+    "", flag, "", `Notes: ${e.notes || "-"}`, "",
+    "Reply to this email to answer them directly. All requests: your private dashboard (/report).",
+  ].filter(x => x !== null).join("\r\n");
+  const subj = `New booking: ${e.company} (${e.option})${vet.result === "warn" ? " - check link" : ""}`;
+  const b64 = (str) => btoa(String.fromCharCode(...new TextEncoder().encode(str)));
+  const raw = [
+    `From: GigrAI bookings <${from}>`, `To: ${to}`, `Reply-To: ${e.email.replace(/[^\w.@+-]/g, "")}`,
+    `Subject: =?UTF-8?B?${b64(subj)}?=`, `Message-ID: <${ref}.${Date.now()}@remotegigrai.com>`, `Date: ${new Date().toUTCString()}`,
+    "MIME-Version: 1.0", "Content-Type: text/plain; charset=utf-8", "Content-Transfer-Encoding: base64", "", b64(body).replace(/.{76}/g, "$&\r\n"),
+  ].join("\r\n");
+  await env.NOTIFY.send(new EmailMessage(from, to, raw));
+}
+
 // Pinned sponsors, minus pay-per-click ones whose budget is used up
 async function activeFeatured(env) {
   const live = liveFeatured(SPONSORED);

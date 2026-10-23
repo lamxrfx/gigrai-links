@@ -178,7 +178,7 @@ export function mediaKitPage({ origin, kit, liveRoles, platforms, views, applies
   <span class="eyebrow"><i></i>Media kit${updated ? ` · Updated ${updated}` : ""}</span>
   <h1>Reach people who want <span class="grad-text">AI training work</span></h1>
   <p>GigrAI is a free search engine and community for remote AI jobs. ${esc(kit.audience || "")}</p>
-  <div class="jump"><a class="btn btn-grad" href="${DM}" target="_blank" rel="noopener" style="color:#fff">Message @gigr.ai ${ARROW}</a>${mailLink(kit.contactEmail, "Email us")}<button type="button" class="ghost printbtn" onclick="window.print()" style="height:52px;padding:0 22px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--soft);font-weight:600">Save as PDF</button></div>
+  <div class="jump"><a class="btn btn-grad" href="/advertise#book" style="color:#fff">Book your spot ${ARROW}</a>${mailLink(kit.contactEmail, "Email us")}<button type="button" class="ghost printbtn" onclick="window.print()" style="height:52px;padding:0 22px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--soft);font-weight:600">Save as PDF</button></div>
 </section>
 
 <section class="block" aria-labelledby="nums"><h2 id="nums">Our numbers</h2>
@@ -209,7 +209,7 @@ ${showCountries ? `<section class="block" aria-labelledby="where"><h2 id="where"
   <li class="glass">${CHECK}<span>We write and design everything. You just send the role link.</span></li>
 </ul></section>
 
-<div class="cta-panel"><h2>Let's talk</h2><p>Send us your role link and we'll reply within a day.</p><div class="jump"><a class="btn btn-grad" href="${DM}" target="_blank" rel="noopener">Message us on Instagram ${ARROW}</a>${mailLink(kit.contactEmail)}</div></div>`;
+<div class="cta-panel"><h2>Let's talk</h2><p>Book online in two minutes and we'll confirm within one working day.</p><div class="jump"><a class="btn btn-grad" href="/advertise#book">Book your spot ${ARROW}</a>${mailLink(kit.contactEmail)}</div></div>`;
   return pageOf({
     title: "GigrAI media kit: audience, numbers and prices",
     desc: "Reach people looking for remote AI training work through remotegigrai.com, @gigr.ai on Instagram and the GigrAI Jobs WhatsApp channel.",
@@ -244,7 +244,7 @@ ${billing && billing.billable >= billing.cap ? `<p class="note" style="padding:1
 }
 
 // ---------- /report?k=... (Lamar only) ----------
-export function adminPage({ origin, views, applies, sponsors, links, days = 30, key = "" }) {
+export function adminPage({ origin, views, applies, sponsors, links, days = 30, key = "", enquiries = [] }) {
   const sponsorBlocks = sponsors.length ? sponsors.map((s, i) => `<div class="rlink glass">
   <b>${esc(s.company || s.id)}</b> <span class="meta">${esc(s.start || "?")} to ${esc(s.until || "?")}${s.pin === false ? " · posts only" : " · pinned on site"} · ${fmt(s._unique || 0)} unique clicks${s._cap ? ` of ${fmt(s._cap)} paid for (£${(Math.min(s._unique || 0, s._cap) * s.cpc).toFixed(2)} of £${s.budget})${(s._unique || 0) >= s._cap ? " · <b>budget used, unpinned</b>" : ""}` : ""}</span>
   <span class="meta">Report link to send them:</span><code>${esc(links[i])}</code>
@@ -267,6 +267,14 @@ ${applies ? `<section class="block"><h2>Apply clicks per day</h2><div class="pan
 <section class="block"><h2>Apply clicks by platform</h2><div class="panel glass">${applies ? barList(applies.byKey, (r) => r.k === "-" ? "Unknown" : r.k, applies.total, "apply clicks") : ""}</div></section>
 <section class="block"><h2>Apply clicks by channel</h2><div class="panel glass">${applies ? barList(applies.bySrc, (r) => source(r.src), applies.total, "apply clicks") : ""}</div></section>
 </div>
+<section class="block"><h2>Booking requests</h2>${enquiries.length ? `<div class="rlinks">${enquiries.map((q) => { const e = q.data, v = e.vet || {}; return `<div class="rlink glass">
+  <b>${esc(e.company)} · ${esc(e.option)}${e.budget ? ` · £${fmt(e.budget)} budget` : ""}</b>
+  <span class="meta">${esc(q.ref)} · ${longDate(q.created.slice(0, 10))} · start ${esc(e.start)} · ${esc(e.name)} &lt;<a href="mailto:${esc(e.email)}?subject=${encodeURIComponent("Your GigrAI booking " + q.ref)}">${esc(e.email)}</a>&gt;</span>
+  <span class="meta">Role: ${esc(e.role)}${e.pay ? " · " + esc(e.pay) : ""}</span>
+  <code>${esc(e.url)}</code>
+  <span class="meta" style="color:${v.result === "pass" ? "#9ff0c5" : "#ffe0a3"}">Link check: ${v.result === "pass" ? "passed" : "needs a look: " + esc((v.warns || []).join(" "))}</span>
+  ${e.notes ? `<span class="meta">Notes: ${esc(e.notes)}</span>` : ""}
+</div>`; }).join("")}</div>` : `<p class="note">No requests yet. They arrive from the form on /advertise.</p>`}</section>
 <section class="block"><h2>Advertiser links</h2><div class="rlinks">${sponsorBlocks}</div></section>`;
   return pageOf({ title: "GigrAI numbers (private)", desc: "Private.", canonical: "", body, robots: "noindex,nofollow" });
 }

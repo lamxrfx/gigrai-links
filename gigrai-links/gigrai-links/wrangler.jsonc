@@ -20,6 +20,8 @@
     { "tag": "v1", "new_sqlite_classes": ["Stats"] },
     { "tag": "v2", "new_sqlite_classes": ["Content"] }
   ],
+  // Emails us new booking requests from /advertise (Cloudflare Email Routing; the address must be a verified destination)
+  "send_email": [{ "name": "NOTIFY", "destination_address": "remotegigr.ai@gmail.com" }],
   // Pull the latest news headlines every hour (see news-sources.js)
   "triggers": { "crons": ["7 * * * *"] },
   "observability": {

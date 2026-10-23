@@ -20,6 +20,7 @@ export class Content extends DurableObject {
       sources TEXT, affiliate TEXT, author TEXT, status TEXT NOT NULL DEFAULT 'draft',
       created TEXT NOT NULL, updated TEXT NOT NULL, published_at TEXT)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS enquiries (ref TEXT PRIMARY KEY, created TEXT NOT NULL, data TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new')`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS images (id TEXT PRIMARY KEY, type TEXT NOT NULL, data BLOB NOT NULL, size INTEGER NOT NULL, created TEXT NOT NULL)`);
   }
 
@@ -53,6 +54,19 @@ export class Content extends DurableObject {
   }
   setHidden(id, hidden) {
     this.sql.exec(`UPDATE news SET hidden = ? WHERE id = ?`, hidden ? 1 : 0, id);
+  }
+
+  // ---- advertiser booking requests from /advertise ----
+  addEnquiry(ref, data) {
+    this.sql.exec(`INSERT INTO enquiries (ref, created, data) VALUES (?, ?, ?)`, ref, now(), JSON.stringify(data));
+    // keep 2 years
+    this.sql.exec(`DELETE FROM enquiries WHERE created < ?`, new Date(Date.now() - 730 * 864e5).toISOString());
+  }
+  listEnquiries(limit = 50) {
+    return [...this.sql.exec(`SELECT ref, created, data, status FROM enquiries ORDER BY created DESC LIMIT ?`, limit)].map((r) => ({ ...r, data: JSON.parse(r.data) }));
+  }
+  setEnquiryStatus(ref, status) {
+    this.sql.exec(`UPDATE enquiries SET status = ? WHERE ref = ?`, status, ref);
   }
 
   // ---- uploaded images (resized in the browser before upload, so each is small) ----
