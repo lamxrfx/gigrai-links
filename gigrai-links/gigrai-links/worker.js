@@ -1,5 +1,5 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
-import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat, setEmail } from "./seo.js";
+import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat, setEmail, alertsConfirmedPage } from "./seo.js";
 import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, flagged, markOwner, isOwner, roleClick, topRoles, meta } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
@@ -261,6 +261,12 @@ const app = {
       const today = { views: tv ? tv.total : 0, applies: ta ? ta.total : 0, countries: tv ? tv.byCountry.slice(0, 6) : [] };
       return json(d ? { ok: true, ...d, today } : { ok: false });
     }
+    // Thank-you page after confirming email alerts (set as the redirect in MailerLite's double opt-in settings)
+    if (request.method === "GET" && (url.pathname === "/alerts/confirmed" || url.pathname === "/alerts/confirmed/")) {
+      view("confirmed");
+      return alertsConfirmedPage(url.origin);
+    }
+
     // Lost or changed the numbers-page link? This emails it to our own inbox only (never shown here)
     if (url.pathname === "/report/email-link") {
       if (request.method === "POST") {

@@ -593,3 +593,21 @@ ${bookingForm(email)}`;
     canonical: origin + "/advertise", body, active: "/advertise",
   }), 200, 3600);
 }
+
+// ---------- /alerts/confirmed (MailerLite sends people here after they confirm their email) ----------
+export function alertsConfirmedPage(origin) {
+  const body = `<section class="hero sm" style="text-align:center;max-width:640px;margin:0 auto">
+<img src="/email/gigrai-icon.png" width="72" height="72" alt="" style="border-radius:18px;margin:10px auto 18px;display:block">
+<span class="eyebrow"><i></i>You're subscribed</span>
+<h1>You're in. <span class="grad-text">Welcome to GigrAI.</span></h1>
+<p>Your first email is on its way, with where to start. After that, we'll send the best new remote AI roles once a week, with the pay shown up front.</p>
+<p style="margin-top:22px"><a class="btn btn-grad" href="/?src=email-confirmed">See roles open to you ${ARROW}</a></p>
+</section>
+<section class="block" style="max-width:760px;margin:0 auto"><div class="cards">
+<a class="card" href="/guides/micro1-ai-interview?src=email-confirmed"><div class="c-title"><span class="c-name">Pass the AI interview</span><span class="meta">What gets scored, and how to prepare</span></div></a>
+<a class="card" href="/platforms?src=email-confirmed"><div class="c-title"><span class="c-name">Compare the platforms</span><span class="meta">micro1, Mercor, Ethos and more</span></div></a>
+<a class="card" href="${WA}" target="_blank" rel="noopener"><div class="c-title"><span class="c-name">WhatsApp channel</span><span class="meta">New roles the moment they go live</span></div></a>
+</div>
+<p class="fine" style="text-align:center;margin-top:18px">Didn't get the email? Check spam and mark it "Not spam" so the next ones arrive. You can unsubscribe from any email.</p></section>`;
+  return html(shell({ title: "You're subscribed · GigrAI", desc: "You're subscribed to GigrAI job alerts.", canonical: "", body, robots: "noindex,follow" }));
+}
