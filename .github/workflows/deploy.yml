@@ -66,7 +66,7 @@ jobs:
             echo "::notice title=Report links::REPORT_SECRET copied to Cloudflare"
             sleep 20
             # email the (new) numbers-page link to the GigrAI inbox; it's never printed here
-            curl -s -o /dev/null -X POST https://remotegigrai.com/report/email-link || true
+            curl -s -o /dev/null -X POST 'https://remotegigrai.com/report/email-link?auto=1' || true
           else
             echo "::warning title=Report links::Could not copy REPORT_SECRET to Cloudflare (check the API token can edit Workers)"
           fi

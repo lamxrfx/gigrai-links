@@ -1,6 +1,6 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
 import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat } from "./seo.js";
-import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, flagged, markOwner, isOwner, roleClick, topRoles } from "./stats.js";
+import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, flagged, markOwner, isOwner, roleClick, topRoles, meta } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
 import DRAFTS from "./drafts.json";
@@ -267,6 +267,12 @@ const app = {
         const cache = typeof caches !== "undefined" ? caches.default : null;
         if (cache && await cache.match(lock)) return linkPage(emailLinkPage("Already sent in the last 10 minutes. Check your inbox (and spam)."), 429);
         const key = await signKey(env, "owner");
+        // After a deploy (?auto=1) only send when the key has actually changed, so the inbox isn't spammed
+        if (key && url.searchParams.get("auto") === "1") {
+          const h = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key)))].slice(0, 8).map(b => b.toString(16).padStart(2, "0")).join("");
+          if ((await meta(env, "owner_key_sent")) === h) return linkPage(emailLinkPage("No change: the link is the same as before."));
+          await meta(env, "owner_key_sent", h);
+        }
         if (key && env.NOTIFY) {
           if (cache) ctx.waitUntil(cache.put(lock, new Response("1", { headers: { "cache-control": "max-age=600" } })));
           ctx.waitUntil(sendOwnerLink(env, `${url.origin}/report?k=${key}`).catch(e => console.error("owner link email failed", String(e))));

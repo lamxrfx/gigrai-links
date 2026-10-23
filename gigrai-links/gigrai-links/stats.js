@@ -34,6 +34,9 @@ export class Stats extends DurableObject {
     this.sql.exec(`INSERT OR IGNORE INTO meta (key, value) VALUES ('since', ?)`, today());
   }
 
+  getMeta(key) { return [...this.sql.exec(`SELECT value FROM meta WHERE key = ?`, String(key))][0]?.value ?? null; }
+  setMeta(key, value) { this.sql.exec(`INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value`, String(key), String(value)); }
+
   roleClick(id, title, via, path, pay) {
     id = String(id).slice(0, 120);
     this.sql.exec(`INSERT INTO roleclicks (day, id, n) VALUES (?, ?, 1) ON CONFLICT (day, id) DO UPDATE SET n = n + 1`, today(), id);
@@ -231,6 +234,11 @@ export function roleClick(env, ctx, request, job, path, pay) {
 export async function topRoles(env, from, to) {
   if (!env.STATS) return [];
   try { return await stub(env).topRoles(from, to, 25); } catch (e) { console.error("roles read failed", String(e)); return []; }
+}
+
+export async function meta(env, key, value) {
+  if (!env.STATS) return null;
+  try { const s = stub(env); if (value === undefined) return await s.getMeta(key); await s.setMeta(key, value); return value; } catch { return null; }
 }
 
 export async function flagged(env, from, to) {
