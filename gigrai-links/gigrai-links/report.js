@@ -253,11 +253,10 @@ function liveMap(key, period, geo, ccViews = []) {
   const cc = {}; for (const r of ccViews) { const c = String(r.cc || "").toUpperCase(); if (/^[A-Z]{2}$/.test(c) && c !== "XX") cc[c] = (cc[c] || 0) + r.n; }
   const ccJson = JSON.stringify(cc);
   const data = JSON.stringify((geo || []).filter(g => g.lat !== null && g.lon !== null).map(g => [Math.round(g.lat * 10) / 10, Math.round(g.lon * 10) / 10, g.n, g.city || "", g.cc])).replace(/</g, "\\u003c");
-  return `<section class="block" id="live"><div class="live-head"><h2><span class="pulse"></span>On the site now: <b id="liveN">…</b></h2>
+  return `<section class="block" id="live"><div class="live-head"><h2>Live visitors</h2>
 <div class="livebar"><button type="button" class="rf" id="mapRefresh" aria-label="Refresh the map now"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg><span id="mapAgo">Refresh</span></button><div class="seg" role="tablist"><button type="button" class="on" data-m="live">Live now</button><button type="button" data-m="hist">${esc(period)}</button></div></div></div>
-<div class="panel glass mapwrap"><svg id="map" viewBox="0 0 960 470" role="img" aria-label="World map of visitors"></svg><div class="mapctl"><button type="button" id="mapIn" aria-label="Zoom in">+</button><button type="button" id="mapOut" aria-label="Zoom out">−</button><button type="button" id="mapReset" class="wide" hidden>Reset</button></div><div class="maptip" id="mapTip" hidden></div>
+<div class="panel glass mapwrap"><svg id="map" viewBox="0 0 960 470" role="img" aria-label="World map of visitors"></svg><div class="mapctl"><button type="button" id="mapIn" aria-label="Zoom in">+</button><button type="button" id="mapOut" aria-label="Zoom out">−</button><button type="button" id="mapReset" class="wide" hidden>Reset</button></div><div class="maptip" id="mapTip" hidden></div><div class="hud" id="hud"><div class="hud-n"><span class="pulse" id="hudDot"></span><b id="liveN">…</b><span id="hudLbl">on the site now</span><button type="button" class="hudx" id="hudX" aria-label="Hide details" aria-expanded="true">–</button></div><div class="hudbody"><h3 class="mini" id="hudCCt">Countries</h3><ul class="chips" id="liveCC"></ul><div id="hudPagesBox"><h3 class="mini">Pages</h3><ul class="chips" id="livePages"></ul></div></div></div>
 <p class="note" id="mapNote">Visitors active in the last 5 minutes, by town. Updates every 20 seconds.</p></div>
-<div class="two"><section><h3 class="mini">Countries now</h3><ul class="chips" id="liveCC"></ul></section><section><h3 class="mini">Pages now</h3><ul class="chips" id="livePages"></ul></section></div>
 </section>
 <style>
 .live-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}.live-head h2{margin:0;display:flex;align-items:center;gap:10px}
@@ -271,6 +270,10 @@ function liveMap(key, period, geo, ccViews = []) {
 .chips .ccgo{all:unset;cursor:pointer}.chips li:has(.ccgo):hover{border-color:#7fdcf0}.chips li:has(.ccgo){padding:0}.chips .ccgo{display:block;padding:6px 11px}.chips .ccgo:focus-visible{outline:2px solid #7fdcf0;border-radius:999px}
 .chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}.chips li{padding:6px 11px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:13px}.chips li b{margin-left:5px}
 h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
+.hud{position:absolute;top:18px;left:18px;width:224px;max-height:calc(100% - 80px);overflow:auto;padding:14px;border-radius:16px;background:rgba(10,13,30,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line-2);box-shadow:0 18px 40px -18px rgba(0,0,0,.9);scrollbar-width:none}
+.hud::-webkit-scrollbar{display:none}.hudx{margin-left:auto;width:26px;height:26px;flex:none;border-radius:8px;border:1px solid var(--line-2);background:none;color:var(--text);font:700 15px/1 inherit;font-family:inherit;cursor:pointer}.hud.min .hudbody{display:none}.hud.min{width:auto}.hud-n{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--muted)}.hud-n b{font-size:28px;line-height:1;color:var(--text);font-weight:800;font-variant-numeric:tabular-nums}
+.hud h3.mini{margin:12px 0 7px;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em}.hud .chips li{font-size:12.5px;background:rgba(255,255,255,.06)}.hud .pulse{flex:none}.hud .pulse.off{background:#8b3dff;animation:none}
+@media(max-width:700px){.hudx{display:none}.hud.min .hudbody{display:block}.hud{position:static;width:auto;max-height:none;margin-top:10px;background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:4px 2px}}
 @media(prefers-reduced-motion:reduce){.pulse{animation:none}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
@@ -342,14 +345,13 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
       .on("mouseleave",function(){tip.hidden=true})
       .on("click",function(e,r){e.stopPropagation();showTip(e,(r[3]?r[3]+", ":"")+cn(r[4])+" · "+r[2].toLocaleString("en-GB")+(mode==="live"?" now":" views"))});
     gDots.selectAll("g.dot").order();
-    size();colour();
+    size();colour();if(typeof hud==="function")hud();
     document.getElementById("mapNote").textContent=(mode==="live"?(live.length?"Visitors active in the last 5 minutes, by town. Updates every 20 seconds.":"Nobody on the site in the last 5 minutes. This updates every 20 seconds."):("Brighter countries = more page views (${esc(period).toLowerCase()}), "+Object.values(CC).reduce(function(a,b){return a+b},0).toLocaleString("en-GB")+" in total."+(HIST.length?" Dots show towns, recorded since 23 Oct 2026.":"")))+" Tap a country to zoom in, pinch or scroll to zoom, drag to move.";
   }
   function chips(id,rows,label,cc){document.getElementById(id).innerHTML=rows.length?rows.map(function(r){var t=label(r)+"<b>"+r.n+"</b>";return cc?'<li><button type="button" class="ccgo" data-cc="'+esc(r.cc)+'">'+t+"</button></li>":"<li>"+t+"</li>"}).join(""):"<li>None right now</li>"}
   // Tap a country under the map: fly to its dots (or the country itself)
   function goCountry(c){
-    if(mode!=="live"){mode="live";document.querySelectorAll(".seg button").forEach(function(x){x.classList.toggle("on",x.dataset.m==="live")});draw();}
-    var pts=live.filter(function(p){return String(p[4]).toLowerCase()===c}).map(function(p){return proj([p[1],p[0]])}).filter(Boolean);
+    var pts=(mode==="live"?live:HIST).filter(function(p){return String(p[4]).toLowerCase()===c}).map(function(p){return proj([p[1],p[0]])}).filter(Boolean);
     var t;
     if(pts.length){
       var x0=d3.min(pts,function(p){return p[0]}),x1=d3.max(pts,function(p){return p[0]}),y0=d3.min(pts,function(p){return p[1]}),y1=d3.max(pts,function(p){return p[1]});
@@ -359,10 +361,24 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
     var f=gLand.selectAll(".land").filter(function(x){return NUM2CC[x.id]===c.toUpperCase()});
     gLand.selectAll(".land").classed("on",false);f.classed("on",true);picked=f.size()?f.datum():null;
     if(!t&&f.size()){var bb=path.bounds(f.datum());t=d3.zoomIdentity.translate(480,235).scale(Math.max(1,Math.min(24,.8/Math.max((bb[1][0]-bb[0][0])/960,(bb[1][1]-bb[0][1])/470)))).translate(-(bb[0][0]+bb[1][0])/2,-(bb[0][1]+bb[1][1])/2);}
-    if(t){flyTo(t);window.scrollTo({top:document.getElementById("live").getBoundingClientRect().top+scrollY-90,behavior:"smooth"});}
+    if(t){flyTo(t);if(innerWidth<=700)window.scrollTo({top:document.getElementById("live").getBoundingClientRect().top+scrollY-90,behavior:"smooth"});}
   }
   document.getElementById("liveCC").addEventListener("click",function(e){var b=e.target.closest(".ccgo");if(b){e.stopPropagation();goCountry(b.dataset.cc)}});
   function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+  var liveTotal=0, liveCountries=[], livePages=[];
+  document.getElementById("hudX").addEventListener("click",function(){var h=document.getElementById("hud"),m=h.classList.toggle("min");this.textContent=m?"+":"–";this.setAttribute("aria-expanded",String(!m));this.setAttribute("aria-label",m?"Show details":"Hide details");try{localStorage.setItem("gg-hud-min",m?"1":"")}catch(e){}});
+  try{if(localStorage.getItem("gg-hud-min")&&innerWidth>700)document.getElementById("hudX").click()}catch(e){}
+  function hud(){
+    var h=mode==="hist";
+    document.getElementById("liveN").textContent=(h?Object.values(CC).reduce(function(a,b){return a+b},0):liveTotal).toLocaleString("en-GB");
+    document.getElementById("hudLbl").textContent=h?"page views · ${esc(period).toLowerCase()}":"on the site now";
+    document.getElementById("hudDot").classList.toggle("off",h);
+    document.getElementById("hudCCt").textContent=h?"Top countries":"Countries";
+    document.getElementById("hudPagesBox").hidden=h;
+    var rows=h?Object.keys(CC).map(function(c){return {cc:c.toLowerCase(),n:CC[c]}}).sort(function(a,b){return b.n-a.n}).slice(0,12):liveCountries;
+    chips("liveCC",rows,function(r){return esc(cn(r.cc))},true);
+    if(!h)chips("livePages",livePages,function(r){return esc(r.page)});
+  }
   var lastAt=0, rfBtn=document.getElementById("mapRefresh"), ago=document.getElementById("mapAgo");
   function tick(){if(!lastAt)return;var sec=Math.round((Date.now()-lastAt)/1000);ago.textContent=sec<5?"Updated just now":"Updated "+(sec<60?sec+"s":Math.floor(sec/60)+"m")+" ago"}
   setInterval(tick,1000);
@@ -372,9 +388,7 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
     fetch("/report-live?k="+encodeURIComponent(KEY),{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){
       lastAt=Date.now();tick();
       if(!d||!d.ok)return;live=d.places.filter(function(p){return p.lat!==null&&p.lon!==null}).map(function(p){return [p.lat,p.lon,p.n,p.city||"",p.cc]});
-      document.getElementById("liveN").textContent=d.total.toLocaleString("en-GB");
-      chips("liveCC",d.countries,function(r){return esc(cn(r.cc))},true);
-      chips("livePages",d.pages,function(r){return esc(r.page)});
+      liveTotal=d.total;liveCountries=d.countries;livePages=d.pages;hud();
       if(mode==="live")draw();
     }).catch(function(){}).then(function(){rfBtn.classList.remove("spin")});
   }
