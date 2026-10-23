@@ -254,7 +254,7 @@ function liveMap(key, period, geo, ccViews = []) {
   const ccJson = JSON.stringify(cc);
   const data = JSON.stringify((geo || []).filter(g => g.lat !== null && g.lon !== null).map(g => [Math.round(g.lat * 10) / 10, Math.round(g.lon * 10) / 10, g.n, g.city || "", g.cc])).replace(/</g, "\\u003c");
   return `<section class="block" id="live"><div class="live-head"><h2><span class="pulse"></span>On the site now: <b id="liveN">…</b></h2>
-<div class="seg" role="tablist"><button type="button" class="on" data-m="live">Live now</button><button type="button" data-m="hist">${esc(period)}</button></div></div>
+<div class="livebar"><button type="button" class="rf" id="mapRefresh" aria-label="Refresh the map now"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg><span id="mapAgo">Refresh</span></button><div class="seg" role="tablist"><button type="button" class="on" data-m="live">Live now</button><button type="button" data-m="hist">${esc(period)}</button></div></div></div>
 <div class="panel glass mapwrap"><svg id="map" viewBox="0 0 960 470" role="img" aria-label="World map of visitors"></svg><div class="mapctl"><button type="button" id="mapIn" aria-label="Zoom in">+</button><button type="button" id="mapOut" aria-label="Zoom out">−</button><button type="button" id="mapReset" class="wide" hidden>Reset</button></div><div class="maptip" id="mapTip" hidden></div>
 <p class="note" id="mapNote">Visitors active in the last 5 minutes, by town. Updates every 20 seconds.</p></div>
 <div class="two"><section><h3 class="mini">Countries now</h3><ul class="chips" id="liveCC"></ul></section><section><h3 class="mini">Pages now</h3><ul class="chips" id="livePages"></ul></section></div>
@@ -262,6 +262,7 @@ function liveMap(key, period, geo, ccViews = []) {
 <style>
 .live-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}.live-head h2{margin:0;display:flex;align-items:center;gap:10px}
 .pulse{width:10px;height:10px;border-radius:50%;background:#34d399;box-shadow:0 0 0 0 rgba(52,211,153,.7);animation:pl 1.8s infinite}@keyframes pl{70%{box-shadow:0 0 0 12px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+.livebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.rf{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);background:var(--glass);color:var(--text);font:inherit;font-weight:700;font-size:13px;cursor:pointer}.rf:hover{border-color:#7fdcf0}.rf.spin svg{animation:rfs .8s linear infinite}@keyframes rfs{to{transform:rotate(360deg)}}
 .seg{display:inline-flex;padding:4px;border-radius:999px;border:1px solid var(--line-2);background:var(--glass)}.seg button{border:0;background:none;color:var(--muted);font:inherit;font-weight:700;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer}.seg button.on{background:var(--grad);color:#fff}
 .mapwrap{position:relative;padding:10px;-webkit-user-select:none;user-select:none}#map{display:block;width:100%;height:auto;max-height:min(66vh,560px)}#map{cursor:grab;overflow:hidden;border-radius:14px}#map:active{cursor:grabbing}#map .land{fill:#1a1f3d;stroke:#2c3363;stroke-width:.6;vector-effect:non-scaling-stroke;cursor:pointer;transition:fill .15s}#map .land:hover{fill:#232a52}#map .land.on{fill:#2a3368}#map .dot{cursor:pointer}#map .lbl{fill:#eef1ff;font-weight:700;paint-order:stroke;stroke:#0b0e1d;stroke-linejoin:round;pointer-events:none}
 .mapctl{position:absolute;top:18px;right:18px;display:flex;flex-direction:column;gap:6px}.mapctl button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line-2);background:rgba(13,16,36,.85);color:#fff;font:700 18px/1 inherit;font-family:inherit;cursor:pointer}.mapctl button.wide{width:auto;padding:0 8px;font-size:12px}.mapctl [hidden]{display:none}
@@ -362,18 +363,25 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
   }
   document.getElementById("liveCC").addEventListener("click",function(e){var b=e.target.closest(".ccgo");if(b){e.stopPropagation();goCountry(b.dataset.cc)}});
   function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+  var lastAt=0, rfBtn=document.getElementById("mapRefresh"), ago=document.getElementById("mapAgo");
+  function tick(){if(!lastAt)return;var sec=Math.round((Date.now()-lastAt)/1000);ago.textContent=sec<5?"Updated just now":"Updated "+(sec<60?sec+"s":Math.floor(sec/60)+"m")+" ago"}
+  setInterval(tick,1000);
+  rfBtn.addEventListener("click",function(){load()});
   function load(){
+    rfBtn.classList.add("spin");
     fetch("/report-live?k="+encodeURIComponent(KEY),{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){
+      lastAt=Date.now();tick();
       if(!d||!d.ok)return;live=d.places.filter(function(p){return p.lat!==null&&p.lon!==null}).map(function(p){return [p.lat,p.lon,p.n,p.city||"",p.cc]});
       document.getElementById("liveN").textContent=d.total.toLocaleString("en-GB");
       chips("liveCC",d.countries,function(r){return esc(cn(r.cc))},true);
       chips("livePages",d.pages,function(r){return esc(r.page)});
       if(mode==="live")draw();
-    }).catch(function(){});
+    }).catch(function(){}).then(function(){rfBtn.classList.remove("spin")});
   }
   document.querySelectorAll(".seg button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll(".seg button").forEach(function(x){x.classList.toggle("on",x===b)});mode=b.dataset.m;draw()})});
   document.addEventListener("click",function(){tip.hidden=true});
   load();setInterval(function(){if(!document.hidden)load()},20000);
+  document.addEventListener("visibilitychange",function(){if(!document.hidden&&Date.now()-lastAt>15000)load()});
 })();
 </script>`;
 }
