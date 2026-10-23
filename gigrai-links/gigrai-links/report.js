@@ -267,6 +267,7 @@ function liveMap(key, period, geo, ccViews = []) {
 .mapctl{position:absolute;top:18px;right:18px;display:flex;flex-direction:column;gap:6px}.mapctl button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line-2);background:rgba(13,16,36,.85);color:#fff;font:700 18px/1 inherit;font-family:inherit;cursor:pointer}.mapctl button.wide{width:auto;padding:0 8px;font-size:12px}.mapctl [hidden]{display:none}
 .maptip{position:absolute;pointer-events:none;padding:7px 10px;border-radius:10px;background:#f2f4ff;color:#0b0e1d;font-size:13px;font-weight:700;white-space:nowrap;transform:translate(-50%,-120%)}
 .flaglist{list-style:none;margin:0;padding:0;display:grid;gap:8px}.flaglist li{display:grid;gap:2px;padding:10px 12px;border-radius:12px;background:rgba(255,193,7,.07);border:1px solid rgba(255,193,7,.25)}.flaglist span{color:var(--muted);font-size:13px}
+.chips .ccgo{all:unset;cursor:pointer}.chips li:has(.ccgo):hover{border-color:#7fdcf0}.chips li:has(.ccgo){padding:0}.chips .ccgo{display:block;padding:6px 11px}.chips .ccgo:focus-visible{outline:2px solid #7fdcf0;border-radius:999px}
 .chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}.chips li{padding:6px 11px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:13px}.chips li b{margin-left:5px}
 h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
 @media(prefers-reduced-motion:reduce){.pulse{animation:none}}
@@ -343,13 +344,29 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
     size();colour();
     document.getElementById("mapNote").textContent=(mode==="live"?(live.length?"Visitors active in the last 5 minutes, by town. Updates every 20 seconds.":"Nobody on the site in the last 5 minutes. This updates every 20 seconds."):("Brighter countries = more page views (${esc(period).toLowerCase()}), "+Object.values(CC).reduce(function(a,b){return a+b},0).toLocaleString("en-GB")+" in total."+(HIST.length?" Dots show towns, recorded since 23 Oct 2026.":"")))+" Tap a country to zoom in, pinch or scroll to zoom, drag to move.";
   }
-  function chips(id,rows,label){document.getElementById(id).innerHTML=rows.length?rows.map(function(r){return "<li>"+label(r)+"<b>"+r.n+"</b></li>"}).join(""):"<li>None right now</li>"}
+  function chips(id,rows,label,cc){document.getElementById(id).innerHTML=rows.length?rows.map(function(r){var t=label(r)+"<b>"+r.n+"</b>";return cc?'<li><button type="button" class="ccgo" data-cc="'+esc(r.cc)+'">'+t+"</button></li>":"<li>"+t+"</li>"}).join(""):"<li>None right now</li>"}
+  // Tap a country under the map: fly to its dots (or the country itself)
+  function goCountry(c){
+    if(mode!=="live"){mode="live";document.querySelectorAll(".seg button").forEach(function(x){x.classList.toggle("on",x.dataset.m==="live")});draw();}
+    var pts=live.filter(function(p){return String(p[4]).toLowerCase()===c}).map(function(p){return proj([p[1],p[0]])}).filter(Boolean);
+    var t;
+    if(pts.length){
+      var x0=d3.min(pts,function(p){return p[0]}),x1=d3.max(pts,function(p){return p[0]}),y0=d3.min(pts,function(p){return p[1]}),y1=d3.max(pts,function(p){return p[1]});
+      var k=pts.length===1?8:Math.max(1,Math.min(12,.45/Math.max((x1-x0)/960,(y1-y0)/470,.02)));
+      t=d3.zoomIdentity.translate(480,235).scale(k).translate(-(x0+x1)/2,-(y0+y1)/2);
+    }
+    var f=gLand.selectAll(".land").filter(function(x){return NUM2CC[x.id]===c.toUpperCase()});
+    gLand.selectAll(".land").classed("on",false);f.classed("on",true);picked=f.size()?f.datum():null;
+    if(!t&&f.size()){var bb=path.bounds(f.datum());t=d3.zoomIdentity.translate(480,235).scale(Math.max(1,Math.min(24,.8/Math.max((bb[1][0]-bb[0][0])/960,(bb[1][1]-bb[0][1])/470)))).translate(-(bb[0][0]+bb[1][0])/2,-(bb[0][1]+bb[1][1])/2);}
+    if(t){flyTo(t);window.scrollTo({top:document.getElementById("live").getBoundingClientRect().top+scrollY-90,behavior:"smooth"});}
+  }
+  document.getElementById("liveCC").addEventListener("click",function(e){var b=e.target.closest(".ccgo");if(b){e.stopPropagation();goCountry(b.dataset.cc)}});
   function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
   function load(){
     fetch("/report-live?k="+encodeURIComponent(KEY),{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){
       if(!d||!d.ok)return;live=d.places.filter(function(p){return p.lat!==null&&p.lon!==null}).map(function(p){return [p.lat,p.lon,p.n,p.city||"",p.cc]});
       document.getElementById("liveN").textContent=d.total.toLocaleString("en-GB");
-      chips("liveCC",d.countries,function(r){return esc(cn(r.cc))});
+      chips("liveCC",d.countries,function(r){return esc(cn(r.cc))},true);
       chips("livePages",d.pages,function(r){return esc(r.page)});
       if(mode==="live")draw();
     }).catch(function(){});
@@ -361,7 +378,7 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
 </script>`;
 }
 
-export function adminPage({ origin, views, applies, sponsors, links, days = 30, allTime = false, key = "", enquiries = [], geo = [], ccViews = [], bots = null, flags = [] }) {
+export function adminPage({ origin, views, applies, sponsors, links, days = 30, allTime = false, key = "", enquiries = [], geo = [], ccViews = [], bots = null, flags = [], hidden = true }) {
   const period = allTime ? "All time" : `Last ${days} days`;
   const sponsorBlocks = sponsors.length ? sponsors.map((s, i) => `<div class="rlink glass">
   <b>${esc(s.company || s.id)}</b> <span class="meta">${esc(s.start || "?")} to ${esc(s.until || "?")}${s.pin === false ? " · posts only" : " · pinned on site"} · ${fmt(s._unique || 0)} unique clicks${s._cap ? ` of ${fmt(s._cap)} paid for (£${(Math.min(s._unique || 0, s._cap) * s.cpc).toFixed(2)} of £${s.budget})${(s._unique || 0) >= s._cap ? " · <b>budget used, unpinned</b>" : ""}` : ""}</span>
@@ -371,6 +388,7 @@ export function adminPage({ origin, views, applies, sponsors, links, days = 30, 
 </div>`).join("") : `<p class="note">No campaigns yet. Add one to sponsored.json and its links appear here.</p>`;
   const body = `<section class="hero sm"><span class="eyebrow"><i></i>Private · only for you</span><h1>GigrAI <span class="grad-text">numbers</span></h1>
 <p>${period}. Counting started ${views ? longDate(views.since) : "-"}. Bookmark this page and don't share the link.</p>
+<p class="note" style="margin-top:6px">${hidden ? `🔒 <b>This device isn't counted</b> in your numbers or on the map. <a href="/report?k=${encodeURIComponent(key)}&count=1">Count it again</a>` : `This device is counted like any visitor. <a href="/report?k=${encodeURIComponent(key)}&count=0">Stop counting this device</a>`}</p>
 ${rangeSwitch("/report", days, `k=${encodeURIComponent(key)}&`, allTime)}</section>
 ${liveMap(key, period, geo, ccViews)}
 <section class="block"><div class="kpis">

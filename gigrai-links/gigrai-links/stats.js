@@ -159,9 +159,14 @@ export function isHuman(request) {
 
 const stub = (env) => env.STATS.get(env.STATS.idFromName("global"));
 
+// Requests from the owner's own devices (private cookie): never counted anywhere
+const OWNER = new WeakSet();
+export const markOwner = (request) => OWNER.add(request);
+export const isOwner = (request) => OWNER.has(request);
+
 // Count something without slowing the response down. Never throws.
 export function track(env, ctx, request, kind, k, src) {
-  if (!env.STATS) return;
+  if (!env.STATS || OWNER.has(request)) return;
   const cc = request.cf?.country || "";
   try { ctx.waitUntil(stub(env).hit(kind, k, src, cc).catch(() => {})); } catch {}
 }
@@ -174,14 +179,14 @@ async function visitorCode(env, request) {
 }
 
 export function trackUnique(env, ctx, request, k, src) {
-  if (!env.STATS) return;
+  if (!env.STATS || OWNER.has(request)) return;
   const cc = request.cf?.country || "";
   try { ctx.waitUntil(visitorCode(env, request).then((v) => stub(env).uniqueHit(k, v, src, cc)).catch(() => {})); } catch {}
 }
 
 // Mark a visitor as on the site now (town-level location from Cloudflare, rounded; no IP stored)
 export function presence(env, ctx, request, page, isView) {
-  if (!env.STATS) return;
+  if (!env.STATS || OWNER.has(request)) return;
   const cf = request.cf || {};
   const r = (x) => { const n = parseFloat(x); return Number.isFinite(n) ? Math.round(n * 10) / 10 : NaN; };
   try {

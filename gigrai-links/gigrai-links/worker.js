@@ -1,6 +1,6 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
 import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat } from "./seo.js";
-import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, flagged } from "./stats.js";
+import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, flagged, markOwner, isOwner } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
 import DRAFTS from "./drafts.json";
@@ -67,6 +67,9 @@ export default {
       url.protocol = "https:";
       return Response.redirect(url.toString(), 301);
     }
+    // Owner's own devices carry a private cookie (set from the numbers page) and are never counted
+    const nt = (request.headers.get("cookie") || "").match(/(?:^|;\s*)gg_nt=([a-f0-9]{20})(?:;|$)/);
+    if (nt && await keyOk(env, "notrack", nt[1])) markOwner(request);
     // Count a human page view (anonymous daily totals for the media kit)
     const view = (section) => {
       if (request.method !== "GET") return;
@@ -277,7 +280,20 @@ export default {
         sponsors.forEach(s => { s._unique = used[s.id] || 0; s._cap = clickCap(s); });
         const db = content(env);
         const enquiries = db ? await db.listEnquiries(30) : [];
-        return nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags }));
+        // Opening the numbers page stops this device being counted (?count=1 turns counting back on)
+        const countMe = url.searchParams.get("count") === "1";
+        const chose = /(?:^|;\s*)gg_count=1(?:;|$)/.test(request.headers.get("cookie") || "");
+        const hidden = countMe ? false : (isOwner(request) || url.searchParams.get("count") === "0" || (!nt && !chose));
+        const page = nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags, hidden }));
+        const secure = url.protocol === "https:" ? "; Secure" : "";
+        if (countMe) {
+          page.headers.append("set-cookie", `gg_nt=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure}`);
+          page.headers.append("set-cookie", `gg_count=1; Path=/report; Max-Age=34560000; HttpOnly; SameSite=Lax${secure}`);
+        } else if (hidden && !isOwner(request)) {
+          page.headers.append("set-cookie", `gg_nt=${await signKey(env, "notrack")}; Path=/; Max-Age=34560000; HttpOnly; SameSite=Lax${secure}`);
+          page.headers.append("set-cookie", `gg_count=; Path=/report; Max-Age=0; HttpOnly; SameSite=Lax${secure}`);
+        }
+        return page;
       }
       const sponsor = ((SPONSORED && SPONSORED.featured) || []).find(s => s.id === rm[1]);
       if (!sponsor || !(await keyOk(env, "sponsor:" + sponsor.id, k))) return nocache(reportsOff(url.origin));
