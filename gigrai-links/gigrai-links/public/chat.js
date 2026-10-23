@@ -33,6 +33,7 @@
     + '.ggc-f textarea:focus{outline:none;border-color:#7fdcf0}'
     + '.ggc-send{width:44px;height:44px;flex:none;border:0;border-radius:14px;cursor:pointer;color:#fff;background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff)}.ggc-send:disabled{opacity:.5}'
     + '.ggc-n{padding:0 14px 10px;color:#8f97b6;font-size:11.5px;text-align:center}'
+    + '.ggc-ig{display:flex;align-items:center;justify-content:center;gap:7px;margin:0 12px 8px;padding:9px;border-radius:12px;border:1px solid rgba(255,255,255,.14);color:#dfe4ff;font-size:13px;font-weight:700;text-decoration:none}.ggc-ig:hover{border-color:#7fdcf0}.ggc-ig svg{width:16px;height:16px}'
     + '.ggc-t{display:inline-flex;gap:4px}.ggc-t i{width:6px;height:6px;border-radius:50%;background:#a9b0cc;animation:ggc 1s infinite}.ggc-t i:nth-child(2){animation-delay:.15s}.ggc-t i:nth-child(3){animation-delay:.3s}'
     + '@keyframes ggc{0%,80%,100%{opacity:.3}40%{opacity:1}}@media(prefers-reduced-motion:reduce){.ggc-t i{animation:none}}';
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
@@ -46,6 +47,7 @@
   p.innerHTML = '<div class="ggc-h"><div class="ggc-dot">' + ICON + '</div><div><b>GigrAI assistant</b><small>AI helper · can make mistakes</small></div><button class="ggc-x" type="button" aria-label="Close">×</button></div>'
     + '<div class="ggc-l" aria-live="polite"></div><div class="ggc-s"></div>'
     + '<form class="ggc-f"><textarea rows="1" maxlength="500" placeholder="Ask about roles, pay, platforms…" aria-label="Your question"></textarea><button class="ggc-send" type="submit" aria-label="Send"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>'
+    + '<a class="ggc-ig" href="https://ig.me/m/gigr.ai" target="_blank" rel="noopener" data-track="chat-instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6" fill="currentColor"/></svg>Need a person? DM us on Instagram</a>'
     + '<div class="ggc-n">Don\'t share personal details. Chats aren\'t saved. Real platforms never charge to apply.</div>';
   document.body.appendChild(btn); document.body.appendChild(p);
   var list = p.querySelector(".ggc-l"), sug = p.querySelector(".ggc-s"), form = p.querySelector("form"), ta = p.querySelector("textarea"), send = p.querySelector(".ggc-send");
