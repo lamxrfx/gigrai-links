@@ -20,6 +20,7 @@ export class Content extends DurableObject {
       sources TEXT, affiliate TEXT, author TEXT, status TEXT NOT NULL DEFAULT 'draft',
       created TEXT NOT NULL, updated TEXT NOT NULL, published_at TEXT)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS images (id TEXT PRIMARY KEY, type TEXT NOT NULL, data BLOB NOT NULL, size INTEGER NOT NULL, created TEXT NOT NULL)`);
   }
 
   // ---- news ----
@@ -52,6 +53,15 @@ export class Content extends DurableObject {
   }
   setHidden(id, hidden) {
     this.sql.exec(`UPDATE news SET hidden = ? WHERE id = ?`, hidden ? 1 : 0, id);
+  }
+
+  // ---- uploaded images (resized in the browser before upload, so each is small) ----
+  saveImage(id, type, bytes) {
+    this.sql.exec(`INSERT OR REPLACE INTO images (id, type, data, size, created) VALUES (?, ?, ?, ?, ?)`, id, type, bytes, bytes.byteLength, now());
+  }
+  getImage(id) {
+    const r = [...this.sql.exec(`SELECT type, data FROM images WHERE id = ?`, id)][0];
+    return r ? { type: r.type, data: r.data } : null;
   }
 
   // ---- posts ----

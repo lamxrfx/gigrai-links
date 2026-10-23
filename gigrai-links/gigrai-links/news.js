@@ -17,6 +17,7 @@ const EXT = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke=
 // ---- tiny safe Markdown: ## headings, lists, **bold**, *italic*, [links](https://...), > quotes ----
 export function md(src) {
   const inline = (t) => esc(t)
+    .replace(/!\[([^\]]*)\]\((\/media\/[a-z0-9]+\.(?:webp|jpg|png|gif)|https:\/\/[^\s)]+)\)/g, (_, alt, url) => `<img src="${url}" alt="${alt}" loading="lazy" class="art-img">`)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, "$1<em>$2</em>")
     .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]*)\)/g, (_, text, url) => {
@@ -35,6 +36,7 @@ export function md(src) {
     if ((m = line.match(/^\d+[.)]\s+(.*)$/))) { if (list !== "ol") { close(); out.push("<ol>"); list = "ol"; } out.push(`<li>${inline(m[1])}</li>`); continue; }
     if ((m = line.match(/^>\s?(.*)$/))) { close(); out.push(`<blockquote>${inline(m[1])}</blockquote>`); continue; }
     close();
+    if (/^!\[[^\]]*\]\([^)]+\)$/.test(line)) { out.push(`<figure>${inline(line)}</figure>`); continue; }
     out.push(`<p>${inline(line)}</p>`);
   }
   close();
@@ -79,6 +81,7 @@ const STYLE = `<style>
 .article .body h2{font-size:25px;margin:34px 0 10px;line-height:1.3}
 .article .body h3{font-size:20px;margin:26px 0 8px}
 .article .body a{color:#7fdcf0}
+.article .body figure{margin:22px 0}.article .art-img{width:100%;height:auto;border-radius:16px;border:1px solid var(--line)}
 .article .body blockquote{margin:18px 0;padding:6px 0 6px 18px;border-left:3px solid #5b8cff;color:var(--soft)}
 .article .hero-img{width:100%;border-radius:var(--r-lg);border:1px solid var(--line);margin:18px 0 6px;aspect-ratio:16/9;object-fit:cover}
 .srcbox{margin-top:30px;padding:20px 22px;border-radius:var(--r-md)}
@@ -139,7 +142,7 @@ export function postPage({ origin, post, more, platforms, preview }) {
     "@context": "https://schema.org", "@type": "NewsArticle", headline: post.title, description: post.summary || "",
     datePublished: when, dateModified: post.updated, author: { "@type": "Organization", name: post.author || "GigrAI", url: origin },
     publisher: { "@type": "Organization", name: "GigrAI", logo: { "@type": "ImageObject", url: origin + "/favicon-512.png", width: 512, height: 512 } },
-    mainEntityOfPage: origin + "/news/" + post.slug, ...(post.image ? { image: [post.image] } : {}),
+    mainEntityOfPage: origin + "/news/" + post.slug, ...(post.image ? { image: [post.image.startsWith("/") ? origin + post.image : post.image] } : {}),
   };
   const body = `${STYLE}${crumbs([["/", "GigrAI"], ["/news", "News"], ["", catName(post.cat)]])}
 ${preview ? `<p class="note" style="padding:12px 16px;border-radius:12px;background:rgba(255,200,80,.12);border:1px solid rgba(255,200,80,.4);color:#ffe0a3">Preview: this post is a <b>${esc(post.status)}</b> and only you can see it.</p>` : ""}
@@ -158,7 +161,7 @@ ${preview ? `<p class="note" style="padding:12px 16px;border-radius:12px;backgro
 ${more.length ? `<section class="block" aria-labelledby="more"><h2 id="more">More from GigrAI</h2><div class="posts">${more.map((p) => postCard(p)).join("")}</div></section>` : ""}`;
   return html(shell({
     title: `${post.title} · GigrAI`, desc: post.summary || post.title,
-    canonical: origin + "/news/" + post.slug, body, active: "/news", ld: [ld],
+    canonical: origin + "/news/" + post.slug, body, active: "/news", ld: [ld], image: post.image || "",
     robots: preview ? "noindex,nofollow" : undefined,
   }));
 }
@@ -197,6 +200,13 @@ const ADMIN_STYLE = `<style>
 .adm .help code{background:rgba(255,255,255,.08);padding:1px 6px;border-radius:6px}
 .adm .nl a{color:var(--text);text-decoration:none;font-weight:600}.adm .nl small{color:var(--muted)}
 .adm .tiny{height:36px!important;padding:0 14px!important;font-size:13px}
+.imgpick{display:grid;gap:10px}.imgpick .lbl{display:grid;gap:4px;font-weight:700;font-size:14px;color:var(--soft)}.imgpick .lbl small{font-weight:500;color:var(--muted)}
+.imgrow{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.imgprev{width:220px;aspect-ratio:16/9;border-radius:14px;border:1px dashed var(--line);display:grid;place-items:center;overflow:hidden;background:#0d1024;color:var(--muted);font-size:13px}
+.imgprev img{width:100%;height:100%;object-fit:cover}
+.imgbtns{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.adm .upl{cursor:pointer;background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);border:0;color:#fff}
+.imgpick details summary{cursor:pointer;color:#9fdcf0;font-size:14px;font-weight:600;margin-bottom:8px}
 @media (max-width:700px){.adm table,.adm tbody,.adm tr,.adm td{display:block;width:100%}.adm thead{display:none}.adm tr{padding:10px 0;border-bottom:1px solid var(--line)}.adm td{border:0;padding:4px 0}}
 </style>`;
 
@@ -242,12 +252,25 @@ ${error ? `<p class="msg err">${esc(error)}</p>` : ""}
 <label>Summary <small>1–2 sentences. Shown on the news page, in Google and when shared.</small><textarea name="summary" maxlength="300" style="min-height:80px">${esc(p.summary || "")}</textarea></label>
 <label>Article
 <textarea class="big" name="body" placeholder="Write in plain text. Leave an empty line between paragraphs.">${esc(p.body || "")}</textarea>
-<span class="help">Formatting: <code>## Heading</code> · <code>- bullet</code> · <code>1. numbered</code> · <code>**bold**</code> · <code>*italic*</code> · <code>[link text](https://...)</code> · <code>&gt; quote</code>. Write in your own words and keep quotes short.</span></label>
+<span class="help">Formatting: <code>![description](image link)</code> for a picture · <code>## Heading</code> · <code>- bullet</code> · <code>1. numbered</code> · <code>**bold**</code> · <code>*italic*</code> · <code>[link text](https://...)</code> · <code>&gt; quote</code>. Write in your own words and keep quotes short.</span></label>
 <label>Sources <small>One per line: <code>Title | https://link</code>. Shown at the bottom of the post.</small><textarea name="sources" placeholder="TechCrunch: Mercor raises $100M | https://techcrunch.com/...">${esc(p.sources || "")}</textarea></label>
 <div class="row">
 <label>Sign-up box <small>Adds a referral sign-up card under the article</small><select name="affiliate">${opt("", "None", p.affiliate || "")}${(platforms || []).filter((x) => x.active && x.signupUrl).map((x) => opt(x.id, x.name, p.affiliate || "")).join("")}</select></label>
 <label>Author<input name="author" maxlength="60" value="${esc(p.author || "GigrAI")}"></label>
-<label>Image address <small>Optional. Use your own image (e.g. /og-image-v2.jpg) or one you have rights to.</small><input name="image" maxlength="300" value="${esc(p.image || "")}" placeholder="https://..."></label>
+</div>
+<div class="imgpick">
+  <span class="lbl">Cover image <small>Optional. Shown at the top of the post and when it's shared. Use your own photos or ones you have the rights to.</small></span>
+  <div class="imgrow">
+    <div class="imgprev" id="imgPrev">${p.image ? `<img src="${esc(p.image)}" alt="">` : "<span>No image</span>"}</div>
+    <div class="imgbtns">
+      <label class="b upl">Upload image<input type="file" id="coverFile" accept="image/jpeg,image/png,image/webp,image/gif" hidden></label>
+      <button type="button" class="b" id="bodyImgBtn">Add image inside the article</button>
+      <button type="button" class="b tiny" id="coverClear"${p.image ? "" : " hidden"}>Remove cover</button>
+      <input type="file" id="bodyFile" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+      <span class="note" id="imgMsg" aria-live="polite"></span>
+    </div>
+  </div>
+  <details><summary>Or paste an image link</summary><input name="image" id="imageUrl" maxlength="300" value="${esc(p.image || "")}" placeholder="https://... or /media/..."></details>
 </div>
 <div class="bar">
 <button class="primary" type="submit" name="status" value="published">${p.status === "published" ? "Update live post" : "Publish"}</button>
@@ -255,5 +278,57 @@ ${error ? `<p class="msg err">${esc(error)}</p>` : ""}
 ${!isNew && p.slug ? `<a class="b" href="/news/${esc(p.slug)}?preview=1&k=${encodeURIComponent(k)}" target="_blank">Preview</a>` : ""}
 </div>
 </form>
+<script>
+(function(){
+  var K = ${JSON.stringify(k)};
+  var $ = function(id){ return document.getElementById(id); };
+  // Shrink big photos in the browser (max 1600px wide) so pages stay fast
+  function shrink(file){
+    return new Promise(function(ok, bad){
+      if (file.type === "image/gif") return ok(file);
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function(){
+        var w = img.naturalWidth, h = img.naturalHeight, max = 1600;
+        if (w > max) { h = Math.round(h * max / w); w = max; }
+        var c = document.createElement("canvas"); c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        c.toBlob(function(b){ b ? ok(b) : bad(new Error("Couldn't read that image")); }, "image/webp", 0.82);
+      };
+      img.onerror = function(){ bad(new Error("Couldn't read that image")); };
+      img.src = url;
+    });
+  }
+  async function upload(file){
+    $("imgMsg").textContent = "Uploading…";
+    var blob = await shrink(file);
+    if (blob.size > 1800000) throw new Error("That image is too big. Try a smaller one.");
+    var r = await fetch("/admin/upload?k=" + encodeURIComponent(K), { method: "POST", headers: { "content-type": blob.type || file.type }, body: blob });
+    var d = await r.json();
+    if (!d.ok) throw new Error(d.error || "Upload failed");
+    $("imgMsg").textContent = "Uploaded.";
+    return d.url;
+  }
+  $("coverFile").addEventListener("change", async function(){
+    var f = this.files[0]; if (!f) return;
+    try { var u = await upload(f); $("imageUrl").value = u; $("imgPrev").innerHTML = '<img src="' + u + '" alt="">'; $("coverClear").hidden = false; }
+    catch (e) { $("imgMsg").textContent = e.message; }
+    this.value = "";
+  });
+  $("coverClear").addEventListener("click", function(){ $("imageUrl").value = ""; $("imgPrev").innerHTML = "<span>No image</span>"; this.hidden = true; });
+  $("imageUrl").addEventListener("change", function(){ var v = this.value.trim(); $("imgPrev").innerHTML = v ? '<img src="' + v.replace(/"/g, "") + '" alt="">' : "<span>No image</span>"; });
+  $("bodyImgBtn").addEventListener("click", function(){ $("bodyFile").click(); });
+  $("bodyFile").addEventListener("change", async function(){
+    var f = this.files[0]; if (!f) return;
+    try {
+      var u = await upload(f), ta = document.querySelector("textarea[name=body]");
+      var at = ta.selectionStart || ta.value.length, md = "\\n\\n![Image](" + u + ")\\n\\n";
+      ta.value = ta.value.slice(0, at) + md + ta.value.slice(at); ta.focus();
+      $("imgMsg").textContent = "Image added to the article. You can change the word 'Image' to describe it.";
+    } catch (e) { $("imgMsg").textContent = e.message; }
+    this.value = "";
+  });
+})();
+</script>
 ${!isNew && p.slug ? `<form method="post" action="/admin/delete" onsubmit="return confirm('Delete this post for good? This cannot be undone.')">${hidden(k)}<input type="hidden" name="slug" value="${esc(p.slug)}"><button class="danger" type="submit">Delete post</button></form>` : ""}`);
 }

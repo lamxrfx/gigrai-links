@@ -238,6 +238,15 @@ export default {
       return decorate(res, url, env, ctx, "/news");
     }
 
+    // ---- Images uploaded in the editor: /media/<id>.<ext> ----
+    const mm = request.method === "GET" && url.pathname.match(/^\/media\/([a-z0-9]{12,40})\.(webp|jpg|png|gif)$/);
+    if (mm) {
+      const db = content(env);
+      const img = db ? await db.getImage(mm[1]) : null;
+      if (!img) return new Response("Not found", { status: 404 });
+      return new Response(img.data, { headers: { "content-type": img.type, "cache-control": "public, max-age=31536000, immutable", "x-content-type-options": "nosniff" } });
+    }
+
     // ---- Private blog editor: /admin?k=<owner key> ----
     if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
       return handleAdmin(request, url, env, ctx);
@@ -538,6 +547,25 @@ function eligibility(j, country) {
 async function handleAdmin(request, url, env, ctx) {
   const noStore = (res) => { const h = new Headers(res.headers); h.set("cache-control", "private, no-store"); h.set("x-robots-tag", "noindex"); return new Response(res.body, { status: res.status, headers: h }); };
   const db = content(env);
+  // Image upload from the editor (raw image body, key in the address)
+  if (url.pathname === "/admin/upload" && request.method === "POST") {
+    if (!db || !(await keyOk(env, "owner", url.searchParams.get("k") || ""))) return json({ ok: false, error: "Not allowed" }, 403);
+    const origin = request.headers.get("origin");
+    if (origin && new URL(origin).host !== url.host) return json({ ok: false, error: "Not allowed" }, 403);
+    const TYPES = { "image/webp": "webp", "image/jpeg": "jpg", "image/png": "png", "image/gif": "gif" };
+    const type = (request.headers.get("content-type") || "").split(";")[0].trim();
+    if (!TYPES[type]) return json({ ok: false, error: "Use a JPG, PNG, WebP or GIF image." }, 400);
+    const bytes = new Uint8Array(await request.arrayBuffer());
+    if (!bytes.length) return json({ ok: false, error: "That file is empty." }, 400);
+    if (bytes.length > 1900000) return json({ ok: false, error: "That image is too big (max about 1.8 MB). Try a smaller one." }, 413);
+    // check the file really is that kind of image
+    const sig = [...bytes.slice(0, 12)];
+    const real = (sig[0] === 0xff && sig[1] === 0xd8) ? "image/jpeg" : (sig[0] === 0x89 && sig[1] === 0x50) ? "image/png" : (sig[0] === 0x47 && sig[1] === 0x49) ? "image/gif" : (String.fromCharCode(...sig.slice(0, 4)) === "RIFF" && String.fromCharCode(...sig.slice(8, 12)) === "WEBP") ? "image/webp" : "";
+    if (real !== type) return json({ ok: false, error: "That file doesn't look like an image." }, 400);
+    const id = [...crypto.getRandomValues(new Uint8Array(10))].map(b => b.toString(16).padStart(2, "0")).join("");
+    await db.saveImage(id, type, bytes);
+    return json({ ok: true, url: `/media/${id}.${TYPES[type]}` });
+  }
   let form = null;
   if (request.method === "POST") {
     try { form = await request.formData(); } catch { return new Response("Bad request", { status: 400 }); }

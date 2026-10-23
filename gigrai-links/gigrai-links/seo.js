@@ -141,7 +141,7 @@ const FOOTER = `<footer class="foot"><div class="wrap">
   </div>
 </div></footer>`;
 
-export function shell({ title, desc, canonical, body, ld = [], robots = "index,follow,max-image-preview:large", active = "", page = "", bodyClass = "" }) {
+export function shell({ title, desc, canonical, body, ld = [], robots = "index,follow,max-image-preview:large", active = "", page = "", bodyClass = "", image = "" }) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -157,7 +157,7 @@ ${canonical ? `<link rel="canonical" href="${esc(canonical)}">` : ""}
 <meta property="og:locale" content="en_GB">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(desc)}">
-<meta property="og:image" content="https://remotegigrai.com/og-image-v2.jpg">
+<meta property="og:image" content="${esc(image ? (image.startsWith("/") ? "https://remotegigrai.com" + image : image) : "https://remotegigrai.com/og-image-v2.jpg")}">
 ${canonical ? `<meta property="og:url" content="${esc(canonical)}">` : ""}
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
