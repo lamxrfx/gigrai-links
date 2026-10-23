@@ -623,7 +623,7 @@ function eligibility(j, country) {
 // Email us about a new booking request (Cloudflare Email Routing, to our own verified inbox)
 async function notifyEnquiry(env, ref, e, vet) {
   if (!env.NOTIFY) return;
-  const from = "bookings@remotegigrai.com", to = env.NOTIFY_TO || "remotegigr.ai@gmail.com";
+  const from = "partners@remotegigrai.com", to = env.NOTIFY_TO || "remotegigr.ai@gmail.com";
   const flag = vet.result === "pass" ? "Link check: passed" : `Link check: NEEDS A LOOK\n- ${vet.warns.join("\n- ")}`;
   const body = [
     `New booking request ${ref}`, "",

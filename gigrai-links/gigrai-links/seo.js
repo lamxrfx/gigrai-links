@@ -451,12 +451,17 @@ export function bookingForm(email = "") {
 <style>
 .bform{padding:24px;border-radius:var(--r-lg);display:grid;gap:16px}
 .bform .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.bform label{display:grid;gap:6px;font-size:13.5px;font-weight:700;color:var(--soft)}
+.bform label{display:grid;gap:6px;font-size:13.5px;font-weight:700;color:var(--soft);min-width:0}
 .bform label small{font-weight:500;color:var(--muted)}
 .bform input,.bform select,.bform textarea{width:100%;height:50px;border-radius:14px;border:1px solid var(--line);background:#0d1024;color:var(--text);font:inherit;font-size:15.5px;padding:0 14px}
+.bform input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;text-align:left;line-height:50px;color-scheme:dark}
+.bform input[type=date]::-webkit-date-and-time-value{text-align:left}
 .bform textarea{height:auto;min-height:96px;padding:12px 14px;resize:vertical}
 .bform input:focus-visible,.bform select:focus-visible,.bform textarea:focus-visible{outline:3px solid #22d3ee;outline-offset:1px}
-.bform .agree{display:flex;gap:10px;align-items:flex-start;font-weight:500;color:var(--soft);font-size:14px;line-height:1.5}.bform .agree input{width:20px;height:20px;margin-top:2px;accent-color:#5b8cff;flex:0 0 auto}
+.bform .agree{display:flex;gap:12px;align-items:flex-start;font-weight:500;color:var(--soft);font-size:14px;line-height:1.5;cursor:pointer}
+.bform .agree input{-webkit-appearance:none;appearance:none;width:24px;height:24px;margin:1px 0 0;padding:0;flex:0 0 24px;border-radius:7px;border:2px solid rgba(255,255,255,.35);background:#0d1024;display:grid;place-items:center;cursor:pointer}
+.bform .agree input:checked{background:#5b8cff;border-color:#5b8cff}
+.bform .agree input:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:translateY(-1px) rotate(45deg)}
 .bform .ppc{display:none}.bform.is-ppc .ppc{display:grid}
 .bform button{height:56px;border:0;border-radius:999px;background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);color:#fff;font:inherit;font-size:16px;font-weight:800;cursor:pointer}
 .bform button[disabled]{opacity:.6;cursor:wait}
