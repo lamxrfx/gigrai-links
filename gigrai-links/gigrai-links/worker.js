@@ -1,6 +1,6 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
-import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml } from "./seo.js";
-import { track, isHuman, readStats, signKey, keyOk, daysAgo } from "./stats.js";
+import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap } from "./seo.js";
+import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
 import DRAFTS from "./drafts.json";
@@ -133,7 +133,7 @@ export default {
         const f = allSponsors(SPONSORED).find(x => "sponsored-" + x.id === id);
         const src = cleanSrc(url.searchParams.get("src")) || "direct";
         console.log(JSON.stringify({ event: "apply_click", id, platform: "sponsored", found: !!f, src, country: request.cf?.country || "??" }));
-        if (f && isHuman(request)) { track(env, ctx, request, "sponsor", f.id, src); track(env, ctx, request, "apply", "sponsored", src); }
+        if (f && isHuman(request)) { track(env, ctx, request, "sponsor", f.id, src); trackUnique(env, ctx, request, f.id, src); track(env, ctx, request, "apply", "sponsored", src); }
         return Response.redirect(f ? f.url : new URL("/", url).toString(), 302);
       }
       let feed = [];
@@ -206,7 +206,7 @@ export default {
     }
 
     // ---- Private reports: /report?k=<owner key> and /report/<sponsor id>?k=<sponsor key> ----
-    const rm = request.method === "GET" && url.pathname.match(/^\/report(?:\/([a-z0-9-]{1,40}))?\/?$/);
+    const rm = request.method === "GET" && url.pathname.match(/^\/report(?:\/([a-z0-9-]{1,40})(\.csv)?)?\/?$/);
     if (rm) {
       const k = url.searchParams.get("k") || "";
       const nocache = (res) => { const h = new Headers(res.headers); h.set("cache-control", "private, no-store"); h.set("x-robots-tag", "noindex"); return new Response(res.body, { status: res.status, headers: h }); };
@@ -218,6 +218,8 @@ export default {
         if (views) Object.assign(views, { from, to });
         const sponsors = allSponsors(SPONSORED).filter(s => s.id !== "example");
         const links = await Promise.all(sponsors.map(async s => `${url.origin}/report/${s.id}?k=${await signKey(env, "sponsor:" + s.id)}`));
+        const used = await countMany(env, "sponsor_u", sponsors.map(s => ({ k: s.id, from: s.start || "2000-01-01" })));
+        sponsors.forEach(s => { s._unique = used[s.id] || 0; s._cap = clickCap(s); });
         return nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, key: k }));
       }
       const sponsor = ((SPONSORED && SPONSORED.featured) || []).find(s => s.id === rm[1]);
@@ -225,8 +227,21 @@ export default {
       const today = new Date().toISOString().slice(0, 10);
       const from = /^\d{4}-\d{2}-\d{2}$/.test(sponsor.start || "") ? sponsor.start : daysAgo(29);
       const to = (sponsor.until || today) < today ? sponsor.until : today;
-      const stats = (await readStats(env, { kind: "sponsor", k: sponsor.id, from, to })) || { total: 0, byDay: [], bySrc: [], byCountry: [] };
-      return nocache(sponsorReportPage({ origin: url.origin, sponsor, stats, from, to: to < from ? from : to }));
+      const empty = { total: 0, byDay: [], bySrc: [], byCountry: [] };
+      const [stats, uniq] = await Promise.all([readStats(env, { kind: "sponsor", k: sponsor.id, from, to }), readStats(env, { kind: "sponsor_u", k: sponsor.id, from, to })]);
+      const cap = clickCap(sponsor);
+      const unique = (uniq || empty).total;
+      const billing = cap ? { cpc: +sponsor.cpc, budget: +sponsor.budget, cap, billable: Math.min(unique, cap), spent: Math.min(unique, cap) * +sponsor.cpc } : null;
+      if (rm[2]) {
+        // CSV for invoices: one row per day
+        const all = Object.fromEntries(((stats || empty).byDay).map(r => [r.day, r.n]));
+        const u = Object.fromEntries(((uniq || empty).byDay).map(r => [r.day, r.n]));
+        const days = [...new Set([...Object.keys(all), ...Object.keys(u)])].sort();
+        const lines = ["date,unique_clicks,all_clicks", ...days.map(d => `${d},${u[d] || 0},${all[d] || 0}`), `total,${unique},${(stats || empty).total}`];
+        if (billing) lines.push(`billable_clicks,${billing.billable},`, `price_per_click_gbp,${billing.cpc},`, `amount_gbp,${billing.spent.toFixed(2)},`);
+        return new Response(lines.join("\n") + "\n", { headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="gigrai-${sponsor.id}-${from}-to-${to}.csv"`, "cache-control": "private, no-store" } });
+      }
+      return nocache(sponsorReportPage({ origin: url.origin, sponsor, stats: stats || empty, uniq: uniq || empty, billing, from, to: to < from ? from : to, csv: `/report/${sponsor.id}.csv?k=${encodeURIComponent(k)}` }));
     }
 
     // ---- News: /news, /news/rss.xml, /news/<slug> ----
@@ -307,7 +322,7 @@ export default {
       let feed;
       try { feed = await loadFeed(env, ctx); } catch { return Response.redirect(new URL("/", url).toString(), 302); }
       view("jobs");
-      return decorate(jobsIndex(feed, url.origin, PLATFORM_CONFIG.platforms, liveFeatured(SPONSORED)), url, env, ctx, "/jobs");
+      return decorate(jobsIndex(feed, url.origin, PLATFORM_CONFIG.platforms, await activeFeatured(env)), url, env, ctx, "/jobs");
     }
     const jm = request.method === "GET" && url.pathname.match(/^\/jobs\/([^/]+)(?:\/([^/]*))?\/?$/);
     if (jm) {
@@ -400,7 +415,7 @@ async function decorate(res, url, env, ctx, page) {
     rw = rw.on("header.top .wrap", { element(el) { el.append(menuButton(), { html: true }); } })
       .on("body", { element(el) { el.append(drawerHtml(), { html: true }); } });
   }
-  const feat = page === "/" ? liveFeatured(SPONSORED) : [];
+  const feat = page === "/" ? await activeFeatured(env) : [];
   if (feat.length) rw = rw.on("#trust", { element(el) { el.after(featuredHtml(feat), { html: true }); } });
   if (meta) {
     rw = rw
@@ -571,6 +586,15 @@ function eligibility(j, country) {
   if ((j.allow || []).length && !j.allow.includes(country)) return "no";
   return "yes";
 }
+// Pinned sponsors, minus pay-per-click ones whose budget is used up
+async function activeFeatured(env) {
+  const live = liveFeatured(SPONSORED);
+  const cpc = live.filter(f => clickCap(f));
+  if (!cpc.length) return live;
+  const used = await countMany(env, "sponsor_u", cpc.map(f => ({ k: f.id, from: f.start || "2000-01-01" })));
+  return live.filter(f => !clickCap(f) || (used[f.id] || 0) < clickCap(f));
+}
+
 // ---------------- private blog editor ----------------
 async function handleAdmin(request, url, env, ctx) {
   const noStore = (res) => { const h = new Headers(res.headers); h.set("cache-control", "private, no-store"); h.set("x-robots-tag", "noindex"); return new Response(res.body, { status: res.status, headers: h }); };

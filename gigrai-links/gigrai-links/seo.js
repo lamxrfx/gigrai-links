@@ -425,6 +425,9 @@ export function allSponsors(cfg) {
   return ((cfg && cfg.featured) || []).filter((f) => validSponsor(f) && (f.until || "") >= cutoff);
 }
 
+// Pay-per-click advertisers: { cpc: 1.5, budget: 100 } in sponsored.json -> click cap
+export const clickCap = (f) => (f && +f.cpc > 0 && +f.budget > 0 ? Math.floor(+f.budget / +f.cpc) : 0);
+
 // Advertisers pinned on the site right now
 export function liveFeatured(cfg) {
   const today = new Date().toISOString().slice(0, 10);
@@ -442,6 +445,8 @@ export function featuredHtml(list) {
 // Advertising options: shared by /advertise and /media-kit
 export const AD_OPTIONS = [
   { name: "Featured role", price: "£49", per: "/ week", text: "Your role pinned at the top of the GigrAI homepage and All roles page, labelled Sponsored, linking straight to your application page." },
+  { name: "Featured role, monthly", price: "£149", per: "/ month", text: "The same pinned, Sponsored listing for a full month. Best for ongoing hiring. Save about £47 against weekly." },
+  { name: "Pay per click", price: "£1.50", per: "/ click", text: "Only pay for people who click through to your application page, counted once per person per day. Prepay from £100, follow every click in a live report, and it stops automatically when your budget is used." },
   { name: "Sponsored Instagram post", price: "£99", per: "", text: "A carousel about your role in the GigrAI style on @gigr.ai, shared to our Story. Labelled as an ad." },
   { name: "WhatsApp shout-out", price: "£49", per: "", text: "One post about your role, with your link, to the GigrAI Jobs WhatsApp channel." },
   { name: "Launch bundle", price: "£179", per: "", text: "All three: a week as a Featured role, a sponsored Instagram post and a WhatsApp shout-out. Save £18.", feat: true },

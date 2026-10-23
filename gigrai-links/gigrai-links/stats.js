@@ -16,6 +16,9 @@ export class Stats extends DurableObject {
       day TEXT NOT NULL, kind TEXT NOT NULL, k TEXT NOT NULL, src TEXT NOT NULL, cc TEXT NOT NULL, n INTEGER NOT NULL,
       PRIMARY KEY (day, kind, k, src, cc))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)`);
+    // One row per advertiser, per visitor, per day: makes "unique clicks" possible. The visitor is a
+    // one-way code (not an IP address) that changes every day, so people can't be followed over time.
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS uniq (day TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY (day, k, v))`);
     this.sql.exec(`INSERT OR IGNORE INTO meta (key, value) VALUES ('since', ?)`, today());
   }
 
@@ -27,6 +30,24 @@ export class Stats extends DurableObject {
       today(), clean(kind, 12), clean(k) || "-", clean(src, 20) || "direct", clean(cc, 2) || "xx");
     // keep about 13 months
     if (Math.random() < 0.001) this.sql.exec(`DELETE FROM hits WHERE day < ?`, daysAgo(400));
+  }
+
+  // Count a click once per visitor per day. Returns true if it was new.
+  uniqueHit(k, v, src, cc) {
+    const r = this.sql.exec(`INSERT OR IGNORE INTO uniq (day, k, v) VALUES (?, ?, ?)`, today(), clean(k), clean(v, 32));
+    if (Math.random() < 0.002) this.sql.exec(`DELETE FROM uniq WHERE day < ?`, daysAgo(400));
+    if (!r.rowsWritten) return false;
+    this.hit("sponsor_u", k, src, cc);
+    return true;
+  }
+
+  // Totals for several advertisers at once: { id: count } since each one's start date
+  countMany(kind, items) {
+    const out = {};
+    for (const { k, from } of items) {
+      out[k] = [...this.sql.exec(`SELECT COALESCE(SUM(n), 0) AS n FROM hits WHERE kind = ? AND k = ? AND day >= ?`, kind, clean(k), from)][0].n;
+    }
+    return out;
   }
 
   since() {
@@ -67,6 +88,24 @@ export function track(env, ctx, request, kind, k, src) {
   if (!env.STATS) return;
   const cc = request.cf?.country || "";
   try { ctx.waitUntil(stub(env).hit(kind, k, src, cc).catch(() => {})); } catch {}
+}
+
+// A daily, one-way visitor code for unique clicks (never stored with the IP address)
+async function visitorCode(env, request) {
+  const raw = [request.headers.get("cf-connecting-ip") || "", request.headers.get("user-agent") || "", today(), env.REPORT_SECRET || "gigrai"].join("|");
+  const d = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw)));
+  return [...d.slice(0, 12)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export function trackUnique(env, ctx, request, k, src) {
+  if (!env.STATS) return;
+  const cc = request.cf?.country || "";
+  try { ctx.waitUntil(visitorCode(env, request).then((v) => stub(env).uniqueHit(k, v, src, cc)).catch(() => {})); } catch {}
+}
+
+export async function countMany(env, kind, items) {
+  if (!env.STATS || !items.length) return {};
+  try { return await stub(env).countMany(kind, items); } catch (e) { console.error("stats count failed", String(e)); return {}; }
 }
 
 export async function readStats(env, q) {

@@ -218,7 +218,7 @@ ${showCountries ? `<section class="block" aria-labelledby="where"><h2 id="where"
 }
 
 // ---------- /report/<id>?k=... (for one advertiser) ----------
-export function sponsorReportPage({ origin, sponsor, stats, from, to }) {
+export function sponsorReportPage({ origin, sponsor, stats, uniq = { total: 0, byDay: [] }, billing = null, from, to, csv = "" }) {
   const live = new Date().toISOString().slice(0, 10) <= (sponsor.until || "");
   const body = `<section class="hero sm">
   <span class="eyebrow"><i></i>Campaign report · ${live ? "Live" : "Finished"}</span>
@@ -227,24 +227,26 @@ export function sponsorReportPage({ origin, sponsor, stats, from, to }) {
 </section>
 <section class="block" aria-labelledby="tot"><h2 id="tot" class="sr">Totals</h2>
 <div class="kpis">
-  <div class="kpi glass">${countUp(stats.total)}<span>Clicks to your application page</span><small>${longDate(from)} to ${longDate(to)}</small></div>
+  <div class="kpi glass">${countUp(uniq.total)}<span>Unique clicks to your application page</span><small>Each person counted once a day · ${fmt(stats.total)} clicks in all</small></div>
+  ${billing ? `<div class="kpi glass"><b>£${billing.spent.toFixed(2)}</b><span>of your £${fmt(billing.budget)} budget used</span><small>${fmt(billing.billable)} billable clicks at £${billing.cpc.toFixed(2)} · ${fmt(Math.max(0, billing.cap - billing.billable))} left</small></div>` : ""}
   <div class="kpi glass">${countUp(stats.byCountry.length)}<span>${stats.byCountry.length === 1 ? "Country" : "Countries"}</span><small>Where those clicks came from</small></div>
   <div class="kpi glass"><b>${stats.bySrc[0] ? esc(source(stats.bySrc[0].src)) : "-"}</b><span>Top channel</span><small>${stats.bySrc[0] ? fmt(stats.bySrc[0].n) + " clicks" : ""}</small></div>
 </div></section>
-<section class="block" aria-labelledby="pd"><h2 id="pd">Clicks per day</h2><div class="panel glass">${dayChart(stats.byDay, from, to, "clicks")}</div></section>
+${billing && billing.billable >= billing.cap ? `<p class="note" style="padding:12px 16px;border-radius:12px;background:rgba(61,214,140,.12);border:1px solid rgba(61,214,140,.35);color:#c9f5dd">Your budget has been fully used, so your listing is no longer pinned. Get in touch to top up.</p>` : ""}
+<section class="block" aria-labelledby="pd"><h2 id="pd">Unique clicks per day</h2><div class="panel glass">${dayChart(uniq.byDay, from, to, "unique clicks")}</div></section>
 <div class="two">
 <section class="block" aria-labelledby="bc"><h2 id="bc">By channel</h2><div class="panel glass">${barList(stats.bySrc, (r) => source(r.src), stats.total, "clicks")}</div></section>
 <section class="block" aria-labelledby="bco"><h2 id="bco">By country</h2><div class="panel glass">${barList(stats.byCountry, (r) => country(r.cc), stats.total, "clicks")}</div></section>
 </div>
-<p class="note" style="margin-top:24px">A click is counted each time someone taps through to your application page from GigrAI. Automated traffic (bots and link previews) is excluded. No personal data is collected.</p>
-<div class="jump noprint" style="margin-top:16px"><button type="button" class="ghost printbtn" onclick="window.print()" style="height:46px;padding:0 20px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--soft);font-weight:600">Save as PDF</button></div>`;
+<p class="note" style="margin-top:24px">A unique click is one person tapping through to your application page from GigrAI, counted once per day however many times they tap. ${billing ? "Billing uses unique clicks only. " : ""}Automated traffic (bots and link previews) is excluded. No personal data is collected or shared.</p>
+<div class="jump noprint" style="margin-top:16px">${csv ? `<a class="ghost printbtn" href="${esc(csv)}" style="height:46px;padding:0 20px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--soft);font-weight:600;display:inline-flex;align-items:center;text-decoration:none">Download CSV</a>` : ""}<button type="button" class="ghost printbtn" onclick="window.print()" style="height:46px;padding:0 20px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--soft);font-weight:600">Save as PDF</button></div>`;
   return pageOf({ title: `${sponsor.company || sponsor.id} campaign report · GigrAI`, desc: "Private campaign report.", canonical: "", body, robots: "noindex,nofollow" });
 }
 
 // ---------- /report?k=... (Lamar only) ----------
 export function adminPage({ origin, views, applies, sponsors, links, days = 30, key = "" }) {
   const sponsorBlocks = sponsors.length ? sponsors.map((s, i) => `<div class="rlink glass">
-  <b>${esc(s.company || s.id)}</b> <span class="meta">${esc(s.start || "?")} to ${esc(s.until || "?")}${s.pin === false ? " · posts only" : " · pinned on site"}</span>
+  <b>${esc(s.company || s.id)}</b> <span class="meta">${esc(s.start || "?")} to ${esc(s.until || "?")}${s.pin === false ? " · posts only" : " · pinned on site"} · ${fmt(s._unique || 0)} unique clicks${s._cap ? ` of ${fmt(s._cap)} paid for (£${(Math.min(s._unique || 0, s._cap) * s.cpc).toFixed(2)} of £${s.budget})${(s._unique || 0) >= s._cap ? " · <b>budget used, unpinned</b>" : ""}` : ""}</span>
   <span class="meta">Report link to send them:</span><code>${esc(links[i])}</code>
   <span class="meta">Link for Instagram posts / DMs:</span><code>${esc(origin)}/go/sponsored-${esc(s.id)}?src=ig</code>
   <span class="meta">Link for WhatsApp:</span><code>${esc(origin)}/go/sponsored-${esc(s.id)}?src=wa</code>
