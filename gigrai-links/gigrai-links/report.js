@@ -244,7 +244,74 @@ ${billing && billing.billable >= billing.cap ? `<p class="note" style="padding:1
 }
 
 // ---------- /report?k=... (Lamar only) ----------
-export function adminPage({ origin, views, applies, sponsors, links, days = 30, key = "", enquiries = [] }) {
+// World map: who's on the site now (refreshes itself) and where visits came from in the chosen range.
+// Drawn in the browser with d3 + a world outline from jsDelivr (this page is private, so no tracking concerns).
+function liveMap(key, days, geo) {
+  const data = JSON.stringify((geo || []).filter(g => g.lat !== null && g.lon !== null).map(g => [Math.round(g.lat * 10) / 10, Math.round(g.lon * 10) / 10, g.n, g.city || "", g.cc])).replace(/</g, "\\u003c");
+  return `<section class="block" id="live"><div class="live-head"><h2><span class="pulse"></span>On the site now: <b id="liveN">…</b></h2>
+<div class="seg" role="tablist"><button type="button" class="on" data-m="live">Live now</button><button type="button" data-m="hist">Last ${days} days</button></div></div>
+<div class="panel glass mapwrap"><svg id="map" viewBox="0 0 960 470" role="img" aria-label="World map of visitors"></svg><div class="maptip" id="mapTip" hidden></div>
+<p class="note" id="mapNote">Visitors active in the last 5 minutes, by town. Updates every 20 seconds.</p></div>
+<div class="two"><section><h3 class="mini">Countries now</h3><ul class="chips" id="liveCC"></ul></section><section><h3 class="mini">Pages now</h3><ul class="chips" id="livePages"></ul></section></div>
+</section>
+<style>
+.live-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}.live-head h2{margin:0;display:flex;align-items:center;gap:10px}
+.pulse{width:10px;height:10px;border-radius:50%;background:#34d399;box-shadow:0 0 0 0 rgba(52,211,153,.7);animation:pl 1.8s infinite}@keyframes pl{70%{box-shadow:0 0 0 12px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+.seg{display:inline-flex;padding:4px;border-radius:999px;border:1px solid var(--line-2);background:var(--glass)}.seg button{border:0;background:none;color:var(--muted);font:inherit;font-weight:700;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer}.seg button.on{background:var(--grad);color:#fff}
+.mapwrap{position:relative;padding:10px}#map{display:block;width:100%;height:auto}#map .land{fill:#1a1f3d;stroke:#2c3363;stroke-width:.5}#map .dot{cursor:pointer}
+.maptip{position:absolute;pointer-events:none;padding:7px 10px;border-radius:10px;background:#f2f4ff;color:#0b0e1d;font-size:13px;font-weight:700;white-space:nowrap;transform:translate(-50%,-120%)}
+.chips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}.chips li{padding:6px 11px;border-radius:999px;background:var(--glass);border:1px solid var(--line);font-size:13px}.chips li b{margin-left:5px}
+h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
+@media(prefers-reduced-motion:reduce){.pulse{animation:none}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script>
+(function(){
+  var HIST=${data}, KEY=${JSON.stringify(key)}, mode="live", live=[];
+  var svg=d3.select("#map"), proj=d3.geoNaturalEarth1().scale(175).translate([480,250]), path=d3.geoPath(proj);
+  var gLand=svg.append("g"), gDots=svg.append("g"), tip=document.getElementById("mapTip");
+  var names; try{names=new Intl.DisplayNames(["en"],{type:"region"})}catch(e){}
+  function cn(c){c=String(c||"").toUpperCase();try{return /^[A-Z]{2}$/.test(c)&&c!=="XX"?names.of(c):"Unknown"}catch(e){return c}}
+  var defs=svg.append("defs");
+  [["gLive","#22d3ee"],["gHist","#8b3dff"]].forEach(function(g){var r=defs.append("radialGradient").attr("id",g[0]);r.append("stop").attr("offset","0%").attr("stop-color",g[1]).attr("stop-opacity",.95);r.append("stop").attr("offset","100%").attr("stop-color",g[1]).attr("stop-opacity",0)});
+  fetch("https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json").then(function(r){return r.json()}).then(function(w){
+    gLand.selectAll("path").data(topojson.feature(w,w.objects.countries).features.filter(function(f){return f.id!=="010"})).join("path").attr("class","land").attr("d",path);
+  }).catch(function(){});
+  function draw(){
+    var rows=(mode==="live"?live:HIST).slice().sort(function(a,b){return b[2]-a[2]}), max=d3.max(rows,function(r){return r[2]})||1, rs=d3.scaleSqrt().domain([0,max]).range([4,mode==="live"?26:34]);
+    var sel=gDots.selectAll("g.dot").data(rows,function(r){return r[0]+","+r[1]+","+r[3]});
+    sel.exit().remove();
+    var en=sel.enter().append("g").attr("class","dot");
+    en.append("circle").attr("class","halo");en.append("circle").attr("class","core");
+    en.merge(sel).each(function(r){
+      var p=proj([r[1],r[0]]);if(!p)return;var g=d3.select(this).attr("transform","translate("+p[0]+","+p[1]+")");
+      g.select(".halo").attr("r",rs(r[2])).attr("fill","url(#"+(mode==="live"?"gLive":"gHist")+")");
+      g.select(".core").attr("r",mode==="live"?2.6:1.8).attr("fill",mode==="live"?"#e6fbff":"#d9c6ff");
+    }).on("mousemove",function(e,r){var b=document.querySelector(".mapwrap").getBoundingClientRect();tip.hidden=false;tip.style.left=(e.clientX-b.left)+"px";tip.style.top=(e.clientY-b.top)+"px";tip.textContent=(r[3]?r[3]+", ":"")+cn(r[4])+" · "+r[2].toLocaleString("en-GB")+(mode==="live"?" now":" views")})
+      .on("mouseleave",function(){tip.hidden=true})
+      .on("click",function(e,r){e.stopPropagation();var b=document.querySelector(".mapwrap").getBoundingClientRect();tip.hidden=false;tip.style.left=(e.clientX-b.left)+"px";tip.style.top=(e.clientY-b.top)+"px";tip.textContent=(r[3]?r[3]+", ":"")+cn(r[4])+" · "+r[2].toLocaleString("en-GB")+(mode==="live"?" now":" views")});
+    document.getElementById("mapNote").textContent=mode==="live"?(live.length?"Visitors active in the last 5 minutes, by town. Updates every 20 seconds.":"Nobody on the site in the last 5 minutes. This updates every 20 seconds."):(HIST.length?"Page views by town, last ${days} days. Bigger glow = more visits.":"No town data for this range yet. The map started collecting today.");
+  }
+  function chips(id,rows,label){document.getElementById(id).innerHTML=rows.length?rows.map(function(r){return "<li>"+label(r)+"<b>"+r.n+"</b></li>"}).join(""):"<li>None right now</li>"}
+  function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+  function load(){
+    fetch("/report-live?k="+encodeURIComponent(KEY),{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){
+      if(!d||!d.ok)return;live=d.places.filter(function(p){return p.lat!==null&&p.lon!==null}).map(function(p){return [p.lat,p.lon,p.n,p.city||"",p.cc]});
+      document.getElementById("liveN").textContent=d.total.toLocaleString("en-GB");
+      chips("liveCC",d.countries,function(r){return esc(cn(r.cc))});
+      chips("livePages",d.pages,function(r){return esc(r.page)});
+      if(mode==="live")draw();
+    }).catch(function(){});
+  }
+  document.querySelectorAll(".seg button").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll(".seg button").forEach(function(x){x.classList.toggle("on",x===b)});mode=b.dataset.m;draw()})});
+  document.addEventListener("click",function(){tip.hidden=true});
+  load();setInterval(function(){if(!document.hidden)load()},20000);
+})();
+</script>`;
+}
+
+export function adminPage({ origin, views, applies, sponsors, links, days = 30, key = "", enquiries = [], geo = [] }) {
   const sponsorBlocks = sponsors.length ? sponsors.map((s, i) => `<div class="rlink glass">
   <b>${esc(s.company || s.id)}</b> <span class="meta">${esc(s.start || "?")} to ${esc(s.until || "?")}${s.pin === false ? " · posts only" : " · pinned on site"} · ${fmt(s._unique || 0)} unique clicks${s._cap ? ` of ${fmt(s._cap)} paid for (£${(Math.min(s._unique || 0, s._cap) * s.cpc).toFixed(2)} of £${s.budget})${(s._unique || 0) >= s._cap ? " · <b>budget used, unpinned</b>" : ""}` : ""}</span>
   <span class="meta">Report link to send them:</span><code>${esc(links[i])}</code>
@@ -254,6 +321,7 @@ export function adminPage({ origin, views, applies, sponsors, links, days = 30, 
   const body = `<section class="hero sm"><span class="eyebrow"><i></i>Private · only for you</span><h1>GigrAI <span class="grad-text">numbers</span></h1>
 <p>Last ${days} days. Counting started ${views ? longDate(views.since) : "-"}. Bookmark this page and don't share the link.</p>
 ${rangeSwitch("/report", days, `k=${encodeURIComponent(key)}&`)}</section>
+${liveMap(key, days, geo)}
 <section class="block"><div class="kpis">
   <div class="kpi glass">${countUp(views && views.total)}<span>Page views</span><small>Last ${days} days</small></div>
   <div class="kpi glass">${countUp(applies && applies.total)}<span>Clicks to apply</span><small>Last ${days} days</small></div>

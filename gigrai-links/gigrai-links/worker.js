@@ -1,6 +1,6 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
 import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat } from "./seo.js";
-import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo } from "./stats.js";
+import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
 import DRAFTS from "./drafts.json";
@@ -68,7 +68,7 @@ export default {
       return Response.redirect(url.toString(), 301);
     }
     // Count a human page view (anonymous daily totals for the media kit)
-    const view = (section) => { if (request.method === "GET" && isHuman(request)) track(env, ctx, request, "view", section, visitSource(request, url)); };
+    const view = (section) => { if (request.method === "GET" && isHuman(request)) { track(env, ctx, request, "view", section, visitSource(request, url)); presence(env, ctx, request, section, true); } };
 
     // Email job alerts sign-up -> MailerLite (double opt-in). Only open when EMAIL_SIGNUP is "on".
     if (url.pathname === "/api/subscribe") {
@@ -194,6 +194,7 @@ export default {
     }
 
     if (url.pathname === "/api/job" && request.method === "GET") {
+      if (isHuman(request)) presence(env, ctx, request, null, false);
       const id = url.searchParams.get("id") || "";
       if (!/^[a-z0-9]{1,30}-[A-Za-z0-9_-]{1,80}$/.test(id)) return json({ ok: false, error: "Not found" }, 404);
       let feed;
@@ -209,6 +210,7 @@ export default {
 
     // Live roles from all platforms: GET /api/jobs?q=photography&page=1
     if (url.pathname === "/api/jobs" && request.method === "GET") {
+      if (isHuman(request)) presence(env, ctx, request, null, false);
       return handleJobs(url, env, ctx);
     }
 
@@ -243,6 +245,12 @@ export default {
     }
 
     // ---- Private reports: /report?k=<owner key> and /report/<sponsor id>?k=<sponsor key> ----
+    // Live visitors for the map on the private numbers page
+    if (request.method === "GET" && url.pathname === "/report-live") {
+      if (!(await keyOk(env, "owner", url.searchParams.get("k") || ""))) return json({ ok: false }, 404);
+      const d = await liveNow(env);
+      return json(d ? { ok: true, ...d } : { ok: false });
+    }
     const rm = request.method === "GET" && url.pathname.match(/^\/report(?:\/([a-z0-9-]{1,40})(\.csv)?)?\/?$/);
     if (rm) {
       const k = url.searchParams.get("k") || "";
@@ -251,7 +259,7 @@ export default {
         if (!(await keyOk(env, "owner", k))) return nocache(reportsOff(url.origin));
         const days = pickDays(url);
         const from = daysAgo(days - 1), to = new Date().toISOString().slice(0, 10);
-        const [views, applies] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from })]);
+        const [views, applies, geo] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to)]);
         if (views) Object.assign(views, { from, to });
         const sponsors = allSponsors(SPONSORED).filter(s => s.id !== "example");
         const links = await Promise.all(sponsors.map(async s => `${url.origin}/report/${s.id}?k=${await signKey(env, "sponsor:" + s.id)}`));
@@ -259,7 +267,7 @@ export default {
         sponsors.forEach(s => { s._unique = used[s.id] || 0; s._cap = clickCap(s); });
         const db = content(env);
         const enquiries = db ? await db.listEnquiries(30) : [];
-        return nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, key: k, enquiries }));
+        return nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, key: k, enquiries, geo }));
       }
       const sponsor = ((SPONSORED && SPONSORED.featured) || []).find(s => s.id === rm[1]);
       if (!sponsor || !(await keyOk(env, "sponsor:" + sponsor.id, k))) return nocache(reportsOff(url.origin));

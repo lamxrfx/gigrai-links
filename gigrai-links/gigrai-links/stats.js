@@ -19,7 +19,44 @@ export class Stats extends DurableObject {
     // One row per advertiser, per visitor, per day: makes "unique clicks" possible. The visitor is a
     // one-way code (not an IP address) that changes every day, so people can't be followed over time.
     this.sql.exec(`CREATE TABLE IF NOT EXISTS uniq (day TEXT NOT NULL, k TEXT NOT NULL, v TEXT NOT NULL, PRIMARY KEY (day, k, v))`);
+    // Who's on the site right now: one row per visitor code, kept ~15 minutes, town-level location only
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS live (v TEXT PRIMARY KEY, ts INTEGER NOT NULL, cc TEXT, city TEXT, lat REAL, lon REAL, page TEXT)`);
+    // Page views per town per day, for the map (no visitor details)
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS geo (day TEXT NOT NULL, cc TEXT NOT NULL, city TEXT NOT NULL, lat REAL, lon REAL, n INTEGER NOT NULL, PRIMARY KEY (day, cc, city))`);
     this.sql.exec(`INSERT OR IGNORE INTO meta (key, value) VALUES ('since', ?)`, today());
+  }
+
+  // A visitor did something (page view, search, opened a role)
+  seen(v, cc, city, lat, lon, page, isView) {
+    const now = Date.now();
+    cc = clean(cc, 2) || "xx"; city = String(city || "").replace(/[^\p{L}\p{N} .'-]/gu, "").slice(0, 40);
+    lat = Number.isFinite(lat) ? lat : null; lon = Number.isFinite(lon) ? lon : null;
+    this.sql.exec(`INSERT INTO live (v, ts, cc, city, lat, lon, page) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT (v) DO UPDATE SET ts = excluded.ts, cc = excluded.cc, city = excluded.city, lat = excluded.lat, lon = excluded.lon, page = COALESCE(excluded.page, page)`,
+      clean(v, 32), now, cc, city, lat, lon, page ? clean(page, 20) : null);
+    if (isView && lat !== null && lon !== null) {
+      this.sql.exec(`INSERT INTO geo (day, cc, city, lat, lon, n) VALUES (?, ?, ?, ?, ?, 1)
+        ON CONFLICT (day, cc, city) DO UPDATE SET n = n + 1`, today(), cc, city || "-", lat, lon);
+    }
+    if (Math.random() < 0.02) this.sql.exec(`DELETE FROM live WHERE ts < ?`, now - 15 * 60e3);
+    if (Math.random() < 0.001) this.sql.exec(`DELETE FROM geo WHERE day < ?`, daysAgo(400));
+  }
+
+  // Visitors active in the last few minutes, grouped by town
+  liveNow(mins = 5) {
+    const since = Date.now() - mins * 60e3;
+    const rows = (q) => [...this.sql.exec(q, since)];
+    return {
+      total: rows(`SELECT COUNT(*) AS n FROM live WHERE ts > ?`)[0].n,
+      places: rows(`SELECT cc, city, AVG(lat) AS lat, AVG(lon) AS lon, COUNT(*) AS n FROM live WHERE ts > ? GROUP BY cc, city ORDER BY n DESC LIMIT 300`),
+      countries: rows(`SELECT cc, COUNT(*) AS n FROM live WHERE ts > ? GROUP BY cc ORDER BY n DESC LIMIT 10`),
+      pages: rows(`SELECT COALESCE(page, 'home') AS page, COUNT(*) AS n FROM live WHERE ts > ? GROUP BY 1 ORDER BY n DESC LIMIT 8`),
+    };
+  }
+
+  // Page views by town between two days, for the map
+  geoReport(from, to = today()) {
+    return [...this.sql.exec(`SELECT cc, city, AVG(lat) AS lat, AVG(lon) AS lon, SUM(n) AS n FROM geo WHERE day >= ? AND day <= ? GROUP BY cc, city ORDER BY n DESC LIMIT 600`, from, to)];
   }
 
   // Add one to today's count
@@ -101,6 +138,28 @@ export function trackUnique(env, ctx, request, k, src) {
   if (!env.STATS) return;
   const cc = request.cf?.country || "";
   try { ctx.waitUntil(visitorCode(env, request).then((v) => stub(env).uniqueHit(k, v, src, cc)).catch(() => {})); } catch {}
+}
+
+// Mark a visitor as on the site now (town-level location from Cloudflare, rounded; no IP stored)
+export function presence(env, ctx, request, page, isView) {
+  if (!env.STATS) return;
+  const cf = request.cf || {};
+  const r = (x) => { const n = parseFloat(x); return Number.isFinite(n) ? Math.round(n * 10) / 10 : NaN; };
+  try {
+    ctx.waitUntil(visitorCode(env, request)
+      .then((v) => stub(env).seen(v, cf.country || "", cf.city || "", r(cf.latitude), r(cf.longitude), page, !!isView))
+      .catch(() => {}));
+  } catch {}
+}
+
+export async function liveNow(env) {
+  if (!env.STATS) return null;
+  try { return await stub(env).liveNow(5); } catch (e) { console.error("live read failed", String(e)); return null; }
+}
+
+export async function geoReport(env, from, to) {
+  if (!env.STATS) return [];
+  try { return await stub(env).geoReport(from, to); } catch (e) { console.error("geo read failed", String(e)); return []; }
 }
 
 export async function countMany(env, kind, items) {
