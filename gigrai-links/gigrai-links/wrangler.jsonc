@@ -31,6 +31,10 @@
   },
   "vars": {
     "MAILERLITE_GROUP_ID": "201853461247034816",
+    // Sign-ups wait here until they tap the link in OUR confirmation email (MailerLite automation "GigrAI confirm email")
+    "MAILERLITE_PENDING_GROUP_ID": "202157435910096534",
+    // "ours" = our branded confirmation email; "mailerlite" = MailerLite's built-in double opt-in email
+    "EMAIL_CONFIRM": "mailerlite",
     // Google AdSense publisher ID, e.g. "ca-pub-1234567890123456". Leave empty for no ads.
     // When set, the AdSense code and /ads.txt switch on automatically.
     "ADSENSE_CLIENT": "ca-pub-9842961043523844",

@@ -9,7 +9,10 @@
   var css = ''
     + '.ggc-b{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:var(--ggc-y,20px);z-index:45;display:flex;align-items:center;gap:8px;height:52px;padding:0 18px 0 14px;border:0;border-radius:999px;cursor:pointer;color:#fff;font:700 14px/1 "Plus Jakarta Sans",system-ui,sans-serif;background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);box-shadow:0 14px 30px -10px rgba(47,107,255,.9)}'
     + '.ggc-b svg{width:22px;height:22px}.ggc-b:focus-visible,.ggc-x:focus-visible,.ggc-send:focus-visible{outline:2px solid #7fdcf0;outline-offset:3px}'
-    + '@media(max-width:700px){.ggc-b{height:46px;padding:0 15px 0 12px;font-size:13.5px}}'
+    + '.ggc-b{gap:0;padding:0 15px;transition:padding .25s ease,gap .25s ease,transform .2s ease}.ggc-b span{display:inline-block;max-width:0;overflow:hidden;white-space:nowrap;opacity:0;transition:max-width .3s ease,opacity .2s ease}'
+    + '.ggc-b:hover,.ggc-b:focus-visible,.ggc-b.open{gap:8px;padding:0 18px 0 14px}.ggc-b:hover span,.ggc-b:focus-visible span,.ggc-b.open span{max-width:120px;opacity:1}.ggc-b:hover{transform:translateY(-2px)}'
+    + '@media(max-width:700px){.ggc-b{height:50px;padding:0 14px}.ggc-b.open{padding:0 15px 0 12px;font-size:13.5px}}'
+    + '@media(prefers-reduced-motion:reduce){.ggc-b,.ggc-b span{transition:none}}'
     + '.ggc-p{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:var(--ggc-y,20px);z-index:90;width:min(390px,calc(100vw - 32px));height:min(600px,calc(100dvh - var(--ggc-y,20px) - 24px));display:none;flex-direction:column;border-radius:22px;overflow:hidden;background:#0d1024;border:1px solid rgba(255,255,255,.18);box-shadow:0 30px 60px -20px rgba(0,0,0,.9);color:#eef1ff;font:400 15px/1.5 "Plus Jakarta Sans",system-ui,sans-serif}'
     + '.ggc-p.on{display:flex}'
     + '@media(max-width:520px){.ggc-p{right:0;left:0;bottom:0;width:auto;height:min(88dvh,640px);border-radius:22px 22px 0 0;padding-bottom:env(safe-area-inset-bottom)}}'
@@ -33,6 +36,7 @@
     + '.ggc-f textarea:focus{outline:none;border-color:#7fdcf0}'
     + '.ggc-send{width:44px;height:44px;flex:none;border:0;border-radius:14px;cursor:pointer;color:#fff;background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff)}.ggc-send:disabled{opacity:.5}'
     + '.ggc-n{padding:0 14px 10px;color:#8f97b6;font-size:11.5px;text-align:center}'
+    + '.ggc-toast{position:absolute;left:12px;right:12px;bottom:84px;padding:11px 14px;border-radius:14px;background:#f2f4ff;color:#0b0e1d;font-size:13.5px;font-weight:700;text-align:center;box-shadow:0 10px 30px -10px rgba(0,0,0,.8);opacity:0;pointer-events:none;transition:opacity .2s}.ggc-toast.on{opacity:1}'
     + '.ggc-toast{position:absolute;left:12px;right:12px;bottom:84px;padding:11px 14px;border-radius:14px;background:#f2f4ff;color:#0b0e1d;font-size:13.5px;font-weight:700;text-align:center;box-shadow:0 10px 30px -10px rgba(0,0,0,.8);opacity:0;pointer-events:none;transition:opacity .2s}.ggc-toast.on{opacity:1}'
     + '.ggc-t{display:inline-flex;gap:4px}.ggc-t i{width:6px;height:6px;border-radius:50%;background:#a9b0cc;animation:ggc 1s infinite}.ggc-t i:nth-child(2){animation-delay:.15s}.ggc-t i:nth-child(3){animation-delay:.3s}'
     + '@keyframes ggc{0%,80%,100%{opacity:.3}40%{opacity:1}}@media(prefers-reduced-motion:reduce){.ggc-t i{animation:none}}';
@@ -61,6 +65,8 @@
     document.documentElement.style.setProperty("--ggc-y", y + "px");
   }
   place(); addEventListener("resize", place); setTimeout(place, 600);
+  // Say what it is for a moment, then shrink to a bubble (hover or focus shows the label again)
+  btn.classList.add("open"); setTimeout(function () { btn.classList.remove("open"); }, 4000);
 
   function esc(t) { return String(t).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   // Plain text in, safe HTML out: our own /paths become links, "- " lines become a list
@@ -139,6 +145,21 @@
     var a = e.target.closest && e.target.closest('a[href^="https://ig.me/"]');
     if (!a) return;
     var asks = msgs.filter(function (m) { var c = m.content.trim(); return m.role === "user" && !(HUMAN.test(c) && c.split(/\s+/).length <= 6); }).map(function (m) { return m.content.trim(); }).slice(-3);
+    var text = "Hi GigrAI, I've come from the chat on your website." + (asks.length ? "\n\n" + asks.join("\n") : "");
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        toast.textContent = "Your message is copied. Paste it into the Instagram chat.";
+        toast.classList.add("on"); setTimeout(function () { toast.classList.remove("on"); }, 4000);
+      }).catch(function () {});
+    } catch (err) {}
+  });
+  // Instagram links can't carry a pre-typed message, so copy what they asked to paste into the DM
+  var toast = document.createElement("div"); toast.className = "ggc-toast"; toast.setAttribute("role", "status"); p.appendChild(toast);
+  var HUMAN = /^(hi|hey|hello)?[\s,!]*(can|could|may) i (speak|talk|chat) (to|with)|^(speak|talk) to (a |someone|somebody|a person|a human|an? (real )?person)|^(a )?(human|person|someone|agent)\??$/i;
+  list.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="https://ig.me/"]');
+    if (!a) return;
+    var asks = msgs.filter(function (m) { return m.role === "user" && !HUMAN.test(m.content.trim()); }).map(function (m) { return m.content.trim(); }).slice(-3);
     var text = "Hi GigrAI, I've come from the chat on your website." + (asks.length ? "\n\n" + asks.join("\n") : "");
     try {
       navigator.clipboard.writeText(text).then(function () {

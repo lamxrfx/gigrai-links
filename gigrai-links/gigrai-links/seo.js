@@ -182,8 +182,8 @@ ${body}
 </div></main>
 ${FOOTER.replace("__YEAR__", String(new Date().getFullYear()))}
 ${drawerHtml()}
-${chatOn && !/noindex/.test(robots) ? '<script src="/chat.js?v=8" defer></script>' : ""}
-${emailOn ? '<script src="/alerts.js?v=3" defer></script>' : ""}
+${chatOn && !/noindex/.test(robots) ? '<script src="/chat.js?v=9" defer></script>' : ""}
+${emailOn ? '<script src="/alerts.js?v=4" defer></script>' : ""}
 </body>
 </html>`;
 }
@@ -595,7 +595,8 @@ ${bookingForm(email)}`;
 }
 
 // ---------- /alerts/confirmed (MailerLite sends people here after they confirm their email) ----------
-export function alertsConfirmedPage(origin) {
+export function alertsConfirmedPage(origin, state = "") {
+  if (state) return html(shell({ title: "Confirm link · GigrAI", desc: "Email alerts", canonical: "", robots: "noindex,follow", body: `<section class="hero sm" style="text-align:center;max-width:620px;margin:0 auto"><h1>${state === "bad" ? "That link didn't work" : "Something went wrong"}</h1><p>${state === "bad" ? "The confirm link looks incomplete or out of date." : "We couldn't confirm you just now."} Please sign up again and tap the newest email.</p><p style=\"margin-top:20px\"><a class=\"btn btn-grad\" href=\"/\">Back to GigrAI ${ARROW}</a></p></section>` }));
   const body = `<section class="hero sm" style="text-align:center;max-width:640px;margin:0 auto">
 <img src="/email/gigrai-icon.png" width="72" height="72" alt="" style="border-radius:18px;margin:10px auto 18px;display:block">
 <span class="eyebrow"><i></i>You're subscribed</span>

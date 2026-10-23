@@ -110,6 +110,13 @@ const app = {
         consent_at: new Date().toISOString(),
       };
       try { await mailerliteFields(env); } catch (e) { console.error("MailerLite fields", String(e)); }
+      // Our own branded confirmation email (MailerLite automation on the "pending" group), see /alerts/confirm
+      if (env.EMAIL_CONFIRM === "ours" && env.MAILERLITE_PENDING_GROUP_ID) {
+        const r = await mlConfirmSignup(env, email, fields, request.headers.get("cf-connecting-ip") || undefined);
+        if (r.ok) { if (isHuman(request)) track(env, ctx, request, "signup", "email", fields.signup_source); return json({ ok: true, already: !!r.already }); }
+        if (r.status === 422) return json({ ok: false, error: "Please enter a valid email." }, 400);
+        return json({ ok: false, error: "Something went wrong. Please try again." }, 502);
+      }
       const res = await fetch(`${env.MAILERLITE_API || "https://connect.mailerlite.com/api"}/subscribers`, {
         method: "POST",
         headers: { "content-type": "application/json", accept: "application/json", authorization: `Bearer ${env.MAILERLITE_TOKEN}` },
@@ -122,6 +129,21 @@ const app = {
       console.error("MailerLite error", res.status, (await res.text()).slice(0, 500));
       if (res.status === 422) return json({ ok: false, error: "Please enter a valid email." }, 400);
       return json({ ok: false, error: "Something went wrong. Please try again." }, 502);
+    }
+
+    // Confirm link from our own confirmation email: moves the person from "pending" into the main alerts group
+    if (request.method === "GET" && url.pathname === "/alerts/confirm") {
+      const email = String(url.searchParams.get("e") || "").replace(/ /g, "+").trim().toLowerCase().slice(0, 254);
+      const t = url.searchParams.get("t") || "";
+      if (!EMAIL_RE.test(email) || !(await keyOk(env, "confirm:" + email, t))) return Response.redirect(new URL("/alerts/confirmed?bad=1", url).toString(), 303);
+      try {
+        await mlConfirmDone(env, email);
+        track(env, ctx, request, "signup", "confirmed", "email");
+      } catch (e) {
+        console.error("confirm failed", String(e));
+        return Response.redirect(new URL("/alerts/confirmed?err=1", url).toString(), 303);
+      }
+      return Response.redirect(new URL("/alerts/confirmed", url).toString(), 303);
     }
 
     // Advertiser booking request from /advertise -> saved, link checked, emailed to us
@@ -263,8 +285,9 @@ const app = {
     }
     // Thank-you page after confirming email alerts (set as the redirect in MailerLite's double opt-in settings)
     if (request.method === "GET" && (url.pathname === "/alerts/confirmed" || url.pathname === "/alerts/confirmed/")) {
-      view("confirmed");
-      return alertsConfirmedPage(url.origin);
+      const state = url.searchParams.has("bad") ? "bad" : url.searchParams.has("err") ? "err" : "";
+      if (!state) view("confirmed");
+      return alertsConfirmedPage(url.origin, state);
     }
 
     // Lost or changed the numbers-page link? This emails it to our own inbox only (never shown here)
@@ -526,8 +549,8 @@ async function decorate(res, url, env, ctx, page) {
 
   let rw = new HTMLRewriter().on("head", {
     element(el) {
-      if (env.EMAIL_SIGNUP === "on") el.append(`<script src="/alerts.js?v=3" defer></script>`, { html: true });
-      if (env.CHAT !== "off") el.append(`<script src="/chat.js?v=8" defer></script>`, { html: true });
+      if (env.EMAIL_SIGNUP === "on") el.append(`<script src="/alerts.js?v=4" defer></script>`, { html: true });
+      if (env.CHAT !== "off") el.append(`<script src="/chat.js?v=9" defer></script>`, { html: true });
       if (verify) el.append(`<meta name="google-site-verification" content="${verify}">`, { html: true });
       if (client) {
         el.append(`<meta name="google-adsense-account" content="${client}">`, { html: true });
@@ -830,6 +853,38 @@ async function handleChat(request, url, env, ctx) {
     track(env, ctx, request, "chat", "failed", src);
     return json({ ok: true, reply: fallback, roles, limited: true });
   }
+}
+
+// ---- our own double opt-in with MailerLite ----
+const ML = (env) => env.MAILERLITE_API || "https://connect.mailerlite.com/api";
+const mlHeaders = (env) => ({ "content-type": "application/json", accept: "application/json", authorization: `Bearer ${env.MAILERLITE_TOKEN}` });
+async function mlGet(env, email) {
+  const r = await fetch(`${ML(env)}/subscribers/${encodeURIComponent(email)}`, { headers: mlHeaders(env) });
+  return r.ok ? (await r.json()).data : null;
+}
+// New sign-up: save details + a confirm code, put them in "pending" (which sends our confirmation email)
+async function mlConfirmSignup(env, email, fields, ip) {
+  const existing = await mlGet(env, email);
+  const inMain = existing && existing.status === "active" && (existing.groups || []).some(g => String(g.id) === String(env.MAILERLITE_GROUP_ID));
+  if (inMain) return { ok: true, already: true }; // already subscribed and confirmed
+  const token = await signKey(env, "confirm:" + email);
+  const r = await fetch(`${ML(env)}/subscribers`, { method: "POST", headers: mlHeaders(env),
+    body: JSON.stringify({ email, fields: { ...fields, confirm_token: token }, status: "active", resubscribe: true, ip_address: ip }) });
+  if (!r.ok) { console.error("MailerLite signup", r.status, (await r.text()).slice(0, 300)); return { ok: false, status: r.status }; }
+  const id = (await r.json()).data.id;
+  const g = `${ML(env)}/subscribers/${id}/groups/${env.MAILERLITE_PENDING_GROUP_ID}`;
+  if (existing && (existing.groups || []).some(x => String(x.id) === String(env.MAILERLITE_PENDING_GROUP_ID))) await fetch(g, { method: "DELETE", headers: mlHeaders(env) }); // re-join resends the email
+  const a = await fetch(g, { method: "POST", headers: mlHeaders(env) });
+  if (!a.ok) { console.error("MailerLite pending group", a.status); return { ok: false, status: a.status }; }
+  return { ok: true };
+}
+// Confirmed: add to the main group (starts the welcome series) and take them out of "pending"
+async function mlConfirmDone(env, email) {
+  const r = await fetch(`${ML(env)}/subscribers`, { method: "POST", headers: mlHeaders(env),
+    body: JSON.stringify({ email, fields: { confirmed_at: new Date().toISOString(), confirm_token: "" }, groups: [String(env.MAILERLITE_GROUP_ID)], status: "active" }) });
+  if (!r.ok) throw new Error(`MailerLite ${r.status}`);
+  const id = (await r.json()).data.id;
+  await fetch(`${ML(env)}/subscribers/${id}/groups/${env.MAILERLITE_PENDING_GROUP_ID}`, { method: "DELETE", headers: mlHeaders(env) });
 }
 
 // Email the private numbers-page link to our own inbox (Cloudflare Email Routing)

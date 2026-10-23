@@ -83,7 +83,8 @@
       }) });
       var d = await r.json();
       if (!d.ok) throw new Error(d.error || "Something went wrong. Please try again.");
-      f.innerHTML = '<div class="done"><b>Check your inbox ✉️</b><p>We\'ve sent a confirmation email to <strong>' + esc(email) + '</strong>. Tap the link inside to start getting roles. (Check spam if it doesn\'t arrive.)</p><button type="button" class="go" data-x>Done</button></div>';
+      if (d.already) f.innerHTML = '<div class="done"><b>You\'re already subscribed ✅</b><p>' + esc(email) + ' is already getting GigrAI job alerts. Check your inbox (and spam) for our emails.</p><button class="go" type="button" data-x>Done</button></div>';
+      else f.innerHTML = '<div class="done"><b>Check your inbox ✉️</b><p>We\'ve sent a confirmation email to <strong>' + esc(email) + '</strong>. Tap the link inside to start getting roles. (Check spam if it doesn\'t arrive.)</p><button type="button" class="go" data-x>Done</button></div>';
       f.querySelector("[data-x]").addEventListener("click", function () { dlg.close(); });
       try { localStorage.setItem("gg_alerts", "1"); } catch (_) {}
     } catch (err) {
