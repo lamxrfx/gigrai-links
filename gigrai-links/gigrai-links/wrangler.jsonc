@@ -31,7 +31,10 @@
     // When set, the AdSense code and /ads.txt switch on automatically.
     "ADSENSE_CLIENT": "ca-pub-9842961043523844",
     // Google Search Console "HTML tag" code (just the content="..." value). Optional.
-    "GOOGLE_SITE_VERIFICATION": ""
+    "GOOGLE_SITE_VERIFICATION": "",
+    // Email job alerts: "off" until the ICO fee is paid and MailerLite has the business address.
+    // Set to "on" to switch every "Job alerts" button to the email sign-up (WhatsApp stays as an option).
+    "EMAIL_SIGNUP": "off"
   }
   // REPORT_SECRET is a secret (set by the GitHub deploy workflow) that signs private report links
   // MAILERLITE_TOKEN is a secret set in the Cloudflare dashboard (not stored here)

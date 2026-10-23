@@ -51,7 +51,8 @@ b{color:var(--text)}
   <section>
     <h2>The short version</h2>
     <ul>
-      <li>You don't need an account to search, and we don't ask for your name or email to use the site.</li>
+      <li data-noemail>You don't need an account to search, and we don't ask for your name or email to use the site.</li>
+      <li class="if-email" hidden>You don't need an account to search. We only ask for your email if you sign up for job alerts, and you can unsubscribe at any time.</li>
       <li>Saved roles stay on your own phone or browser.</li>
       <li>Some apply links are referral links. They cost you nothing and don't change your pay.</li>
       <li>We show Google adverts, which use cookies. If you're in the UK or EEA, you choose what you allow.</li>
@@ -73,6 +74,18 @@ b{color:var(--text)}
     <p>We don't sell personal data.</p>
   </section>
 
+  <section class="if-email" hidden>
+    <h2>Email job alerts</h2>
+    <p>If you sign up for job alerts, we collect:</p>
+    <ul>
+      <li>your <b>email address</b>, and the optional choices you make: the country you live in, the kinds of work you're interested in and a minimum pay;</li>
+      <li>a record of your consent: when you signed up, which page you used, the wording you agreed to, your IP address at the time, and when you confirmed by email.</li>
+    </ul>
+    <p>We use this only to send you job alerts and GigrAI news you asked for (our lawful basis is your consent), to match roles to you, and to see which emails are useful. Emails may include referral links and clearly labelled sponsored roles.</p>
+    <p>Your details are stored by our email provider, <b>MailerLite</b> (UAB "MailerLite", Lithuania, EU), which processes them on our behalf. We don't sell or share your email with advertisers.</p>
+    <p>You can <b>unsubscribe</b> with one click from any email. We delete your details from our list if you unsubscribe or don't confirm your sign-up, and remove inactive subscribers after 24 months without opening an email.</p>
+  </section>
+
   <section>
     <h2>Referral links</h2>
     <p>Some links to job platforms include our referral code. If you join or are hired through one, the platform may reward us. It costs you nothing, and your pay and treatment are exactly the same.</p>
@@ -91,7 +104,7 @@ b{color:var(--text)}
 
   <section>
     <h2>Your rights</h2>
-    <p>Under UK GDPR you can ask what data we hold about you, and ask us to correct or delete it. Because we don't run accounts, we usually hold nothing that identifies you. To ask a question, message us on Instagram at <a href="https://www.instagram.com/gigr.ai/" target="_blank" rel="noopener">@gigr.ai</a>.</p>
+    <p>Under UK GDPR you can ask what data we hold about you, and ask us to correct or delete it. Because we don't run accounts, we usually hold nothing that identifies you<span class="if-email" hidden>, apart from your email if you've signed up for alerts</span>. To ask a question or make a request, email <a href="mailto:partners@remotegigrai.com">partners@remotegigrai.com</a> or message us on Instagram at <a href="https://www.instagram.com/gigr.ai/" target="_blank" rel="noopener">@gigr.ai</a>. You can also complain to the UK Information Commissioner's Office (<a href="https://ico.org.uk" target="_blank" rel="noopener">ico.org.uk</a>).</p>
   </section>
 
   <a class="back" href="/">&larr; Back to search</a>

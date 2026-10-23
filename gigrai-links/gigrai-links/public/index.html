@@ -639,7 +639,7 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
       const where = S.country ? ` <span>open to ${esc(short(S.country))}</span>` : "";
       $("count").innerHTML = `${d.total.toLocaleString("en-GB")} <span>role${d.total === 1 ? "" : "s"}</span>${where}`;
       if (!d.total) {
-        $("grid").innerHTML = `<div class="empty"><b>No live roles${S.q ? ` for “${esc(S.q)}”` : ""} yet</b>Try another word, widen your filters, or get new roles first on WhatsApp.<br><a class="btn-grad" href="https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u" target="_blank" rel="noopener" data-track="search-empty-whatsapp">Get notified on WhatsApp</a></div>`;
+        $("grid").innerHTML = `<div class="empty"><b>No live roles${S.q ? ` for “${esc(S.q)}”` : ""} yet</b>Try another word, widen your filters, or get new roles sent to you.<br><a class="btn-grad" href="https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u" target="_blank" rel="noopener" data-track="search-empty-whatsapp">Get notified on WhatsApp</a></div>`;
         return;
       }
       const html = d.items.map((j, i) => card(j, append ? 99 : i)).join("");

@@ -25,6 +25,31 @@ const json = (body, status = 200) =>
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+// Best-effort limit: 5 sign-up attempts a minute per visitor (per server location)
+const HITS = new Map();
+function tooMany(request) {
+  const ip = request.headers.get("cf-connecting-ip") || "?";
+  const now = Date.now(), list = (HITS.get(ip) || []).filter(t => now - t < 60000);
+  list.push(now); HITS.set(ip, list);
+  if (HITS.size > 5000) HITS.clear();
+  return list.length > 5;
+}
+
+// Make sure the custom fields we send exist in MailerLite (checked once per server start)
+let fieldsReady = false;
+async function mailerliteFields(env) {
+  if (fieldsReady) return;
+  const base = env.MAILERLITE_API || "https://connect.mailerlite.com/api";
+  const h = { "content-type": "application/json", accept: "application/json", authorization: `Bearer ${env.MAILERLITE_TOKEN}` };
+  const r = await fetch(`${base}/fields?limit=100`, { headers: h });
+  if (!r.ok) return;
+  const have = new Set(((await r.json()).data || []).map(f => f.key));
+  for (const name of ["interests", "min_pay", "signup_source", "signup_page", "consent_text", "consent_at"]) {
+    if (!have.has(name)) await fetch(`${base}/fields`, { method: "POST", headers: h, body: JSON.stringify({ name, type: "text" }) });
+  }
+  fieldsReady = true;
+}
+
 export default {
   // Hourly (see "triggers" in wrangler.jsonc): pull the latest headlines
   async scheduled(event, env, ctx) {
@@ -41,52 +66,48 @@ export default {
     // Count a human page view (anonymous daily totals for the media kit)
     const view = (section) => { if (request.method === "GET" && isHuman(request)) track(env, ctx, request, "view", section, visitSource(request, url)); };
 
+    // Email job alerts sign-up -> MailerLite (double opt-in). Only open when EMAIL_SIGNUP is "on".
     if (url.pathname === "/api/subscribe") {
       if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
-
-      // Only accept submissions from our own page
+      if (env.EMAIL_SIGNUP !== "on") return json({ ok: false, error: "Email alerts are coming soon. Join our WhatsApp channel for now." }, 403);
       const origin = request.headers.get("origin");
-      if (origin && new URL(origin).host !== url.host) return json({ ok: false, error: "Forbidden" }, 403);
+      if (!origin || new URL(origin).host !== url.host) return json({ ok: false, error: "Forbidden" }, 403);
+      if (tooMany(request)) return json({ ok: false, error: "Too many tries. Please wait a minute and try again." }, 429);
 
       let data;
-      try {
-        data = await request.json();
-      } catch {
-        return json({ ok: false, error: "Bad request" }, 400);
-      }
-
-      // Honeypot field: real people never fill it in
-      if (data.website) return json({ ok: true });
+      try { data = JSON.parse((await request.text()).slice(0, 4000)); } catch { return json({ ok: false, error: "Bad request" }, 400); }
+      if (data.website) return json({ ok: true }); // honeypot: bots fill it in
 
       const email = String(data.email || "").trim().toLowerCase();
-      const name = String(data.name || "").trim().slice(0, 80);
-      if (!EMAIL_RE.test(email) || email.length > 254) {
-        return json({ ok: false, error: "Please enter a valid email." }, 400);
+      if (!EMAIL_RE.test(email) || email.length > 254) return json({ ok: false, error: "Please enter a valid email." }, 400);
+      if (data.consent !== true) return json({ ok: false, error: "Please tick the box to agree to receive emails." }, 400);
+      if (!env.MAILERLITE_TOKEN || !env.MAILERLITE_GROUP_ID) {
+        console.error("MAILERLITE_TOKEN or MAILERLITE_GROUP_ID is not set");
+        return json({ ok: false, error: "Sign-up is temporarily unavailable." }, 500);
       }
-
-      if (!env.MAILERLITE_TOKEN) {
-        console.error("MAILERLITE_TOKEN secret is not set");
-        return json({ ok: false, error: "Signup is temporarily unavailable." }, 500);
-      }
-
-      const res = await fetch("https://connect.mailerlite.com/api/subscribers", {
+      const INTERESTS = ["Writing", "Coding", "Research", "Medical", "Finance", "Legal", "Languages", "Maths", "Design", "Data"];
+      const interests = (Array.isArray(data.interests) ? data.interests : []).filter(x => INTERESTS.includes(x)).join(", ");
+      const country = /^[A-Z]{3}$/.test(String(data.country || "")) ? String(data.country) : "";
+      const minpay = [0, 25, 50, 100].includes(+data.minpay) ? +data.minpay : 0;
+      const fields = {
+        country: country ? (COUNTRY[country] || country) : "",
+        interests, min_pay: minpay ? `$${minpay}+` : "",
+        signup_source: cleanSrc(data.source) || "site",
+        signup_page: String(data.page || "").replace(/[^\w\-/]/g, "").slice(0, 80),
+        consent_text: String(data.consentText || "").slice(0, 200),
+        consent_at: new Date().toISOString(),
+      };
+      try { await mailerliteFields(env); } catch (e) { console.error("MailerLite fields", String(e)); }
+      const res = await fetch(`${env.MAILERLITE_API || "https://connect.mailerlite.com/api"}/subscribers`, {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          accept: "application/json",
-          authorization: `Bearer ${env.MAILERLITE_TOKEN}`,
-        },
-        body: JSON.stringify({
-          email,
-          fields: name ? { name } : {},
-          groups: [env.MAILERLITE_GROUP_ID],
-        }),
+        headers: { "content-type": "application/json", accept: "application/json", authorization: `Bearer ${env.MAILERLITE_TOKEN}` },
+        body: JSON.stringify({ email, fields, groups: [env.MAILERLITE_GROUP_ID], status: "unconfirmed", ip_address: request.headers.get("cf-connecting-ip") || undefined }),
       });
-
-      if (res.ok) return json({ ok: true });
-
-      // Make failures visible in Cloudflare's logs
-      console.error("MailerLite error", res.status, await res.text());
+      if (res.ok) {
+        if (isHuman(request)) track(env, ctx, request, "signup", "email", fields.signup_source);
+        return json({ ok: true });
+      }
+      console.error("MailerLite error", res.status, (await res.text()).slice(0, 500));
       if (res.status === 422) return json({ ok: false, error: "Please enter a valid email." }, 400);
       return json({ ok: false, error: "Something went wrong. Please try again." }, 502);
     }
@@ -361,6 +382,7 @@ async function decorate(res, url, env, ctx, page) {
 
   let rw = new HTMLRewriter().on("head", {
     element(el) {
+      if (env.EMAIL_SIGNUP === "on") el.append(`<script src="/alerts.js?v=1" defer></script>`, { html: true });
       if (verify) el.append(`<meta name="google-site-verification" content="${verify}">`, { html: true });
       if (client) {
         el.append(`<meta name="google-adsense-account" content="${client}">`, { html: true });
@@ -368,6 +390,12 @@ async function decorate(res, url, env, ctx, page) {
       }
     },
   });
+  // Privacy page: show the email section only once email alerts are switched on
+  if (page === "/privacy") {
+    const on = env.EMAIL_SIGNUP === "on";
+    rw = rw.on(".if-email", { element(el) { if (on) el.removeAttribute("hidden"); else el.remove(); } })
+      .on("[data-noemail]", { element(el) { if (on) el.remove(); } });
+  }
   if (page === "/") {
     rw = rw.on("header.top .wrap", { element(el) { el.append(menuButton(), { html: true }); } })
       .on("body", { element(el) { el.append(drawerHtml(), { html: true }); } });
