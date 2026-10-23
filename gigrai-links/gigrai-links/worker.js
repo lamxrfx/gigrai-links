@@ -260,6 +260,21 @@ const app = {
       const today = { views: tv ? tv.total : 0, applies: ta ? ta.total : 0, countries: tv ? tv.byCountry.slice(0, 6) : [] };
       return json(d ? { ok: true, ...d, today } : { ok: false });
     }
+    // Lost or changed the numbers-page link? This emails it to our own inbox only (never shown here)
+    if (url.pathname === "/report/email-link") {
+      if (request.method === "POST") {
+        const lock = new Request("https://cache.remotegigrai.internal/owner-link-lock");
+        const cache = typeof caches !== "undefined" ? caches.default : null;
+        if (cache && await cache.match(lock)) return linkPage(emailLinkPage("Already sent in the last 10 minutes. Check your inbox (and spam)."), 429);
+        const key = await signKey(env, "owner");
+        if (key && env.NOTIFY) {
+          if (cache) ctx.waitUntil(cache.put(lock, new Response("1", { headers: { "cache-control": "max-age=600" } })));
+          ctx.waitUntil(sendOwnerLink(env, `${url.origin}/report?k=${key}`).catch(e => console.error("owner link email failed", String(e))));
+        }
+        return linkPage(emailLinkPage("Sent. If this is set up, the link is on its way to the GigrAI inbox."));
+      }
+      return linkPage(emailLinkPage(""));
+    }
     const rm = request.method === "GET" && url.pathname.match(/^\/report(?:\/([a-z0-9-]{1,40})(\.csv)?)?\/?$/);
     if (rm) {
       const k = url.searchParams.get("k") || "";
@@ -803,6 +818,20 @@ async function handleChat(request, url, env, ctx) {
     return json({ ok: true, reply: fallback, roles, limited: true });
   }
 }
+
+// Email the private numbers-page link to our own inbox (Cloudflare Email Routing)
+async function sendOwnerLink(env, link) {
+  const from = "partners@remotegigrai.com", to = env.NOTIFY_TO || "remotegigr.ai@gmail.com";
+  const b64 = (str) => btoa(String.fromCharCode(...new TextEncoder().encode(str)));
+  const body = ["Your private GigrAI numbers page:", "", link, "", "Bookmark it and don't share it. Opening it on a device also stops that device being counted in your numbers.", "If you didn't ask for this, you can ignore it: the link only ever goes to this inbox."].join("\r\n");
+  const raw = [`From: GigrAI <${from}>`, `To: ${to}`, `Subject: Your GigrAI numbers link`, `Message-ID: <owner.${Date.now()}@remotegigrai.com>`, `Date: ${new Date().toUTCString()}`,
+    "MIME-Version: 1.0", "Content-Type: text/plain; charset=utf-8", "Content-Transfer-Encoding: base64", "", b64(body).replace(/.{76}/g, "$&\r\n")].join("\r\n");
+  await env.NOTIFY.send(new EmailMessage(from, to, raw));
+}
+const linkPage = (body, status = 200) => new Response(body, { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex" } });
+const emailLinkPage = (msg) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Numbers link · GigrAI</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#070914;color:#eef1ff;font:16px/1.5 system-ui,sans-serif;padding:20px}main{max-width:420px;text-align:center}button{margin-top:14px;height:48px;padding:0 22px;border:0;border-radius:999px;color:#fff;font-weight:700;font-size:15px;background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);cursor:pointer}p{color:#a9b0cc}</style></head>
+<body><main><h1>Email the numbers link</h1><p>This sends the private numbers-page link to the GigrAI inbox. It never shows the link here.</p>${msg ? `<p><b style="color:#fff">${msg}</b></p>` : `<form method="post"><button type="submit">Email me the link</button></form>`}</main></body></html>`;
 
 // Pinned sponsors, minus pay-per-click ones whose budget is used up
 async function activeFeatured(env) {

@@ -50,7 +50,7 @@ jobs:
             exit 1
           fi
 
-      - name: Set the report-link secret (first time only)
+      - name: Copy the report-link secret to Cloudflare
         working-directory: gigrai-links/gigrai-links
         continue-on-error: true   # the site is already live; this only affects private report links
         env:
@@ -61,10 +61,12 @@ jobs:
         run: |
           export CLOUDFLARE_API_TOKEN="$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')"
           if [ -z "$REPORT_SECRET" ]; then echo "::notice title=Report links::REPORT_SECRET is not in GitHub secrets yet (skipped)"; exit 0; fi
-          if npx --yes wrangler@4.42.0 secret list 2>/dev/null | grep -q '"REPORT_SECRET"'; then
-            echo "::notice title=Report links::REPORT_SECRET is set on Cloudflare"
-          elif printf '%s' "$REPORT_SECRET" | npx --yes wrangler@4.42.0 secret put REPORT_SECRET; then
+          # Always copy it, so changing REPORT_SECRET in GitHub (to rotate the private links) takes effect on the next deploy
+          if printf '%s' "$REPORT_SECRET" | npx --yes wrangler@4.42.0 secret put REPORT_SECRET >/dev/null 2>&1; then
             echo "::notice title=Report links::REPORT_SECRET copied to Cloudflare"
+            sleep 20
+            # email the (new) numbers-page link to the GigrAI inbox; it's never printed here
+            curl -s -o /dev/null -X POST https://remotegigrai.com/report/email-link || true
           else
             echo "::warning title=Report links::Could not copy REPORT_SECRET to Cloudflare (check the API token can edit Workers)"
           fi
