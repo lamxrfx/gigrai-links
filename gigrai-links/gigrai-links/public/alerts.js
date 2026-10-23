@@ -4,7 +4,7 @@
   var WA = "https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u";
   var TRIGGERS = ["header-whatsapp", "menu-whatsapp", "news-whatsapp", "post-whatsapp", "search-empty-whatsapp", "email-alerts"];
   var FIELDS = ["Writing", "Coding", "Research", "Medical", "Finance", "Legal", "Languages", "Maths", "Design", "Data"];
-  var COUNTRIES = [["GBR", "United Kingdom"], ["USA", "United States"], ["CAN", "Canada"], ["IRL", "Ireland"], ["AUS", "Australia"], ["NZL", "New Zealand"], ["IND", "India"], ["NGA", "Nigeria"], ["ZAF", "South Africa"], ["KEN", "Kenya"], ["GHA", "Ghana"], ["DEU", "Germany"], ["FRA", "France"], ["ESP", "Spain"], ["NLD", "Netherlands"], ["PHL", "Philippines"], ["BRA", "Brazil"], ["MEX", "Mexico"], ["", "Somewhere else"]];
+  var COUNTRIES = [["GBR","United Kingdom"],["USA","United States"],["ARG","Argentina"],["AUS","Australia"],["AUT","Austria"],["BGD","Bangladesh"],["BRB","Barbados"],["BEL","Belgium"],["BRA","Brazil"],["BGR","Bulgaria"],["CAN","Canada"],["CHL","Chile"],["CHN","China"],["COL","Colombia"],["HRV","Croatia"],["CYP","Cyprus"],["CZE","Czechia"],["DNK","Denmark"],["EGY","Egypt"],["EST","Estonia"],["ETH","Ethiopia"],["FIN","Finland"],["FRA","France"],["DEU","Germany"],["GHA","Ghana"],["GRC","Greece"],["HKG","Hong Kong SAR China"],["HUN","Hungary"],["ISL","Iceland"],["IND","India"],["IDN","Indonesia"],["IRL","Ireland"],["ISR","Israel"],["ITA","Italy"],["JAM","Jamaica"],["JPN","Japan"],["KEN","Kenya"],["LVA","Latvia"],["LTU","Lithuania"],["LUX","Luxembourg"],["MYS","Malaysia"],["MLT","Malta"],["MEX","Mexico"],["MAR","Morocco"],["NPL","Nepal"],["NLD","Netherlands"],["NZL","New Zealand"],["NGA","Nigeria"],["NOR","Norway"],["PAK","Pakistan"],["PER","Peru"],["PHL","Philippines"],["POL","Poland"],["PRT","Portugal"],["QAT","Qatar"],["ROU","Romania"],["SAU","Saudi Arabia"],["SRB","Serbia"],["SGP","Singapore"],["SVK","Slovakia"],["SVN","Slovenia"],["ZAF","South Africa"],["KOR","South Korea"],["ESP","Spain"],["LKA","Sri Lanka"],["SWE","Sweden"],["CHE","Switzerland"],["TWN","Taiwan"],["THA","Thailand"],["TTO","Trinidad & Tobago"],["TUR","Türkiye"],["UGA","Uganda"],["UKR","Ukraine"],["ARE","United Arab Emirates"],["VNM","Vietnam"],["","Somewhere else"]];
   var CONSENT = "Email me new remote AI roles and GigrAI news. I can unsubscribe at any time.";
 
   var css = document.createElement("style");
@@ -90,13 +90,20 @@
     }
   }
 
-  function open(src) {
+  // opts (optional): { country: "POL", title: "...", text: "..." }
+  function open(src, opts) {
     if (!dlg) build();
     source = src || "site";
+    opts = opts || {};
+    var h = dlg.querySelector("#gaT"), p = h && h.parentElement.querySelector("p");
+    if (h) h.textContent = opts.title || "Get new roles by email";
+    if (p) p.textContent = opts.text || "The best new remote AI roles for you, once a week. Free.";
+    var sel = dlg.querySelector("select[name=country]");
+    if (sel && opts.country && [].some.call(sel.options, function (o) { return o.value === opts.country; })) sel.value = opts.country;
     if (!dlg.open) dlg.showModal();
     setTimeout(function () { var i = dlg.querySelector("input[type=email]"); if (i) i.focus(); }, 50);
   }
-  window.ggAlerts = { open: open };
+  window.ggAlerts = { open: open, signedUp: function () { try { return !!localStorage.getItem("gg_alerts"); } catch (_) { return false; } } };
 
   // Every job-alert prompt now opens the email form
   document.addEventListener("click", function (e) {

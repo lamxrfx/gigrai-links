@@ -1026,6 +1026,7 @@ async function handleJobs(url, env, ctx) {
     ? (a, b) => (b.max || b.min || 0) - (a.max || a.min || 0) || (b.posted || "").localeCompare(a.posted || "")
     : (a, b) => (b.posted || "").localeCompare(a.posted || ""));
   const total = list.length;
+  const yes = country ? list.filter(j => eligibility(j, country) === "yes").length : null; // roles that say they're open to this country
   const items = list.slice((page - 1) * size, page * size).map(j => {
     const { allow, deny, known, desc, ...rest } = j;
     return country ? { ...rest, elig: eligibility(j, country) } : rest;
@@ -1033,7 +1034,7 @@ async function handleJobs(url, env, ctx) {
   if (q && page === 1) console.log(JSON.stringify({ event: "job_search", q, results: total, src: cleanSrc(url.searchParams.get("src")) }));
   const dayAgo = new Date(Date.now() - 864e5).toISOString().replace("T", " ").slice(0, 19);
   const newToday = feed.filter(j => (j.posted || "") >= dayAgo).length;
-  return new Response(JSON.stringify({ ok: true, q, total, all: feed.length, newToday, page, pages: Math.ceil(total / size), fields, sources, items }), {
+  return new Response(JSON.stringify({ ok: true, q, total, yes, all: feed.length, newToday, page, pages: Math.ceil(total / size), fields, sources, items }), {
     headers: { "content-type": "application/json", "cache-control": "public, max-age=120" },
   });
 }
