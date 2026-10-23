@@ -33,6 +33,7 @@
     + '.ggc-f textarea:focus{outline:none;border-color:#7fdcf0}'
     + '.ggc-send{width:44px;height:44px;flex:none;border:0;border-radius:14px;cursor:pointer;color:#fff;background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff)}.ggc-send:disabled{opacity:.5}'
     + '.ggc-n{padding:0 14px 10px;color:#8f97b6;font-size:11.5px;text-align:center}'
+    + '.ggc-toast{position:absolute;left:12px;right:12px;bottom:84px;padding:11px 14px;border-radius:14px;background:#f2f4ff;color:#0b0e1d;font-size:13.5px;font-weight:700;text-align:center;box-shadow:0 10px 30px -10px rgba(0,0,0,.8);opacity:0;pointer-events:none;transition:opacity .2s}.ggc-toast.on{opacity:1}'
     + '.ggc-t{display:inline-flex;gap:4px}.ggc-t i{width:6px;height:6px;border-radius:50%;background:#a9b0cc;animation:ggc 1s infinite}.ggc-t i:nth-child(2){animation-delay:.15s}.ggc-t i:nth-child(3){animation-delay:.3s}'
     + '@keyframes ggc{0%,80%,100%{opacity:.3}40%{opacity:1}}@media(prefers-reduced-motion:reduce){.ggc-t i{animation:none}}';
   var st = document.createElement("style"); st.textContent = css; document.head.appendChild(st);
@@ -131,6 +132,21 @@
     try { sessionStorage.setItem(KEY + "-open", "1"); } catch (e) {}
   }
   function close() { p.classList.remove("on"); btn.style.display = ""; btn.focus(); try { sessionStorage.removeItem(KEY + "-open"); } catch (e) {} }
+  // Instagram links can't carry a pre-typed message, so copy what they asked to paste into the DM
+  var toast = document.createElement("div"); toast.className = "ggc-toast"; toast.setAttribute("role", "status"); p.appendChild(toast);
+  var HUMAN = /^(hi|hey|hello)?[\s,!]*(can|could|may) i (speak|talk|chat) (to|with)|^(speak|talk) to (a |someone|somebody|a person|a human|an? (real )?person)|^(a )?(human|person|someone|agent)\??$/i;
+  list.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="https://ig.me/"]');
+    if (!a) return;
+    var asks = msgs.filter(function (m) { var c = m.content.trim(); return m.role === "user" && !(HUMAN.test(c) && c.split(/\s+/).length <= 6); }).map(function (m) { return m.content.trim(); }).slice(-3);
+    var text = "Hi GigrAI, I've come from the chat on your website." + (asks.length ? "\n\n" + asks.join("\n") : "");
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        toast.textContent = "Your message is copied. Paste it into the Instagram chat.";
+        toast.classList.add("on"); setTimeout(function () { toast.classList.remove("on"); }, 4000);
+      }).catch(function () {});
+    } catch (err) {}
+  });
   btn.addEventListener("click", open);
   p.querySelector(".ggc-x").addEventListener("click", close);
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && p.classList.contains("on")) close(); });
