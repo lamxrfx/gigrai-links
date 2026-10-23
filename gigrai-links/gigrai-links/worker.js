@@ -437,7 +437,7 @@ async function decorate(res, url, env, ctx, page) {
   let rw = new HTMLRewriter().on("head", {
     element(el) {
       if (env.EMAIL_SIGNUP === "on") el.append(`<script src="/alerts.js?v=1" defer></script>`, { html: true });
-      if (env.CHAT !== "off") el.append(`<script src="/chat.js?v=6" defer></script>`, { html: true });
+      if (env.CHAT !== "off") el.append(`<script src="/chat.js?v=7" defer></script>`, { html: true });
       if (verify) el.append(`<meta name="google-site-verification" content="${verify}">`, { html: true });
       if (client) {
         el.append(`<meta name="google-adsense-account" content="${client}">`, { html: true });

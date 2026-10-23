@@ -181,7 +181,7 @@ ${body}
 </div></main>
 ${FOOTER.replace("__YEAR__", String(new Date().getFullYear()))}
 ${drawerHtml()}
-${chatOn && !/noindex/.test(robots) ? '<script src="/chat.js?v=6" defer></script>' : ""}
+${chatOn && !/noindex/.test(robots) ? '<script src="/chat.js?v=7" defer></script>' : ""}
 </body>
 </html>`;
 }
