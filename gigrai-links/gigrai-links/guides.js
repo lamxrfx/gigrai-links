@@ -129,6 +129,9 @@ export const GUIDES = [
   },
   {
     slug: "get-paid-ai-training-work",
+    roles: "beginner",
+    rolesTitle: "Beginner-friendly roles open now",
+    rolesLead: "General roles that don't need a specialist degree. Free to apply.",
     title: "How to get paid for AI training work (a beginner's guide)",
     desc: "What AI training work is, who it's for, what it pays, where to find real roles, and how to avoid scams. A plain-English guide for beginners.",
     updated: "2026-10-22",
@@ -282,6 +285,9 @@ export const GUIDES = [
   },
   {
     slug: "ai-training-jobs-no-experience",
+    roles: "beginner",
+    rolesTitle: "Beginner-friendly roles open now",
+    rolesLead: "General roles that don't need a specialist degree. Free to apply.",
     title: "AI training jobs with no experience: where to start in 2026",
     desc: "Can you get AI training work with no experience? What 'experience' really means, which roles to apply for first, how to pass the AI interview, and the scams to avoid.",
     updated: "2026-10-24",

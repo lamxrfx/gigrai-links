@@ -817,8 +817,24 @@ function livePayTable(feed) {
 
 // 3 live roles for the end of a guide: the guide's platform first, roles most people can do, best pay
 const EXPERT = /doctor|nurs|physician|medical|clinic|lawyer|attorney|legal|paralegal|dentist|pharmac|phd|professor|surgeon|radiolog|psychiatr/i;
-const EASY = /generalist|writ|editor|annotat|evaluat|rater|review|tester|english|content|research|quality|data label/i;
+const EASY = /generalist|writ|editor|annotat|evaluat|rater|review|tester|english|content|quality|data label/i;
+// Beginner guides only show roles anyone can try: general writing, rating, languages. Never senior or specialist ones.
+const BEGINNER = /generalist|writer|writing|editor|annotat|evaluat|rater|rating|tester|transcri|translat|language|native|bilingual|fluent|content|data label|labell?er|chat|tutor|english|voice|speaker/i;
+const SENIOR = /senior|principal|\blead\b|staff|scientist|phd|professor|expert|specialist|engineer|developer|architect|manager|director|consultant|research|analyst|clinical|python|software|coding|\bcode/i;
+function beginnerRoles(feed) {
+  const ok = feed.filter(j => (j.min || j.max) && BEGINNER.test(j.title) && !SENIOR.test(j.title) && !EXPERT.test(j.title));
+  const score = (j) => (j.hot ? 1 : 0) + (/generalist|rater|evaluat|annotat/i.test(j.title) ? 1 : 0) - Math.max(0, ((j.min || j.max) - 60) / 20); // lower barrier first
+  const out = [], seen = new Set();
+  for (const j of ok.sort((a, b) => score(b) - score(a))) {
+    const key = j.title.toLowerCase().replace(/\s*\d+$/, "");
+    if (seen.has(key)) continue;
+    seen.add(key); out.push(j);
+    if (out.length === 3) break;
+  }
+  return out; // may be empty: then the guide shows no role cards rather than unsuitable ones
+}
 function guideRoles(g, feed) {
+  if (g.roles === "beginner") return beginnerRoles(feed);
   const want = ["micro1", "mercor", "ethos"].filter(p => g.slug.includes(p));
   const paid = feed.filter(j => j.min || j.max);
   const score = (j) => (want.includes(j.platform) ? 2 : 0) + (EASY.test(j.title) ? 3 : 0) - (EXPERT.test(j.title) ? 4 : 0) + (j.hot ? 1 : 0) + Math.min(2, (j.max || j.min || 0) / 50);

@@ -360,7 +360,7 @@ export function guidePage(g, guides, origin, roles = [], platforms = []) {
   </header>
   <div class="prose">${prose}</div>
   ${refBox(plats, "guide-end", { text: plats.length > 1 ? "Join more than one: work comes in waves, so being in several talent pools means less waiting." : "Free to join. You apply on the platform's own site." })}
-  ${roles.length ? `<section class="block" aria-labelledby="gr"><h2 id="gr">Live roles you can apply for now</h2><p class="lead">Open right now, with the pay shown. Free to apply.</p><div class="cards">${roles.map((x) => roleCard(x, platforms, "guide")).join("")}</div></section>` : ""}
+  ${roles.length ? `<section class="block" aria-labelledby="gr"><h2 id="gr">${esc(g.rolesTitle || "Live roles you can apply for now")}</h2><p class="lead">${esc(g.rolesLead || "Open right now, with the pay shown. Free to apply.")}</p><div class="cards">${roles.map((x) => roleCard(x, platforms, "guide")).join("")}</div></section>` : ""}
   ${mailCard("guide-" + g.slug.slice(0, 14))}
   <div class="cta-panel"><h2>Find your next remote AI role</h2><p>Search live roles from every platform in one place, with real pay rates.</p><a class="btn btn-grad" href="/">Search GigrAI ${ARROW}</a></div>
 </article>
