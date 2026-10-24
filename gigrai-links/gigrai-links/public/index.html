@@ -680,8 +680,9 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
     if (!facetsDone && d.sources) {
       const mini = id => PLATFORM[id] && PLATFORM[id].icon ? `<img class="mini" src="/${esc(PLATFORM[id].icon)}" alt="">` : "";
       fp.insertAdjacentHTML("beforeend", d.sources.filter(s => s.n).map(s => `<label><input type="checkbox" name="via" value="${esc(s.id)}" checked> ${mini(s.id)}${esc(s.name)} <span class="count">${s.n}</span></label>`).join(""));
-      const parts = d.sources.filter(s => s.n).map(s => `<span class="src">${mini(s.id)}${s.n}&nbsp;from&nbsp;<b>${esc(s.name)}</b></span>`);
-      $("trust").innerHTML = `<span id="newToday">${d.newToday ? `<b>${d.newToday} new</b> in the last 24 hours` : ""}</span><span>${parts.join(" · ")}</span><span>Updated every 30 minutes</span>`;
+      // one tidy line: total roles and platforms (the per-platform counts are in the Platform filter)
+      const live = d.sources.filter(s => s.n), all = live.reduce((t, s) => t + s.n, 0);
+      $("trust").innerHTML = `<span id="newToday">${d.newToday ? `<b>${d.newToday} new</b> in the last 24 hours` : ""}</span><span><b>${all.toLocaleString("en-GB")}</b> live roles from <b>${live.length}</b> platforms</span><span>Updated every 30 minutes</span>`;
       facetsDone = true;
     }
     const sel = $("field"), cur = S.field;
