@@ -272,14 +272,24 @@ ${similar.length ? `<section class="block" aria-labelledby="sim"><h2 id="sim">Si
 }
 
 // ---------- /jobs ----------
+// "Back to top" button for long pages: appears after scrolling down, sits bottom-left (the chat button is bottom-right)
+export const TOP_BTN = `<style>
+.totop{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:var(--ggc-y,20px);z-index:44;width:52px;height:52px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(13,16,36,.88);color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .2s,transform .2s}
+.totop.on{opacity:1;transform:none;pointer-events:auto}.totop:hover{background:rgba(47,107,255,.9)}.totop:focus-visible{outline:2px solid #22d3ee;outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.totop{transition:none}}
+</style>
+<button type="button" class="totop" id="toTop" aria-label="Back to top" title="Back to top"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+<script>(function(){var b=document.getElementById("toTop");if(!b)return;var t=0;function f(){b.classList.toggle("on",window.scrollY>900)}addEventListener("scroll",function(){if(!t){t=requestAnimationFrame(function(){t=0;f()})}},{passive:true});f();b.addEventListener("click",function(){var r=matchMedia("(prefers-reduced-motion: reduce)").matches;scrollTo({top:0,behavior:r?"auto":"smooth"});var h=document.querySelector("h1");if(h){h.setAttribute("tabindex","-1");h.focus({preventScroll:true})}})})();</script>`;
+
 export function jobsIndex(feed, origin, platforms, featured = []) {
-  const groups = (platforms || []).map((p) => ({ p, jobs: feed.filter((j) => j.platform === p.id).sort((a, b) => (b.posted || "").localeCompare(a.posted || "")) }))
+  const groups = [...(platforms || []), { id: "other", name: "Other companies" }].map((p) => ({ p, jobs: feed.filter((j) => j.platform === p.id).sort((a, b) => (b.posted || "").localeCompare(a.posted || "")) }))
     .filter((g) => g.jobs.length);
-  const body = `${crumbs([["/", "GigrAI"], ["", "All roles"]])}
+  const names = groups.map((g) => esc(g.p.name));
+  const body = `${TOP_BTN}${crumbs([["/", "GigrAI"], ["", "All roles"]])}
 <section class="hero sm">
   <span class="eyebrow"><i></i>Updated every 30 minutes</span>
   <h1>All <span class="grad-text">${feed.length} live</span> remote AI jobs</h1>
-  <p>Every live role training and testing AI, from ${groups.map((g) => esc(g.p.name)).join(" and ")}. Free to apply on the platform's own site. Want filters? <a href="/">Search and filter roles</a>.</p>
+  <p>Every live role training and testing AI, from ${names.length > 1 ? names.slice(0, -1).join(", ") + " and " + names[names.length - 1] : names[0] || "AI platforms"}. Free to apply on the platform's own site. Want filters? <a href="/">Search and filter roles</a>.</p>
   <div class="jump">${groups.map((g) => `<a href="#${esc(g.p.id)}">${esc(g.p.name)} <b>${g.jobs.length}</b></a>`).join("")}</div>
 </section>
 ${featuredHtml(featured)}
