@@ -221,7 +221,7 @@ export function adminHome({ k, posts, news, msg, fetched, suggested = [] }) {
   const a = (path) => `${path}${path.includes("?") ? "&" : "?"}k=${encodeURIComponent(k)}`;
   return admShell("Blog", `<section class="hero sm" style="padding-bottom:6px"><span class="eyebrow"><i></i>Private · only for you</span><h1>Blog <span class="grad-text">editor</span></h1>
 <p>Write your own posts, publish or keep them as drafts, and turn any headline into a post. Bookmark this page and don't share the link.</p>
-<div class="bar"><a class="b primary" href="${a("/admin/post")}">+ New post</a><a class="b" href="/news" target="_blank">View /news</a><a class="b" href="${a("/admin/roles")}">Add roles</a><a class="b" href="${a("/admin/sponsored")}">Sponsored listings</a><a class="b" href="${a("/report")}">Site numbers</a></div></section>
+<div class="bar"><a class="b primary" href="${a("/admin/post")}">+ New post</a><a class="b" href="/news" target="_blank">View /news</a></div></section>
 ${msg ? `<p class="msg">${esc(msg)}</p>` : ""}
 <section class="block"><h2>Your posts</h2>
 ${posts.length ? `<table><thead><tr><th>Title</th><th>Status</th><th>Updated</th><th></th></tr></thead><tbody>${posts.map((p) => `<tr>
@@ -244,7 +244,7 @@ ${suggested.length ? `<section class="block"><h2>Suggested drafts</h2><p class="
 export function adminEditor({ k, post, isNew, error, platforms }) {
   const p = post || {};
   const opt = (v, t, cur) => `<option value="${esc(v)}"${v === cur ? " selected" : ""}>${esc(t)}</option>`;
-  return admShell(isNew ? "New post" : "Edit post", `<p style="margin:0"><a href="/admin?k=${encodeURIComponent(k)}" style="color:#9fdcf0">← All posts</a></p>
+  return admShell(isNew ? "New post" : "Edit post", `<p style="margin:0"><a href="/admin/blog?k=${encodeURIComponent(k)}" style="color:#9fdcf0">← All posts</a></p>
 <h1 style="margin:0">${isNew ? "New post" : "Edit post"}</h1>
 ${error ? `<p class="msg err">${esc(error)}</p>` : ""}
 <form method="post" action="/admin/post">${hidden(k)}<input type="hidden" name="original" value="${esc(isNew ? "" : p.slug || "")}">

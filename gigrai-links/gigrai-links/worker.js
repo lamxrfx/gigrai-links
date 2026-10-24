@@ -312,7 +312,7 @@ const app = {
         await sendOwnerHtml(env, "[Preview] " + email.subject, email.html);
         return linkPage(`<p style="font:16px system-ui;padding:24px">Sent a preview to the GigrAI inbox. <a href="/report-weekly?k=${k}">Back</a></p>`);
       }
-      const bar = `<div style="position:sticky;top:0;z-index:9;background:#0b0e1d;color:#fff;font:15px system-ui;padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><b>Preview: next Monday's email</b><span style="opacity:.75">Subject: ${email.subject.replace(/</g, "&lt;")}</span><form method="post" style="margin:0 0 0 auto"><button style="height:38px;padding:0 16px;border-radius:999px;border:0;background:#2f6bff;color:#fff;font-weight:700;cursor:pointer">Email me a copy</button></form></div>`;
+      const bar = `<div style="position:sticky;top:0;z-index:9;background:#0b0e1d;color:#fff;font:15px system-ui;padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><a href="/admin?k=${k}" style="color:#9fdcf0;text-decoration:none;font-weight:700">← Admin</a><b>Preview: next Monday's email</b><span style="opacity:.75">Subject: ${email.subject.replace(/</g, "&lt;")}</span><form method="post" style="margin:0 0 0 auto"><button style="height:38px;padding:0 16px;border-radius:999px;border:0;background:#2f6bff;color:#fff;font-weight:700;cursor:pointer">Email me a copy</button></form></div>`;
       return linkPage(email.html.replace('<body class="body" style="margin:0;padding:0;background:#ffffff">', '$&' + bar));
     }
     if (url.pathname === "/report/email-link") {
@@ -329,7 +329,7 @@ const app = {
         }
         if (key && env.NOTIFY) {
           if (cache) ctx.waitUntil(cache.put(lock, new Response("1", { headers: { "cache-control": "max-age=600" } })));
-          ctx.waitUntil(sendOwnerLink(env, `${url.origin}/report?k=${key}`).catch(e => console.error("owner link email failed", String(e))));
+          ctx.waitUntil(sendOwnerLink(env, `${url.origin}/admin?k=${key}`).catch(e => console.error("owner link email failed", String(e))));
         }
         return linkPage(emailLinkPage("Sent. If this is set up, the link is on its way to the GigrAI inbox."));
       }
@@ -361,7 +361,7 @@ const app = {
         const countMe = url.searchParams.get("count") === "1";
         const chose = /(?:^|;\s*)gg_count=1(?:;|$)/.test(request.headers.get("cookie") || "");
         const hidden = countMe ? false : (isOwner(request) || url.searchParams.get("count") === "0" || (!nt && !chose));
-        const page = nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags, hidden, roles, pages, botnets, joins }));
+        const page = withAdminNav(nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags, hidden, roles, pages, botnets, joins })), k, "numbers");
         const secure = url.protocol === "https:" ? "; Secure" : "";
         if (countMe) {
           page.headers.append("set-cookie", `gg_nt=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure}`);
@@ -1010,6 +1010,65 @@ async function mlConfirmDone(env, email) {
 }
 
 // Email the private numbers-page link to our own inbox (Cloudflare Email Routing)
+// ---- Admin menu (on every private page) and admin home ----
+const ADMIN_LINKS = [["home", "Home", "/admin"], ["numbers", "Numbers", "/report"], ["sponsored", "Sponsored", "/admin/sponsored"], ["roles", "Add roles", "/admin/roles"], ["blog", "Blog", "/admin/blog"], ["weekly", "Weekly email", "/report-weekly"]];
+function adminNavHtml(k, active) {
+  const q = encodeURIComponent(k);
+  return `<style>.anav{position:sticky;top:76px;z-index:30;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:6px 0 4px;padding:6px;border-radius:999px;background:rgba(13,16,36,.85);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}.anav::-webkit-scrollbar{display:none}
+.anav a{flex:none;padding:9px 15px;border-radius:999px;color:#c9cfee;text-decoration:none;font-weight:700;font-size:14px;white-space:nowrap}.anav a:hover{background:rgba(255,255,255,.07);color:#fff}.anav a.on{background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);color:#fff}
+@media (max-width:700px){.anav{top:68px}}</style>
+<nav class="anav" aria-label="Admin">${ADMIN_LINKS.map(([id, label, path]) => `<a href="${path}?k=${q}"${id === active ? ' class="on" aria-current="page"' : ""}>${label}</a>`).join("")}</nav>`;
+}
+function withAdminNav(res, k, active) {
+  if (!k || !(res.headers.get("content-type") || "").includes("text/html")) return res;
+  let done = false;
+  return new HTMLRewriter().on("#main > .wrap", { element(el) { if (!done) { done = true; el.prepend(adminNavHtml(k, active), { html: true }); } } }).transform(res);
+}
+
+async function adminDashboard(env, ctx, k, url) {
+  const e = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  const q = encodeURIComponent(k), today = ukDay(), utcToday = new Date().toISOString().slice(0, 10);
+  const db = content(env);
+  const [live, tv, ta, ts, feed, cfg, enq, added, sentWeekly] = await Promise.all([
+    liveNow(env), readStats(env, { kind: "view", from: utcToday }), readStats(env, { kind: "apply", from: utcToday }), readStats(env, { kind: "signup", from: utcToday }),
+    loadFeed(env, ctx).catch(() => []), sponsorsCfg(env), db ? db.listEnquiries(30).catch(() => []) : [], db ? db.listRoles().catch(() => []) : [], meta(env, "weekly_sent"),
+  ]);
+  const sp = cfg.featured.filter(f => f.id !== "example");
+  const liveSp = sp.filter(f => !f.ended && f.start <= today && f.until >= today), soonSp = sp.filter(f => !f.ended && f.start > today);
+  const newEnq = enq.filter(x => x.status === "new");
+  const expiring = added.filter(r => r.expires <= ukDay(7));
+  const nextMon = (() => { for (let i = 0; i < 8; i++) { const d = ukDay(i); if (new Date(d + "T12:00:00Z").getUTCDay() === 1 && (i > 0 || sentWeekly !== d)) return d; } return ""; })();
+  const nice = (d) => d ? new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "–";
+  const stat = (n, label) => `<div class="ds"><b>${(n ?? 0).toLocaleString("en-GB")}</b><span>${label}</span></div>`;
+  const tile = (path, icon, title, line, alert = "") => `<a class="dt" href="${path}?k=${q}"><span class="di">${icon}</span><span class="dtt">${title}${alert ? `<i>${alert}</i>` : ""}</span><span class="dl">${line}</span></a>`;
+  const todo = [
+    ...newEnq.slice(0, 3).map(x => `<li>📩 New booking: <b>${e(x.data.company)}</b> · ${e(x.data.option)} · starts ${e(x.data.start)} · <a href="/admin/sponsored?k=${q}&from=${e(x.ref)}">Paid? Set up →</a></li>`),
+    ...soonSp.slice(0, 3).map(f => `<li>🗓️ Sponsored <b>${e(f.title)}</b> (${e(f.company)}) goes live ${nice(f.start)}</li>`),
+    ...liveSp.filter(f => f.until <= ukDay(2)).map(f => `<li>⏳ Sponsored <b>${e(f.title)}</b> ends ${nice(f.until)}: offer them another week?</li>`),
+    ...expiring.slice(0, 3).map(r => `<li>⌛ Added role <b>${e(r.title)}</b> expires ${nice(r.expires)} · <a href="/admin/roles?k=${q}">Check →</a></li>`),
+  ];
+  const body = `<style>
+.dash{display:grid;gap:18px}.dstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.ds{padding:16px;border-radius:18px;background:var(--glass);border:1px solid var(--line)}.ds b{display:block;font-size:30px;font-weight:800;letter-spacing:-.02em}.ds span{color:var(--muted);font-size:13.5px}
+.dtiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px}
+.dt{display:grid;gap:6px;padding:18px;border-radius:20px;background:var(--glass);border:1px solid var(--line);text-decoration:none;color:var(--text);transition:transform .15s,border-color .15s}
+.dt:hover{transform:translateY(-2px);border-color:rgba(91,140,255,.6)}.di{font-size:26px}.dtt{font-weight:800;font-size:18px;display:flex;gap:8px;align-items:center}.dtt i{font-style:normal;font-size:12px;padding:2px 9px;border-radius:999px;background:#ff6b6b;color:#fff}
+.dl{color:var(--muted);font-size:14px;line-height:1.5}.dtodo{margin:0;padding:16px 18px;list-style:none;display:grid;gap:10px;border-radius:18px;background:var(--glass);border:1px solid var(--line)}.dtodo li{font-size:14.5px;line-height:1.5}.dtodo a{color:#9fdcf0}
+</style><div class="dash">
+<section class="hero sm" style="padding-bottom:0"><span class="eyebrow"><i></i>Private · only for you</span><h1>GigrAI <span class="grad-text">admin</span></h1><p>Everything in one place. Bookmark this page.</p></section>
+<div class="dstats">${stat(live && live.total, "on the site now")}${stat(tv && tv.total, "page views today")}${stat(ta && ta.total, "apply clicks today")}${stat(ts && ts.total, "email sign-ups today")}${stat(feed.length, "live roles")}</div>
+<section><h2 style="margin:6px 0 10px">To do</h2>${todo.length ? `<ul class="dtodo">${todo.join("")}</ul>` : `<p class="note" style="margin:0">Nothing needs you right now. 👌</p>`}</section>
+<div class="dtiles">
+${tile("/report", "📊", "Numbers", "Live map, visitors, clicks, popular pages, bots and booking requests.")}
+${tile("/admin/sponsored", "⭐", "Sponsored listings", `${liveSp.length} live${soonSp.length ? ` · ${soonSp.length} scheduled` : ""}. Set up paid listings with dates and click reports.`, newEnq.length ? `${newEnq.length} new` : "")}
+${tile("/admin/roles", "➕", "Add roles", `${added.length} added role${added.length === 1 ? "" : "s"} live. Add roles you find, with an expiry date.`, expiring.length ? `${expiring.length} expiring` : "")}
+${tile("/admin/blog", "📝", "Blog and news", "Write posts, publish news, hide headlines.")}
+${tile("/report-weekly", "📧", "Weekly email", `Next send ${nice(nextMon)}, 9am. ${sentWeekly ? `Last sent ${nice(sentWeekly)}.` : "Not sent yet."} Preview it here.`)}
+<a class="dt" href="/" target="_blank"><span class="di">🌐</span><span class="dtt">View the site</span><span class="dl">Opens remotegigrai.com in a new tab.</span></a>
+</div></div>`;
+  return html(shellPage({ title: "Admin · GigrAI", desc: "Private.", canonical: "", robots: "noindex,nofollow", body }));
+}
+
 // ---- /admin/sponsored: paid listings with dates ----
 function adminSponsoredPage({ k, rows, used, links, prefill, origin, msg }) {
   const e = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
@@ -1042,7 +1101,7 @@ ${fromFile ? "" : `<form method="post" class="sp-a"><input type="hidden" name="k
 </style><div class="adm">
 <section class="hero sm" style="padding-bottom:4px"><span class="eyebrow"><i></i>Private · only for you</span><h1>Sponsored <span class="grad-text">listings</span></h1>
 <p>Set up a paid listing once the advertiser has paid. It goes live on the start date, shows with a "Sponsored" label, and comes down by itself after the end date.</p>
-<p><a class="b" href="/admin/roles?k=${e(k)}">Add roles</a> <a class="b" href="/admin?k=${e(k)}">Blog editor</a> <a class="b" href="/report?k=${e(k)}">Site numbers</a> <a class="b" href="/advertise/terms" target="_blank">Advertising Terms</a></p></section>
+<p><a class="b" href="/advertise/terms" target="_blank">Advertising Terms</a></p></section>
 ${msg ? `<p class="msg">${e(msg)}</p>` : ""}
 <form method="post" class="add"><input type="hidden" name="k" value="${e(k)}"><input type="hidden" name="ref" value="${e(pf.ref || "")}">
 ${pf.ref ? `<p class="help">Filled in from booking request <b>${e(pf.ref)}</b>. Check everything before saving.</p>` : ""}
@@ -1086,7 +1145,6 @@ function adminRolesPage({ k, roles, msg }) {
 </style><div class="adm">
 <section class="hero sm" style="padding-bottom:4px"><span class="eyebrow"><i></i>Private · only for you</span><h1>Add <span class="grad-text">roles</span></h1>
 <p>Add roles you find (Handshake, Mindrift, Instagram finds). They appear in search, role pages, guides and the Monday email straight away, and disappear on their expiry date.</p>
-<p><a class="b" href="/admin/sponsored?k=${e(k)}">Sponsored listings</a> <a class="b" href="/admin?k=${e(k)}">Blog editor</a> <a class="b" href="/report?k=${e(k)}">Site numbers</a></p>
 <p class="help">Paid or sponsored roles go in <a href="/admin/sponsored?k=${e(k)}">Sponsored listings</a> instead, so they get dates, a Sponsored label and a click report.</p></section>
 ${msg ? `<p class="msg">${e(msg)}</p>` : ""}
 <form method="post" class="add"><input type="hidden" name="k" value="${e(k)}">
@@ -1134,8 +1192,8 @@ async function sendOwnerHtml(env, subject, html) {
 async function sendOwnerLink(env, link) {
   const from = "partners@remotegigrai.com", to = env.NOTIFY_TO || "remotegigr.ai@gmail.com";
   const b64 = (str) => btoa(String.fromCharCode(...new TextEncoder().encode(str)));
-  const body = ["Your private GigrAI numbers page:", "", link, "", "Bookmark it and don't share it. Opening it on a device also stops that device being counted in your numbers.", "If you didn't ask for this, you can ignore it: the link only ever goes to this inbox."].join("\r\n");
-  const raw = [`From: GigrAI <${from}>`, `To: ${to}`, `Subject: Your GigrAI numbers link`, `Message-ID: <owner.${Date.now()}@remotegigrai.com>`, `Date: ${new Date().toUTCString()}`,
+  const body = ["Your private GigrAI admin page (numbers, sponsored listings, roles, blog and the weekly email, all in one place):", "", link, "", "Bookmark it and don't share it. Opening it on a device also stops that device being counted in your numbers.", "If you didn't ask for this, you can ignore it: the link only ever goes to this inbox."].join("\r\n");
+  const raw = [`From: GigrAI <${from}>`, `To: ${to}`, `Subject: Your GigrAI admin link`, `Message-ID: <owner.${Date.now()}@remotegigrai.com>`, `Date: ${new Date().toUTCString()}`,
     "MIME-Version: 1.0", "Content-Type: text/plain; charset=utf-8", "Content-Transfer-Encoding: base64", "", b64(body).replace(/.{76}/g, "$&\r\n")].join("\r\n");
   await env.NOTIFY.send(new EmailMessage(from, to, raw));
 }
@@ -1194,21 +1252,29 @@ async function handleAdmin(request, url, env, ctx) {
   }
   const k = (form ? form.get("k") : url.searchParams.get("k")) || "";
   if (!db || !(await keyOk(env, "owner", String(k)))) return noStore(reportsOff(url.origin));
-  const back = (msg) => Response.redirect(new URL(`/admin?k=${encodeURIComponent(k)}${msg ? "&msg=" + encodeURIComponent(msg) : ""}`, url).toString(), 303);
+  const back = (msg) => Response.redirect(new URL(`/admin/blog?k=${encodeURIComponent(k)}${msg ? "&msg=" + encodeURIComponent(msg) : ""}`, url).toString(), 303);
+  const nav = (res, active) => withAdminNav(res, k, active);
   const platforms = PLATFORM_CONFIG.platforms;
 
-  if (url.pathname === "/admin" && request.method === "GET") {
+  // Admin home: everything in one place
+  if ((url.pathname === "/admin" || url.pathname === "/admin/") && request.method === "GET") {
+    const res = nav(noStore(await adminDashboard(env, ctx, k, url)), "home");
+    // like the numbers page: opening admin stops this device being counted in the stats
+    if (!isOwner(request)) { const h = new Headers(res.headers); h.append("set-cookie", `gg_nt=${await signKey(env, "notrack")}; Path=/; Max-Age=34560000; HttpOnly; SameSite=Lax${url.protocol === "https:" ? "; Secure" : ""}`); return new Response(res.body, { status: res.status, headers: h }); }
+    return res;
+  }
+  if (url.pathname === "/admin/blog" && request.method === "GET") {
     const [posts, news, fetched] = await Promise.all([db.listPosts({ status: "all", limit: 100 }), db.listNews({ limit: 60, includeHidden: true }), db.lastFetched()]);
     const taken = new Set(posts.map(p => p.slug));
     const suggested = ((DRAFTS && DRAFTS.drafts) || []).filter(d => d && d.id && d.title && !taken.has(slugify(d.slug || d.title)));
-    return noStore(adminHome({ k, posts, news: news.rows, msg: url.searchParams.get("msg") || "", fetched, suggested }));
+    return nav(noStore(adminHome({ k, posts, news: news.rows, msg: url.searchParams.get("msg") || "", fetched, suggested })), "blog");
   }
   if (url.pathname === "/admin/post" && request.method === "GET") {
     const slug = url.searchParams.get("slug") || "";
     if (slug) {
       const post = await db.getPost(slug);
       if (!post) return back("That post wasn't found.");
-      return noStore(adminEditor({ k, post, isNew: false, platforms }));
+      return nav(noStore(adminEditor({ k, post, isNew: false, platforms })), "blog");
     }
     let post = null;
     const draftId = url.searchParams.get("draft");
@@ -1221,7 +1287,7 @@ async function handleAdmin(request, url, env, ctx) {
       const n = await db.getNews(from);
       if (n) post = { title: n.title, cat: n.cat, summary: "", body: "", sources: `${n.source}: ${n.title} | ${n.link}`, author: "GigrAI" };
     }
-    return noStore(adminEditor({ k, post, isNew: true, platforms }));
+    return nav(noStore(adminEditor({ k, post, isNew: true, platforms })), "blog");
   }
   if (url.pathname === "/admin/post" && request.method === "POST") {
     const f = (n, max) => String(form.get(n) || "").replace(/\r/g, "").trim().slice(0, max);
@@ -1251,7 +1317,7 @@ async function handleAdmin(request, url, env, ctx) {
     let prefill = null;
     const ref = url.searchParams.get("from");
     if (ref) { const q = (await db.listEnquiries(100)).find(x => x.ref === ref); if (q) prefill = { ...q.data, ref }; }
-    return noStore(adminSponsoredPage({ k, rows, used, links, prefill, origin: url.origin, msg: url.searchParams.get("msg") || "" }));
+    return nav(noStore(adminSponsoredPage({ k, rows, used, links, prefill, origin: url.origin, msg: url.searchParams.get("msg") || "" })), "sponsored");
   }
   if (url.pathname === "/admin/sponsored" && request.method === "POST") {
     const backS = (msg) => Response.redirect(new URL(`/admin/sponsored?k=${encodeURIComponent(k)}&msg=${encodeURIComponent(msg)}`, url).toString(), 303);
@@ -1289,7 +1355,7 @@ async function handleAdmin(request, url, env, ctx) {
   }
   // ---- hand-added roles ----
   if (url.pathname === "/admin/roles" && request.method === "GET") {
-    return noStore(adminRolesPage({ k, roles: await db.listRoles({ includeExpired: true }), msg: url.searchParams.get("msg") || "" }));
+    return nav(noStore(adminRolesPage({ k, roles: await db.listRoles({ includeExpired: true }), msg: url.searchParams.get("msg") || "" })), "roles");
   }
   if (url.pathname === "/admin/roles" && request.method === "POST") {
     const backR = (msg) => Response.redirect(new URL(`/admin/roles?k=${encodeURIComponent(k)}&msg=${encodeURIComponent(msg)}`, url).toString(), 303);
