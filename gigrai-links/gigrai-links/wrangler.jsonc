@@ -2,6 +2,8 @@
   "name": "gigrai-links",
   "main": "worker.js",
   "compatibility_date": "2025-01-01",
+  // Keep anything added in the Cloudflare dashboard (e.g. MAILERLITE_TOKEN) when we deploy
+  "keep_vars": true,
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
