@@ -13,7 +13,7 @@ const country = (cc) => {
   if (!/^[A-Z]{2}$/.test(c) || c === "XX") return "Unknown";
   try { return (regionNames && regionNames.of(c)) || c; } catch { return c; }
 };
-const SRC = { ig: "Instagram", wa: "WhatsApp", featured: "Featured on site", site: "Website", direct: "Website", picks: "WhatsApp", x: "X", li: "LinkedIn", tt: "TikTok", fb: "Facebook", google: "Google", bing: "Bing", reddit: "Reddit", internal: "Browsing the site", other: "Other websites", "guide-mid": "Guides: box mid-article", "guide-end": "Guides: box at the end", "guide-role": "Guides: role cards", "news-box": "News: platform box", news: "News: platform box", "news-role": "News: role cards", platforms: "Platforms page", email: "Emails", seo: "Role pages (Google)" };
+const SRC = { ig: "Instagram", wa: "WhatsApp", featured: "Featured on site", site: "Website", direct: "Website", picks: "WhatsApp", x: "X", li: "LinkedIn", tt: "TikTok", fb: "Facebook", google: "Google", bing: "Bing", reddit: "Reddit", internal: "Browsing the site", other: "Other websites", "guide-mid": "Guides: box mid-article", "guide-end": "Guides: box at the end", "guide-role": "Guides: role cards", "news-box": "News: platform box", news: "News: platform box", "news-role": "News: role cards", platforms: "Platforms page", email: "Emails", seo: "Role pages (Google)", "email-weekly": "Weekly email" };
 const source = (s) => SRC[s] || (s ? s.charAt(0).toUpperCase() + s.slice(1) : "Other");
 
 // Thresholds: a number only appears in the public media kit once it's worth showing
@@ -430,6 +430,7 @@ export function adminPage({ origin, views, applies, sponsors, links, days = 30, 
 </div>`).join("") : `<p class="note">No campaigns yet. Add one to sponsored.json and its links appear here.</p>`;
   const body = `<section class="hero sm"><span class="eyebrow"><i></i>Private · only for you</span><h1>GigrAI <span class="grad-text">numbers</span></h1>
 <p>${period}. Counting started ${views ? longDate(views.since) : "-"}. Bookmark this page and don't share the link.</p>
+${key ? `<p class="note" style="margin-top:6px">📧 <a href="/report-weekly?k=${esc(key)}">Preview next Monday's weekly email</a> (sent automatically at 9am UK time to everyone on the email list)</p>` : ""}
 <p class="note" style="margin-top:6px">${hidden ? `🔒 <b>This device isn't counted</b> in your numbers or on the map. <a href="/report?k=${encodeURIComponent(key)}&count=1">Count it again</a>` : `This device is counted like any visitor. <a href="/report?k=${encodeURIComponent(key)}&count=0">Stop counting this device</a>`}</p>
 ${rangeSwitch("/report", days, `k=${encodeURIComponent(key)}&`, allTime)}</section>
 ${liveMap(key, period, geo, ccViews)}

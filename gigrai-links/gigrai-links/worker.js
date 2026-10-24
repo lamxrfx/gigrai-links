@@ -7,6 +7,7 @@ import DRAFTS from "./drafts.json";
 export { Stats } from "./stats.js";
 export { Content } from "./content.js";
 import { content, refreshNews } from "./content.js";
+import { pickWeekly, weeklyEmail, londonNow, mlSendCampaign } from "./weekly.js";
 import { newsIndex, postPage, postsRss, adminHome, adminEditor } from "./news.js";
 import { CATEGORIES } from "./news-sources.js";
 import { slugify, AD_OPTIONS } from "./seo.js";
@@ -57,6 +58,7 @@ const app = {
   // Hourly (see "triggers" in wrangler.jsonc): pull the latest headlines
   async scheduled(event, env, ctx) {
     ctx.waitUntil(refreshNews(env));
+    ctx.waitUntil(weeklyRun(env, ctx).catch(e => console.error("weekly email failed", String(e))));
   },
 
   async route(request, env, ctx) {
@@ -295,6 +297,19 @@ const app = {
     }
 
     // Lost or changed the numbers-page link? This emails it to our own inbox only (never shown here)
+    // Owner preview of this week's email: /report-weekly?k=... (POST emails a copy to the GigrAI inbox)
+    if (url.pathname === "/report-weekly") {
+      const k = url.searchParams.get("k") || "";
+      if (!(await keyOk(env, "owner", k))) return linkPage("Not found", 404);
+      const email = await buildWeekly(env, ctx);
+      if (!email) return linkPage("<p style='font:16px system-ui;padding:24px'>Not enough paid roles to build this week's email yet.</p>");
+      if (request.method === "POST" && env.NOTIFY) {
+        await sendOwnerHtml(env, "[Preview] " + email.subject, email.html);
+        return linkPage(`<p style="font:16px system-ui;padding:24px">Sent a preview to the GigrAI inbox. <a href="/report-weekly?k=${k}">Back</a></p>`);
+      }
+      const bar = `<div style="position:sticky;top:0;z-index:9;background:#0b0e1d;color:#fff;font:15px system-ui;padding:12px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap"><b>Preview: next Monday's email</b><span style="opacity:.75">Subject: ${email.subject.replace(/</g, "&lt;")}</span><form method="post" style="margin:0 0 0 auto"><button style="height:38px;padding:0 16px;border-radius:999px;border:0;background:#2f6bff;color:#fff;font-weight:700;cursor:pointer">Email me a copy</button></form></div>`;
+      return linkPage(email.html.replace('<body class="body" style="margin:0;padding:0;background:#ffffff">', '$&' + bar));
+    }
     if (url.pathname === "/report/email-link") {
       if (request.method === "POST") {
         const lock = new Request("https://cache.remotegigrai.internal/owner-link-lock");
@@ -894,6 +909,34 @@ async function mlConfirmDone(env, email) {
 }
 
 // Email the private numbers-page link to our own inbox (Cloudflare Email Routing)
+// ---- Weekly "Top roles" email ----
+async function buildWeekly(env, ctx) {
+  const feed = await loadFeed(env, ctx);
+  const db = content(env);
+  const [featured, posts] = await Promise.all([activeFeatured(env).catch(() => []), db ? db.listPosts({ limit: 1 }).catch(() => []) : []]);
+  return weeklyEmail({ roles: pickWeekly(feed), total: feed.length, sponsor: featured[0] || null, post: posts[0] || null });
+}
+// Runs every hour from the cron; sends once, on Monday from 9am UK time
+async function weeklyRun(env, ctx) {
+  const mode = String(env.WEEKLY_EMAIL || "off");
+  if (mode === "off" || !env.MAILERLITE_TOKEN || !env.MAILERLITE_GROUP_ID) return;
+  const t = londonNow();
+  if (t.day !== "Mon" || t.hour < 9) return;
+  if ((await meta(env, "weekly_sent")) === t.date) return;
+  await meta(env, "weekly_sent", t.date); // mark first, so two runs can never double-send
+  const email = await buildWeekly(env, ctx);
+  if (!email) { console.log("weekly email skipped: not enough roles"); return; }
+  const r = await mlSendCampaign(env, email, mode);
+  console.log(JSON.stringify({ event: "weekly_email", date: t.date, ...r }));
+}
+async function sendOwnerHtml(env, subject, html) {
+  const from = "partners@remotegigrai.com", to = env.NOTIFY_TO || "remotegigr.ai@gmail.com";
+  const b64 = (str) => btoa(String.fromCharCode(...new TextEncoder().encode(str)));
+  const raw = [`From: GigrAI <${from}>`, `To: ${to}`, `Subject: =?UTF-8?B?${b64(subject)}?=`, `Message-ID: <weekly.${Date.now()}@remotegigrai.com>`, `Date: ${new Date().toUTCString()}`,
+    "MIME-Version: 1.0", "Content-Type: text/html; charset=utf-8", "Content-Transfer-Encoding: base64", "", b64(html).replace(/.{76}/g, "$&\r\n")].join("\r\n");
+  await env.NOTIFY.send(new EmailMessage(from, to, raw));
+}
+
 async function sendOwnerLink(env, link) {
   const from = "partners@remotegigrai.com", to = env.NOTIFY_TO || "remotegigr.ai@gmail.com";
   const b64 = (str) => btoa(String.fromCharCode(...new TextEncoder().encode(str)));
