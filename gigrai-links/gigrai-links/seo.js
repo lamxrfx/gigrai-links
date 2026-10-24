@@ -488,11 +488,13 @@ ${soon.length ? `<section class="block" aria-labelledby="soon"><h2 id="soon">Com
 }
 
 // ---------- Featured (paid) roles from sponsored.json ----------
+// Today's date in the UK (campaigns, expiries and admin forms run on UK time), e.g. "2026-10-25"
+export const ukDay = (offsetDays = 0) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date(Date.now() + offsetDays * 864e5));
 const validSponsor = (f) => f && /^[a-z0-9-]{1,40}$/.test(f.id || "") && /^https:\/\//.test(f.url || "");
 
 // Every advertiser with a working link (kept for 60 days after the campaign so old posts still work)
 export function allSponsors(cfg) {
-  const cutoff = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);
+  const cutoff = ukDay(-60);
   return ((cfg && cfg.featured) || []).filter((f) => validSponsor(f) && (f.until || "") >= cutoff);
 }
 
@@ -501,7 +503,7 @@ export const clickCap = (f) => (f && +f.cpc > 0 && +f.budget > 0 ? Math.floor(+f
 
 // Advertisers pinned on the site right now
 export function liveFeatured(cfg) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukDay();
   return ((cfg && cfg.featured) || []).filter((f) =>
     validSponsor(f) && f.title && f.pin !== false && (f.start || "") <= today && (f.until || "") >= today);
 }
@@ -515,7 +517,7 @@ export function featuredHtml(list) {
 // ---------- booking form (on /advertise) ----------
 export function bookingForm(email = "") {
   const opts = AD_OPTIONS.map((o) => `<option value="${esc(o.name)}">${esc(o.name)}: ${esc(o.price)}${o.per ? " " + esc(o.per) : ""}</option>`).join("");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukDay();
   return `<section class="block" id="book" aria-labelledby="bk"><h2 id="bk">Book your spot</h2>
 <p class="lead">Tell us about your role and we'll confirm your dates and send a payment link within one working day. No payment is taken now.</p>
 <form class="bform glass" id="bform" novalidate>

@@ -10,7 +10,7 @@ import { content, refreshNews } from "./content.js";
 import { pickWeekly, weeklyEmail, londonNow, mlSendCampaign } from "./weekly.js";
 import { newsIndex, postPage, postsRss, adminHome, adminEditor } from "./news.js";
 import { CATEGORIES } from "./news-sources.js";
-import { slugify, AD_OPTIONS, shell as shellPage, html } from "./seo.js";
+import { slugify, AD_OPTIONS, shell as shellPage, html, ukDay } from "./seo.js";
 import { vetLink } from "./vet.js";
 import { EmailMessage } from "cloudflare:email";
 import { systemPrompt, askAi, parseAsk } from "./chat.js";
@@ -374,7 +374,7 @@ const app = {
       }
       const sponsor = (await sponsorsCfg(env)).featured.find(s => s.id === rm[1]);
       if (!sponsor || !(await keyOk(env, "sponsor:" + sponsor.id, k))) return nocache(reportsOff(url.origin));
-      const today = new Date().toISOString().slice(0, 10);
+      const today = ukDay();
       const from = /^\d{4}-\d{2}-\d{2}$/.test(sponsor.start || "") ? sponsor.start : daysAgo(29);
       const to = (sponsor.until || today) < today ? sponsor.until : today;
       const empty = { total: 0, byDay: [], bySrc: [], byCountry: [] };
@@ -1013,7 +1013,7 @@ async function mlConfirmDone(env, email) {
 // ---- /admin/sponsored: paid listings with dates ----
 function adminSponsoredPage({ k, rows, used, links, prefill, origin, msg }) {
   const e = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukDay();
   const pf = prefill || {};
   const status = (r) => (r.ended || r.until < today) ? ["Ended", "#9aa3c7"] : r.start > today ? ["Scheduled", "#ffe0a3"] : (clickCap(r) && (used[r.id] || 0) >= clickCap(r)) ? ["Budget used", "#ffb3b3"] : ["Live", "#9ff0c5"];
   const fileRows = (SPONSORED.featured || []).filter(x => x.id !== "example");
@@ -1029,7 +1029,7 @@ ${fromFile ? "" : `<form method="post" class="sp-a"><input type="hidden" name="k
 .adm{display:grid;gap:14px;max-width:880px;margin:0 auto}.adm form.add{display:grid;gap:14px}
 .adm label{display:grid;gap:6px;font-weight:700;font-size:14px;color:var(--soft)}.adm label small{font-weight:500;color:var(--muted)}
 .adm input,.adm select,.adm textarea{width:100%;border-radius:12px;border:1px solid var(--line);background:#0d1024;color:var(--text);font:inherit;font-size:15px;padding:12px 14px}
-.adm textarea{min-height:80px;resize:vertical}.adm .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.adm textarea{min-height:80px;resize:vertical}.adm .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:end}
 .adm button,.adm .b{height:48px;padding:0 20px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--text);font:inherit;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
 .adm .primary{background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);border:0;color:#fff}.adm .danger{border-color:rgba(255,107,107,.5);color:#ffb3b3}.adm .tiny{height:34px;padding:0 12px;font-size:13px}
 .adm .msg{padding:12px 16px;border-radius:12px;background:rgba(61,214,140,.12);border:1px solid rgba(61,214,140,.35)}.adm .help{font-size:13.5px;color:var(--muted);line-height:1.6}
@@ -1037,6 +1037,8 @@ ${fromFile ? "" : `<form method="post" class="sp-a"><input type="hidden" name="k
 .sp{padding:16px;border-radius:16px;border:1px solid var(--line);background:var(--glass);display:grid;gap:8px}.sp-h{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .sp-m{font-size:13.5px;color:var(--muted);line-height:1.6}.sp-m code{font-size:12.5px;word-break:break-all}.badge{font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;border:1px solid}
 .sp-a{display:flex;gap:8px}
+.adm [hidden]{display:none!important}.adm input:not([type=checkbox]),.adm select{min-width:0;max-width:100%;box-sizing:border-box;min-height:50px}.adm .tog input{width:24px!important;height:24px!important;flex:0 0 24px;accent-color:#2f6bff}.adm input[type=date]{-webkit-appearance:none;appearance:none;display:block;text-align:left;line-height:1.2}.adm input[type=date]::-webkit-date-and-time-value{text-align:left}.adm .row>label{min-width:0}
+@media (max-width:560px){.adm .row{grid-template-columns:minmax(0,1fr)!important}}
 </style><div class="adm">
 <section class="hero sm" style="padding-bottom:4px"><span class="eyebrow"><i></i>Private · only for you</span><h1>Sponsored <span class="grad-text">listings</span></h1>
 <p>Set up a paid listing once the advertiser has paid. It goes live on the start date, shows with a "Sponsored" label, and comes down by itself after the end date.</p>
@@ -1067,18 +1069,20 @@ o.addEventListener("change",upd);s.addEventListener("change",upd);upd()})();</sc
 function adminRolesPage({ k, roles, msg }) {
   const e = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
   const plats = (PLATFORM_CONFIG.platforms || []).filter(p => p.active);
-  const today = new Date().toISOString().slice(0, 10), month = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+  const today = ukDay(), month = ukDay(30);
   const fileRoles = (CURATED.roles || []).map(r => `<tr><td><b>${e(r.title)}</b><br><small>${e(r.platform)} · built in (curated.json)</small></td><td>${r.min || ""}${r.max ? "–" + r.max : ""}</td><td>${e(r.expires)}</td><td></td></tr>`).join("");
   const rows = roles.map(r => `<tr><td><b>${e(r.title)}</b><br><small>${e(r.company || r.platform)}${r.url ? " · own link" : " · our referral link"}</small></td><td>${r.min || ""}${r.max ? "–" + r.max : ""}</td><td>${r.expires < today ? `<span style="color:#ffb3b3">Expired ${e(r.expires)}</span>` : e(r.expires)}</td><td><form method="post" style="margin:0"><input type="hidden" name="k" value="${e(k)}"><button class="b tiny danger" name="delete" value="${e(r.id)}">Remove</button></form></td></tr>`).join("");
   const body = `<style>
 .adm{display:grid;gap:14px;max-width:860px;margin:0 auto}.adm form.add{display:grid;gap:14px}
 .adm label{display:grid;gap:6px;font-weight:700;font-size:14px;color:var(--soft)}.adm label small{font-weight:500;color:var(--muted)}
 .adm input,.adm select,.adm textarea{width:100%;border-radius:12px;border:1px solid var(--line);background:#0d1024;color:var(--text);font:inherit;font-size:15px;padding:12px 14px}
-.adm textarea{min-height:110px;resize:vertical}.adm .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.adm textarea{min-height:110px;resize:vertical}.adm .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;align-items:end}
 .adm button,.adm .b{height:48px;padding:0 20px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--text);font:inherit;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
 .adm .primary{background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);border:0;color:#fff}.adm .danger{border-color:rgba(255,107,107,.5);color:#ffb3b3}.adm .tiny{height:34px;padding:0 12px;font-size:13px}
 .adm table{width:100%;border-collapse:collapse;font-size:14.5px}.adm th,.adm td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}.adm th{color:var(--muted);font-size:13px}.adm small{color:var(--muted)}
 .adm .msg{padding:12px 16px;border-radius:12px;background:rgba(61,214,140,.12);border:1px solid rgba(61,214,140,.35)}.adm .help{font-size:13.5px;color:var(--muted);line-height:1.6}
+.adm [hidden]{display:none!important}.adm input:not([type=checkbox]),.adm select{min-width:0;max-width:100%;box-sizing:border-box;min-height:50px}.adm .tog input{width:24px!important;height:24px!important;flex:0 0 24px;accent-color:#2f6bff}.adm input[type=date]{-webkit-appearance:none;appearance:none;display:block;text-align:left;line-height:1.2}.adm input[type=date]::-webkit-date-and-time-value{text-align:left}.adm .row>label{min-width:0}
+@media (max-width:560px){.adm .row{grid-template-columns:minmax(0,1fr)!important}}
 </style><div class="adm">
 <section class="hero sm" style="padding-bottom:4px"><span class="eyebrow"><i></i>Private · only for you</span><h1>Add <span class="grad-text">roles</span></h1>
 <p>Add roles you find (Handshake, Mindrift, Instagram finds). They appear in search, role pages, guides and the Monday email straight away, and disappear on their expiry date.</p>
@@ -1252,7 +1256,7 @@ async function handleAdmin(request, url, env, ctx) {
   if (url.pathname === "/admin/sponsored" && request.method === "POST") {
     const backS = (msg) => Response.redirect(new URL(`/admin/sponsored?k=${encodeURIComponent(k)}&msg=${encodeURIComponent(msg)}`, url).toString(), 303);
     const f = (n, max) => String(form.get(n) || "").replace(/\r/g, "").trim().slice(0, max);
-    const today = new Date().toISOString().slice(0, 10), yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+    const today = ukDay(), yesterday = ukDay(-1);
     if (form.get("end")) {
       const s0 = await db.getSponsor(f("end", 60)); if (!s0) return backS("Listing not found.");
       await db.saveSponsor({ ...s0, until: yesterday, ended: today }); sponsorMemo.at = 0; // comes off the site straight away
@@ -1297,8 +1301,8 @@ async function handleAdmin(request, url, env, ctx) {
       id: "c-" + (f("id", 40) || [...crypto.getRandomValues(new Uint8Array(5))].map(b => b.toString(16).padStart(2, "0")).join("")),
       title: f("title", 140), platform: p ? p.id : "other", company: p ? "" : f("company", 60),
       url: f("url", 600), min: Math.min(1000, Math.max(0, parseInt(f("min", 5)) || 0)) || null, max: Math.min(1000, Math.max(0, parseInt(f("max", 5)) || 0)) || null,
-      domain: f("domain", 60), desc: f("desc", 3000), posted: new Date().toISOString().slice(0, 10),
-      expires: /^\d{4}-\d{2}-\d{2}$/.test(f("expires", 10)) ? f("expires", 10) : new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10),
+      domain: f("domain", 60), desc: f("desc", 3000), posted: ukDay(),
+      expires: /^\d{4}-\d{2}-\d{2}$/.test(f("expires", 10)) ? f("expires", 10) : ukDay(30),
     };
     if (!role.title) return backR("Add a role title.");
     if (!p && !role.company) return backR("Pick a platform, or type the company name for 'Other'.");
@@ -1405,7 +1409,7 @@ async function loadFeed(env, ctx) {
 // Hand-added roles become normal feed roles. They expire on their date and drop off by themselves.
 let curatedMemo = { at: 0, rows: [] };
 async function curatedRoles(env) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukDay();
   let stored = curatedMemo.rows;
   if (Date.now() - curatedMemo.at > 60000) {
     const db = content(env);
