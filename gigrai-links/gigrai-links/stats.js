@@ -31,7 +31,23 @@ export class Stats extends DurableObject {
     // Apply clicks per role (which roles people actually click), plus the role's title for the report
     this.sql.exec(`CREATE TABLE IF NOT EXISTS roleclicks (day TEXT NOT NULL, id TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY (day, id))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS roles (id TEXT PRIMARY KEY, title TEXT, via TEXT, path TEXT, pay TEXT, last TEXT)`);
+    // Views per page (which guide, article or role people read), plus a readable title for the report
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS pageviews (day TEXT NOT NULL, path TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY (day, path))`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS pagemeta (path TEXT PRIMARY KEY, title TEXT, section TEXT)`);
     this.sql.exec(`INSERT OR IGNORE INTO meta (key, value) VALUES ('since', ?)`, today());
+  }
+
+  pageHit(path, title, section) {
+    path = String(path || "/").slice(0, 200);
+    this.sql.exec(`INSERT INTO pageviews (day, path, n) VALUES (?, ?, 1) ON CONFLICT (day, path) DO UPDATE SET n = n + 1`, today(), path);
+    this.sql.exec(`INSERT INTO pagemeta (path, title, section) VALUES (?, ?, ?) ON CONFLICT (path) DO UPDATE SET title = excluded.title, section = excluded.section`,
+      path, String(title || "").slice(0, 160), clean(section, 20));
+    if (Math.random() < 0.001) this.sql.exec(`DELETE FROM pageviews WHERE day < ?`, daysAgo(400));
+  }
+
+  topPages(from, to = today(), limit = 25) {
+    return [...this.sql.exec(`SELECT v.path, SUM(v.n) AS n, m.title, m.section FROM pageviews v LEFT JOIN pagemeta m ON m.path = v.path
+      WHERE v.day >= ? AND v.day <= ? GROUP BY v.path ORDER BY n DESC LIMIT ?`, from, to, limit)];
   }
 
   getMeta(key) { return [...this.sql.exec(`SELECT value FROM meta WHERE key = ?`, String(key))][0]?.value ?? null; }
@@ -224,6 +240,16 @@ export async function liveNow(env) {
 export async function countryTotals(env, kind, from, to) {
   if (!env.STATS) return [];
   try { return await stub(env).countryTotals(kind, from, to); } catch (e) { console.error("country read failed", String(e)); return []; }
+}
+
+export function pageHit(env, ctx, request, path, title, section) {
+  if (!env.STATS || OWNER.has(request)) return;
+  try { ctx.waitUntil(stub(env).pageHit(path, title, section).catch(() => {})); } catch {}
+}
+
+export async function topPages(env, from, to) {
+  if (!env.STATS) return [];
+  try { return await stub(env).topPages(from, to, 25); } catch (e) { console.error("pages read failed", String(e)); return []; }
 }
 
 export function roleClick(env, ctx, request, job, path, pay) {

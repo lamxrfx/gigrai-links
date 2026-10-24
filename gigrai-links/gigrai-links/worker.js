@@ -1,6 +1,6 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
 import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat, setEmail, alertsConfirmedPage } from "./seo.js";
-import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, flagged, markOwner, isOwner, roleClick, topRoles, meta } from "./stats.js";
+import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, flagged, markOwner, isOwner, roleClick, topRoles, meta, pageHit, topPages } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
 import DRAFTS from "./drafts.json";
@@ -72,9 +72,9 @@ const app = {
     const nt = (request.headers.get("cookie") || "").match(/(?:^|;\s*)gg_nt=([a-f0-9]{20})(?:;|$)/);
     if (nt && await keyOk(env, "notrack", nt[1])) markOwner(request);
     // Count a human page view (anonymous daily totals for the media kit)
-    const view = (section) => {
+    const view = (section, title = "") => {
       if (request.method !== "GET") return;
-      if (isHuman(request)) { track(env, ctx, request, "view", section, visitSource(request, url)); presence(env, ctx, request, section, true); }
+      if (isHuman(request)) { track(env, ctx, request, "view", section, visitSource(request, url)); presence(env, ctx, request, section, true); pageHit(env, ctx, request, url.pathname.replace(/\/+$/, "") || "/", title, section); }
       else track(env, ctx, request, "bot", botKind(request), section); // counted separately, never in the visitor numbers
     };
 
@@ -321,7 +321,7 @@ const app = {
         let days = pickDays(url);
         let from = allTime ? "2000-01-01" : daysAgo(days - 1);
         const to = new Date().toISOString().slice(0, 10);
-        const [views, applies, geo, ccViews, bots, flags, roles] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to), countryTotals(env, "view", from, to), readStats(env, { kind: "bot", from }), flagged(env, from, to), topRoles(env, from, to)]);
+        const [views, applies, geo, ccViews, bots, flags, roles, pages] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to), countryTotals(env, "view", from, to), readStats(env, { kind: "bot", from }), flagged(env, from, to), topRoles(env, from, to), topPages(env, from, to)]);
         if (allTime) { // from the day counting started
           from = (views && views.since) || to;
           days = Math.max(1, Math.round((Date.parse(to) - Date.parse(from)) / 864e5) + 1);
@@ -337,7 +337,7 @@ const app = {
         const countMe = url.searchParams.get("count") === "1";
         const chose = /(?:^|;\s*)gg_count=1(?:;|$)/.test(request.headers.get("cookie") || "");
         const hidden = countMe ? false : (isOwner(request) || url.searchParams.get("count") === "0" || (!nt && !chose));
-        const page = nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags, hidden, roles }));
+        const page = nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags, hidden, roles, pages }));
         const secure = url.protocol === "https:" ? "; Secure" : "";
         if (countMe) {
           page.headers.append("set-cookie", `gg_nt=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure}`);
@@ -394,7 +394,7 @@ const app = {
       const preview = url.searchParams.get("preview") === "1" && (await keyOk(env, "owner", url.searchParams.get("k") || ""));
       if (!post || (post.status !== "published" && !preview)) return Response.redirect(new URL("/news", url).toString(), 302);
       const more = (await db.listPosts({ limit: 4 })).filter(p => p.slug !== post.slug).slice(0, 3);
-      view("post");
+      view("post", post.title);
       const res = postPage({ origin: url.origin, post, more, platforms: PLATFORM_CONFIG.platforms, preview: post.status !== "published" });
       if (post.status !== "published") { const h = new Headers(res.headers); h.set("cache-control", "private, no-store"); return new Response(res.body, { headers: h }); }
       return decorate(res, url, env, ctx, "/news");
@@ -438,7 +438,7 @@ const app = {
     const gm = request.method === "GET" && url.pathname.match(/^\/guides\/([a-z0-9-]+)\/?$/);
     if (gm) {
       const g = GUIDES.find(x => x.slug === gm[1]);
-      if (g) view("guides");
+      if (g) view("guides", g.title);
       if (g) {
         let roles = [];
         try { roles = guideRoles(g, await loadFeed(env, ctx)); } catch {}
@@ -464,7 +464,7 @@ const app = {
       if (!j) return decorate(roleGone(url.origin), url, env, ctx, "/jobs");
       // One address per role: fix old or missing title slugs
       if (url.pathname !== jobPath(j)) return Response.redirect(new URL(jobPath(j), url).toString(), 301);
-      view("role");
+      view("role", `${j.title} (${j.via})`);
       return decorate(rolePage(j, feed, url.origin, PLATFORM_CONFIG.platforms), url, env, ctx, "/jobs");
     }
 
