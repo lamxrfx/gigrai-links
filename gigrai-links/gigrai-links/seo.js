@@ -511,8 +511,10 @@ export function liveFeatured(cfg) {
 export function featuredHtml(list) {
   if (!list.length) return "";
   return `<style>.gf{display:flex;flex-direction:column;gap:10px;margin:18px 0 6px}.gf a{display:flex;flex-direction:column;gap:4px;padding:16px 18px;border-radius:18px;text-decoration:none;color:#f2f4ff;background:linear-gradient(160deg,rgba(47,107,255,.24),rgba(139,61,255,.12) 60%,rgba(255,255,255,.04));border:1px solid rgba(139,61,255,.45)}.gf .gl{font-size:12px;font-weight:700;color:#b8bfdc;text-transform:uppercase;letter-spacing:.06em}.gf .gt{font-weight:700;font-size:17px}.gf .gm{font-size:14px;color:#e2e6f8}</style>
-<div class="gf" aria-label="Featured roles">${list.map((f) => `<a href="/go/sponsored-${esc(f.id)}?src=featured" target="_blank" rel="sponsored noopener"><span class="gl">Sponsored · Featured role</span><span class="gt">${esc(f.title)}</span><span class="gm">${[f.company && "via " + f.company, f.pay, f.blurb].filter(Boolean).map(esc).join(" · ")}</span></a>`).join("")}</div>`;
+<div class="gf" aria-label="Featured roles">${list.map((f) => `<a href="/go/sponsored-${esc(f.id)}?src=featured" target="_blank" rel="sponsored noopener"><span class="gl">Sponsored · Featured role</span><span class="gt">${esc(f.title)}</span><span class="gm">${[f.company && "via " + f.company, f.pay, f.blurb].filter(Boolean).map(esc).join(" · ")}</span></a>`).join("")}</div><img src="/api/seen?ids=${list.map((f) => encodeURIComponent(f.id)).join(",")}" width="1" height="1" alt="" aria-hidden="true" loading="lazy" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">`;
 }
+// Report links stay open until 14 days after the campaign ends (or a later date set in admin)
+export const reportOpenUntil = (f) => f.reportUntil || new Date(Date.parse((f.until || "2000-01-01") + "T12:00:00Z") + 14 * 864e5).toISOString().slice(0, 10);
 
 // ---------- booking form (on /advertise) ----------
 export function bookingForm(email = "") {

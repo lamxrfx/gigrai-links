@@ -225,21 +225,27 @@ ${showCountries ? `<section class="block" aria-labelledby="where"><h2 id="where"
 }
 
 // ---------- /report/<id>?k=... (for one advertiser) ----------
-export function sponsorReportPage({ origin, sponsor, stats, uniq = { total: 0, byDay: [] }, billing = null, from, to, csv = "" }) {
-  const live = new Date().toISOString().slice(0, 10) <= (sponsor.until || "");
+export function sponsorReportPage({ origin, sponsor, stats, uniq = { total: 0, byDay: [] }, seen = { total: 0, byDay: [] }, openUntil = "", billing = null, from, to, csv = "" }) {
+  const live = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(new Date()) <= (sponsor.until || "") && !sponsor.ended;
+  const ctr = seen.total ? Math.round((uniq.total / seen.total) * 1000) / 10 : 0;
+  const posts = [sponsor.ig_reach != null && ["Instagram reach", sponsor.ig_reach, "Accounts that saw the Instagram post"], sponsor.ig_taps != null && ["Instagram link taps", sponsor.ig_taps, "From Instagram's own Insights"], sponsor.wa_views != null && ["WhatsApp views", sponsor.wa_views, "Views of the WhatsApp channel post"]].filter(Boolean);
   const body = `<section class="hero sm">
   <span class="eyebrow"><i></i>Campaign report · ${live ? "Live" : "Finished"}</span>
   <h1>${esc(sponsor.company || sponsor.id)} <span class="grad-text">on GigrAI</span></h1>
-  <p>${sponsor.title ? esc(sponsor.title) + " · " : ""}${longDate(from)} to ${longDate(to)}. Updates in real time.</p>
+  <p>${sponsor.title ? esc(sponsor.title) + " · " : ""}${longDate(sponsor.start || from)} to ${longDate(sponsor.until || to)}. Updates in real time.${openUntil ? ` This private link works until ${longDate(openUntil)}.` : ""}</p>
 </section>
 <section class="block" aria-labelledby="tot"><h2 id="tot" class="sr">Totals</h2>
 <div class="kpis">
+  ${sponsor.pin !== false ? `<div class="kpi glass">${countUp(seen.total)}<span>Times your listing was shown</span><small>On GigrAI's homepage and All roles page</small></div>` : ""}
   <div class="kpi glass">${countUp(uniq.total)}<span>Unique clicks to your application page</span><small>Each person counted once a day · ${fmt(stats.total)} clicks in all</small></div>
   ${billing ? `<div class="kpi glass"><b>£${billing.spent.toFixed(2)}</b><span>of your £${fmt(billing.budget)} budget used</span><small>${fmt(billing.billable)} billable clicks at £${billing.cpc.toFixed(2)} · ${fmt(Math.max(0, billing.cap - billing.billable))} left</small></div>` : ""}
+  ${sponsor.pin !== false && seen.total ? `<div class="kpi glass"><b>${ctr}%</b><span>Click rate</span><small>Unique clicks ÷ times shown</small></div>` : ""}
   <div class="kpi glass">${countUp(stats.byCountry.length)}<span>${stats.byCountry.length === 1 ? "Country" : "Countries"}</span><small>Where those clicks came from</small></div>
   <div class="kpi glass"><b>${stats.bySrc[0] ? esc(source(stats.bySrc[0].src)) : "-"}</b><span>Top channel</span><small>${stats.bySrc[0] ? fmt(stats.bySrc[0].n) + " clicks" : ""}</small></div>
 </div></section>
 ${billing && billing.billable >= billing.cap ? `<p class="note" style="padding:12px 16px;border-radius:12px;background:rgba(61,214,140,.12);border:1px solid rgba(61,214,140,.35);color:#c9f5dd">Your budget has been fully used, so your listing is no longer pinned. Get in touch to top up.</p>` : ""}
+${posts.length ? `<section class="block" aria-labelledby="sp"><h2 id="sp">Social posts</h2><div class="kpis">${posts.map(([a, n, b]) => `<div class="kpi glass">${countUp(n)}<span>${a}</span><small>${b}</small></div>`).join("")}</div></section>` : ""}
+${sponsor.pin !== false && seen.total ? `<section class="block" aria-labelledby="sd"><h2 id="sd">Times shown per day</h2><div class="panel glass">${dayChart(seen.byDay, from, to, "times shown")}</div></section>` : ""}
 <section class="block" aria-labelledby="pd"><h2 id="pd">Unique clicks per day</h2><div class="panel glass">${dayChart(uniq.byDay, from, to, "unique clicks")}</div></section>
 <div class="two">
 <section class="block" aria-labelledby="bc"><h2 id="bc">By channel</h2><div class="panel glass">${barList(stats.bySrc.slice(0, 8), (r) => source(r.src), stats.total, "clicks")}</div></section>

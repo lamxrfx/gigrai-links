@@ -10,7 +10,7 @@ import { content, refreshNews } from "./content.js";
 import { pickWeekly, weeklyEmail, londonNow, mlSendCampaign } from "./weekly.js";
 import { newsIndex, postPage, postsRss, adminHome, adminEditor } from "./news.js";
 import { CATEGORIES } from "./news-sources.js";
-import { slugify, AD_OPTIONS, shell as shellPage, html, ukDay } from "./seo.js";
+import { slugify, AD_OPTIONS, shell as shellPage, html, ukDay, reportOpenUntil } from "./seo.js";
 import { vetLink } from "./vet.js";
 import { EmailMessage } from "cloudflare:email";
 import { systemPrompt, askAi, parseAsk } from "./chat.js";
@@ -196,6 +196,14 @@ const app = {
       return new Response(null, { status: 204 });
     }
 
+    // Sponsored listing impressions: a 1x1 image inside the Sponsored cards, loaded when they come on screen
+    if (url.pathname === "/api/seen" && request.method === "GET") {
+      if (isHuman(request)) {
+        const live = new Set((await activeFeatured(env)).map(f => f.id));
+        for (const id of String(url.searchParams.get("ids") || "").split(",").slice(0, 10)) if (live.has(id)) track(env, ctx, request, "sponsor_seen", id, "site");
+      }
+      return new Response(Uint8Array.from(atob("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"), c => c.charCodeAt(0)), { headers: { "content-type": "image/gif", "cache-control": "no-store", "x-robots-tag": "noindex" } });
+    }
     // Tracked apply link: /go/<jobId>?src=wa -> 302 to the job's referral link
     if (url.pathname.startsWith("/go/") && request.method === "GET") {
       const id = decodeURIComponent(url.pathname.slice(4));
@@ -353,7 +361,7 @@ const app = {
         if (views) Object.assign(views, { from, to });
         const sponsors = allSponsors(await sponsorsCfg(env)).filter(s => s.id !== "example");
         const links = await Promise.all(sponsors.map(async s => `${url.origin}/report/${s.id}?k=${await signKey(env, "sponsor:" + s.id)}`));
-        const used = await countMany(env, "sponsor_u", sponsors.map(s => ({ k: s.id, from: s.start || "2000-01-01" })));
+        const used = await countMany(env, "sponsor_u", sponsors.map(s => ({ k: s.id, from: statsDay(s.start || "2000-01-02", -1) })));
         sponsors.forEach(s => { s._unique = used[s.id] || 0; s._cap = clickCap(s); });
         const db = content(env);
         const enquiries = db ? await db.listEnquiries(30) : [];
@@ -375,10 +383,14 @@ const app = {
       const sponsor = (await sponsorsCfg(env)).featured.find(s => s.id === rm[1]);
       if (!sponsor || !(await keyOk(env, "sponsor:" + sponsor.id, k))) return nocache(reportsOff(url.origin));
       const today = ukDay();
-      const from = /^\d{4}-\d{2}-\d{2}$/.test(sponsor.start || "") ? sponsor.start : daysAgo(29);
-      const to = (sponsor.until || today) < today ? sponsor.until : today;
+      // the advertiser's link stops working 14 days after the campaign (you can still open it from admin)
+      if (today > reportOpenUntil(sponsor) && !isOwner(request)) return nocache(reportExpired(url.origin, sponsor, MEDIAKIT.contactEmail));
+      // stats are stored by UTC day and campaigns run on UK days, so widen by a day each side (nothing is counted outside the campaign anyway)
+      const from = /^\d{4}-\d{2}-\d{2}$/.test(sponsor.start || "") ? statsDay(sponsor.start, -1) : daysAgo(29);
+      const utcToday = new Date().toISOString().slice(0, 10);
+      const to = (sponsor.until || today) < today ? statsDay(sponsor.until, 1) : utcToday;
       const empty = { total: 0, byDay: [], bySrc: [], byCountry: [] };
-      const [stats, uniq] = await Promise.all([readStats(env, { kind: "sponsor", k: sponsor.id, from, to }), readStats(env, { kind: "sponsor_u", k: sponsor.id, from, to })]);
+      const [stats, uniq, seen] = await Promise.all([readStats(env, { kind: "sponsor", k: sponsor.id, from, to }), readStats(env, { kind: "sponsor_u", k: sponsor.id, from, to }), readStats(env, { kind: "sponsor_seen", k: sponsor.id, from, to })]);
       const cap = clickCap(sponsor);
       const unique = (uniq || empty).total;
       const billing = cap ? { cpc: +sponsor.cpc, budget: +sponsor.budget, cap, billable: Math.min(unique, cap), spent: Math.min(unique, cap) * +sponsor.cpc } : null;
@@ -387,11 +399,12 @@ const app = {
         const all = Object.fromEntries(((stats || empty).byDay).map(r => [r.day, r.n]));
         const u = Object.fromEntries(((uniq || empty).byDay).map(r => [r.day, r.n]));
         const days = [...new Set([...Object.keys(all), ...Object.keys(u)])].sort();
-        const lines = ["date,unique_clicks,all_clicks", ...days.map(d => `${d},${u[d] || 0},${all[d] || 0}`), `total,${unique},${(stats || empty).total}`];
+        const sv = Object.fromEntries(((seen || empty).byDay).map(r => [r.day, r.n]));
+        const lines = ["date,times_shown,unique_clicks,all_clicks", ...[...new Set([...days, ...Object.keys(sv)])].sort().map(d => `${d},${sv[d] || 0},${u[d] || 0},${all[d] || 0}`), `total,${(seen || empty).total},${unique},${(stats || empty).total}`];
         if (billing) lines.push(`billable_clicks,${billing.billable},`, `price_per_click_gbp,${billing.cpc},`, `amount_gbp,${billing.spent.toFixed(2)},`);
         return new Response(lines.join("\n") + "\n", { headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="gigrai-${sponsor.id}-${from}-to-${to}.csv"`, "cache-control": "private, no-store" } });
       }
-      return nocache(sponsorReportPage({ origin: url.origin, sponsor, stats: stats || empty, uniq: uniq || empty, billing, from, to: to < from ? from : to, csv: `/report/${sponsor.id}.csv?k=${encodeURIComponent(k)}` }));
+      return nocache(sponsorReportPage({ origin: url.origin, sponsor, stats: stats || empty, uniq: uniq || empty, seen: seen || empty, openUntil: reportOpenUntil(sponsor), billing, from, to: to < from ? from : to, csv: `/report/${sponsor.id}.csv?k=${encodeURIComponent(k)}` }));
     }
 
     // ---- News: /news, /news/rss.xml, /news/<slug> ----
@@ -1010,6 +1023,11 @@ async function mlConfirmDone(env, email) {
 }
 
 // Email the private numbers-page link to our own inbox (Cloudflare Email Routing)
+function reportExpired(origin, sponsor, email) {
+  const e = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  return html(shellPage({ title: "Report closed · GigrAI", desc: "Private.", canonical: "", robots: "noindex,nofollow", body: `<section class="hero sm" style="text-align:center;max-width:620px;margin:0 auto"><span class="eyebrow"><i></i>Campaign report</span><h1>This report has <span class="grad-text">closed</span></h1><p>The report for ${e(sponsor.company || "this campaign")} was available until ${e(reportOpenUntil(sponsor))}, two weeks after the campaign ended. Need a copy or want to run another campaign? Email <a href="mailto:${e(email || "partners@remotegigrai.com")}">${e(email || "partners@remotegigrai.com")}</a>.</p><p><a class="btn btn-grad" href="/advertise" style="color:#fff">Book another campaign</a></p></section>` }), 410);
+}
+
 // ---- Admin menu (on every private page) and admin home ----
 const ADMIN_LINKS = [["home", "Home", "/admin"], ["numbers", "Numbers", "/report"], ["sponsored", "Sponsored", "/admin/sponsored"], ["roles", "Add roles", "/admin/roles"], ["blog", "Blog", "/admin/blog"], ["weekly", "Weekly email", "/report-weekly"]];
 function adminNavHtml(k, active) {
@@ -1080,9 +1098,14 @@ function adminSponsoredPage({ k, rows, used, links, prefill, origin, msg }) {
 <div class="sp-h"><b>${e(r.title)}</b><span class="badge" style="color:${col};border-color:${col}">${st}</span></div>
 <div class="sp-m">${e(r.company)} · ${e(r.option || "Featured")} · ${e(r.start)} → ${e(r.until)}${r.pin !== false ? " · pinned on site" : " · posts only"}${r.ref ? " · " + e(r.ref) : ""}${fromFile ? " · (set in sponsored.json)" : ""}</div>
 <div class="sp-m">Unique clicks: <b>${used[r.id] || 0}</b>${cap ? ` of ${cap} paid for (£${(+r.cpc).toFixed(2)}/click, £${r.budget} budget)` : ""}</div>
-${links[r.id] ? `<label>Report link to send them<input readonly value="${e(links[r.id])}" onclick="this.select()"></label>` : ""}
+${links[r.id] ? `<label>Report link to send them <small>Works until ${e(reportOpenUntil(r))}${today > reportOpenUntil(r) ? " (closed for them; you can still open it)" : ""}</small><input readonly value="${e(links[r.id])}" onclick="this.select()"></label>
+<div class="sp-a"><a class="b tiny" href="${e(links[r.id])}" target="_blank">Open report</a><button type="button" class="b tiny" onclick="navigator.clipboard.writeText('${e(links[r.id])}').then(()=>{this.textContent='Copied ✓'})">Copy link</button></div>` : ""}
 <div class="sp-m">Instagram link: <code>${e(origin)}/go/sponsored-${e(r.id)}?src=ig</code><br>WhatsApp link: <code>${e(origin)}/go/sponsored-${e(r.id)}?src=wa</code></div>
-${fromFile ? "" : `<form method="post" class="sp-a"><input type="hidden" name="k" value="${e(k)}">${st === "Live" || st === "Budget used" ? `<button class="b tiny danger" name="end" value="${e(r.id)}">End now</button>` : ""}${st === "Scheduled" ? `<button class="b tiny danger" name="delete" value="${e(r.id)}">Delete</button>` : ""}</form>`}</div>`; };
+${fromFile ? "" : `<details class="sp-x"><summary>Add Instagram / WhatsApp numbers to their report</summary><form method="post" class="sp-n"><input type="hidden" name="k" value="${e(k)}"><input type="hidden" name="stats" value="${e(r.id)}">
+<div class="row"><label>Instagram reach <small>Accounts reached (Insights)</small><input name="ig_reach" type="number" min="0" value="${e(r.ig_reach || "")}"></label><label>Instagram link taps<input name="ig_taps" type="number" min="0" value="${e(r.ig_taps || "")}"></label></div>
+<div class="row"><label>WhatsApp channel views<input name="wa_views" type="number" min="0" value="${e(r.wa_views || "")}"></label><label>Keep report open until <small>Optional</small><input name="report_until" type="date" value="${e(r.reportUntil || "")}"></label></div>
+<button class="b tiny">Save numbers</button></form></details>
+<form method="post" class="sp-a"><input type="hidden" name="k" value="${e(k)}">${st === "Live" || st === "Budget used" ? `<button class="b tiny danger" name="end" value="${e(r.id)}">End now</button>` : ""}${st === "Scheduled" ? `<button class="b tiny danger" name="delete" value="${e(r.id)}">Delete</button>` : ""}</form>`}</div>`; };
   const opts = AD_OPTIONS.map(o => `<option value="${e(o.name)}" ${pf.option === o.name ? "selected" : ""}>${e(o.name)} (${e(o.price)}${o.per ? " " + e(o.per) : ""})</option>`).join("");
   const body = `<style>
 .adm{display:grid;gap:14px;max-width:880px;margin:0 auto}.adm form.add{display:grid;gap:14px}
@@ -1095,7 +1118,7 @@ ${fromFile ? "" : `<form method="post" class="sp-a"><input type="hidden" name="k
 .adm .tog{display:flex;gap:10px;align-items:center;font-weight:600}.adm .tog input{width:22px;height:22px}
 .sp{padding:16px;border-radius:16px;border:1px solid var(--line);background:var(--glass);display:grid;gap:8px}.sp-h{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .sp-m{font-size:13.5px;color:var(--muted);line-height:1.6}.sp-m code{font-size:12.5px;word-break:break-all}.badge{font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;border:1px solid}
-.sp-a{display:flex;gap:8px}
+.sp-a{display:flex;gap:8px;flex-wrap:wrap}.sp-x summary{cursor:pointer;color:#9fdcf0;font-size:14px;font-weight:600}.sp-n{display:grid;gap:10px;margin-top:10px}
 .adm [hidden]{display:none!important}.adm input:not([type=checkbox]),.adm select{min-width:0;max-width:100%;box-sizing:border-box;min-height:50px}.adm .tog input{width:24px!important;height:24px!important;flex:0 0 24px;accent-color:#2f6bff}.adm input[type=date]{-webkit-appearance:none;appearance:none;display:block;text-align:left;line-height:1.2}.adm input[type=date]::-webkit-date-and-time-value{text-align:left}.adm .row>label{min-width:0}
 @media (max-width:560px){.adm .row{grid-template-columns:minmax(0,1fr)!important}}
 </style><div class="adm">
@@ -1202,6 +1225,8 @@ const emailLinkPage = (msg) => `<!doctype html><html lang="en"><head><meta chars
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#070914;color:#eef1ff;font:16px/1.5 system-ui,sans-serif;padding:20px}main{max-width:420px;text-align:center}button{margin-top:14px;height:48px;padding:0 22px;border:0;border-radius:999px;color:#fff;font-weight:700;font-size:15px;background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);cursor:pointer}p{color:#a9b0cc}</style></head>
 <body><main><h1>Email the numbers link</h1><p>This sends the private numbers-page link to the GigrAI inbox. It never shows the link here.</p>${msg ? `<p><b style="color:#fff">${msg}</b></p>` : `<form method="post"><button type="submit">Email me the link</button></form>`}</main></body></html>`;
 
+// A UK campaign date shifted by n days, as a stats (UTC) day key
+const statsDay = (d, n) => new Date(Date.parse(d + "T12:00:00Z") + n * 864e5).toISOString().slice(0, 10);
 // Sponsored listings: sponsored.json plus ones added in /admin/sponsored (cached for a minute)
 let sponsorMemo = { at: 0, rows: [] };
 async function sponsorsCfg(env) {
@@ -1217,7 +1242,7 @@ async function activeFeatured(env) {
   const live = liveFeatured(await sponsorsCfg(env));
   const cpc = live.filter(f => clickCap(f));
   if (!cpc.length) return live;
-  const used = await countMany(env, "sponsor_u", cpc.map(f => ({ k: f.id, from: f.start || "2000-01-01" })));
+  const used = await countMany(env, "sponsor_u", cpc.map(f => ({ k: f.id, from: statsDay(f.start || "2000-01-02", -1) })));
   return live.filter(f => !clickCap(f) || (used[f.id] || 0) < clickCap(f));
 }
 
@@ -1312,7 +1337,7 @@ async function handleAdmin(request, url, env, ctx) {
   // ---- sponsored listings ----
   if (url.pathname === "/admin/sponsored" && request.method === "GET") {
     const rows = await db.listSponsors();
-    const used = await countMany(env, "sponsor_u", rows.map(r => ({ k: r.id, from: r.start || "2000-01-01" })));
+    const used = await countMany(env, "sponsor_u", rows.map(r => ({ k: r.id, from: statsDay(r.start || "2000-01-02", -1) })));
     const links = Object.fromEntries(await Promise.all(rows.map(async r => [r.id, `${url.origin}/report/${r.id}?k=${await signKey(env, "sponsor:" + r.id)}`])));
     let prefill = null;
     const ref = url.searchParams.get("from");
@@ -1327,6 +1352,13 @@ async function handleAdmin(request, url, env, ctx) {
       const s0 = await db.getSponsor(f("end", 60)); if (!s0) return backS("Listing not found.");
       await db.saveSponsor({ ...s0, until: yesterday, ended: today }); sponsorMemo.at = 0; // comes off the site straight away
       return backS(`Ended "${s0.title}" today. Its report and links keep working for 60 days.`);
+    }
+    if (form.get("stats")) {
+      const s0 = await db.getSponsor(f("stats", 60)); if (!s0) return backS("Listing not found.");
+      const num = (n) => { const v = parseInt(f(n, 9)); return Number.isFinite(v) && v >= 0 ? v : null; };
+      const ru = f("report_until", 10);
+      await db.saveSponsor({ ...s0, ig_reach: num("ig_reach"), ig_taps: num("ig_taps"), wa_views: num("wa_views"), reportUntil: /^\d{4}-\d{2}-\d{2}$/.test(ru) ? ru : undefined }); sponsorMemo.at = 0;
+      return backS(`Saved the post numbers for "${s0.title}". They now show on their report.`);
     }
     if (form.get("delete")) {
       const s0 = await db.getSponsor(f("delete", 60));
