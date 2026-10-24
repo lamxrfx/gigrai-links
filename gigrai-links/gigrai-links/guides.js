@@ -4,6 +4,8 @@
 export const GUIDES = [
   {
     slug: "is-micro1-legit",
+    roles: "micro1",
+    rolesTitle: "Live micro1 roles right now",
     title: "Is micro1 legit? An honest look for 2026",
     desc: "Is micro1 a real way to get paid for AI work? How it works, how pay works, the common complaints and how to spot fake micro1 recruiters.",
     updated: "2026-10-22",
@@ -47,6 +49,8 @@ export const GUIDES = [
   },
   {
     slug: "micro1-ai-interview",
+    roles: "micro1",
+    rolesTitle: "Live micro1 roles right now",
     title: "The micro1 AI interview (Zara): how it works and how to pass",
     desc: "What to expect from micro1's AI interview with Zara: length, format, camera and proctoring rules, what's scored, and practical tips to pass first time.",
     updated: "2026-10-22",
@@ -85,6 +89,8 @@ export const GUIDES = [
   },
   {
     slug: "micro1-vs-mercor",
+    roles: "mix",
+    rolesTitle: "Live roles on both platforms",
     title: "micro1 vs Mercor: which AI work platform should you join?",
     desc: "micro1 and Mercor compared: how applying works, pay, how you get paid, time tracking and the common complaints, so you can choose (or join both).",
     updated: "2026-10-22",
@@ -175,6 +181,8 @@ export const GUIDES = [
   },
   {
     slug: "is-mercor-legit",
+    roles: "mercor",
+    rolesTitle: "Live Mercor roles right now",
     title: "Is Mercor legit? Pay, the AI interview and real complaints (2026)",
     desc: "Is Mercor a real way to get paid for AI work? How it works, what it pays, the AI interview, the common complaints and how to spot fake Mercor recruiters.",
     updated: "2026-10-24",
@@ -235,6 +243,9 @@ export const GUIDES = [
   },
   {
     slug: "ai-trainer-pay",
+    roles: "top-pay",
+    rolesTitle: "Best-paid live roles right now",
+    rolesLead: "The top advertised rate in different fields today. Free to apply.",
     title: "How much do AI trainers get paid? Pay by field (2026)",
     desc: "Real hourly pay for AI training work in 2026, by field: general, coding, languages, maths and science, finance, law and medicine. Includes live rates from current roles.",
     updated: "2026-10-24",

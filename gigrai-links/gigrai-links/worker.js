@@ -415,7 +415,9 @@ const app = {
       const more = (await db.listPosts({ limit: 4 })).filter(p => p.slug !== post.slug).slice(0, 3);
       view("post", post.title);
       let roles = [];
-      try { roles = guideRoles({ slug: `${post.affiliate || ""} ${post.title} ${post.summary || ""}`.toLowerCase() }, await loadFeed(env, ctx)); } catch {}
+      // roles from the platform the article is about (or its affiliate), otherwise good general roles
+      const about = `${post.affiliate || ""} ${post.title} ${post.summary || ""}`.toLowerCase();
+      try { roles = guideRoles({ slug: "news-" + post.slug, roles: ["micro1", "mercor", "ethos"].find(p => about.includes(p)) || "general" }, await loadFeed(env, ctx)); } catch {}
       const res = postPage({ origin: url.origin, post, more, platforms: PLATFORM_CONFIG.platforms, preview: post.status !== "published", roles });
       if (post.status !== "published") { const h = new Headers(res.headers); h.set("cache-control", "private, no-store"); return new Response(res.body, { headers: h }); }
       return decorate(res, url, env, ctx, "/news");
@@ -818,34 +820,52 @@ function livePayTable(feed) {
 // 3 live roles for the end of a guide: the guide's platform first, roles most people can do, best pay
 const EXPERT = /doctor|nurs|physician|medical|clinic|lawyer|attorney|legal|paralegal|dentist|pharmac|phd|professor|surgeon|radiolog|psychiatr/i;
 const EASY = /generalist|writ|editor|annotat|evaluat|rater|review|tester|english|content|quality|data label/i;
-// Beginner guides only show roles anyone can try: general writing, rating, languages. Never senior or specialist ones.
+// ---- Role cards on guides: each guide has its own filter (roles: in guides.js) ----
+// Roles come from the live feed on every page load (refreshed every 30 minutes), so closed roles drop off by themselves.
+// The cards also rotate daily: each guide picks 3 from its best ~9 matches, so returning readers see new roles.
 const BEGINNER = /generalist|writer|writing|editor|annotat|evaluat|rater|rating|tester|transcri|translat|language|native|bilingual|fluent|content|data label|labell?er|chat|tutor|english|voice|speaker/i;
 const SENIOR = /senior|principal|\blead\b|staff|scientist|phd|professor|expert|specialist|engineer|developer|architect|manager|director|consultant|research|analyst|clinical|python|software|coding|\bcode/i;
-function beginnerRoles(feed) {
-  const ok = feed.filter(j => (j.min || j.max) && BEGINNER.test(j.title) && !SENIOR.test(j.title) && !EXPERT.test(j.title));
-  const score = (j) => (j.hot ? 1 : 0) + (/generalist|rater|evaluat|annotat/i.test(j.title) ? 1 : 0) - Math.max(0, ((j.min || j.max) - 60) / 20); // lower barrier first
-  const out = [], seen = new Set();
-  for (const j of ok.sort((a, b) => score(b) - score(a))) {
-    const key = j.title.toLowerCase().replace(/\s*\d+$/, "");
-    if (seen.has(key)) continue;
-    seen.add(key); out.push(j);
-    if (out.length === 3) break;
-  }
-  return out; // may be empty: then the guide shows no role cards rather than unsuitable ones
+const dedupe = (list, n) => { const out = [], seen = new Set(); for (const j of list) { const k = j.title.toLowerCase().replace(/\s*\d+$/, ""); if (seen.has(k)) continue; seen.add(k); out.push(j); if (out.length >= n) break; } return out; };
+// Pick 3 of the top matches, changing each day (same for everyone on a given day)
+function rotate(list, n = 3, salt = "") {
+  if (list.length <= n) return list;
+  const pool = list.slice(0, Math.max(n, Math.min(list.length, n * 3)));
+  const day = Math.floor(Date.now() / 864e5);
+  let h = 0; for (const c of salt) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const start = (day + h) % pool.length;
+  return Array.from({ length: n }, (_, i) => pool[(start + i * Math.max(1, Math.floor(pool.length / n))) % pool.length]).filter((j, i, a) => a.indexOf(j) === i);
 }
+const payOf = (j) => j.max || j.min || 0;
 function guideRoles(g, feed) {
-  if (g.roles === "beginner") return beginnerRoles(feed);
-  const want = ["micro1", "mercor", "ethos"].filter(p => g.slug.includes(p));
   const paid = feed.filter(j => j.min || j.max);
-  const score = (j) => (want.includes(j.platform) ? 2 : 0) + (EASY.test(j.title) ? 3 : 0) - (EXPERT.test(j.title) ? 4 : 0) + (j.hot ? 1 : 0) + Math.min(2, (j.max || j.min || 0) / 50);
-  const out = [], seen = new Set();
-  for (const j of paid.slice().sort((a, b) => score(b) - score(a))) {
-    const key = j.title.toLowerCase().replace(/\s*\d+$/, "");
-    if (seen.has(key)) continue; // no near-duplicate titles
-    seen.add(key); out.push(j);
-    if (out.length === 3) break;
+  const mode = g.roles || "general";
+  const byScore = (list, score) => dedupe(list.slice().sort((a, b) => score(b) - score(a)), 9);
+  let pool;
+  if (mode === "beginner") {
+    // only roles anyone can try; lower barrier first. Empty is fine: no cards beats unsuitable ones
+    pool = byScore(paid.filter(j => BEGINNER.test(j.title) && !SENIOR.test(j.title) && !EXPERT.test(j.title)),
+      j => (j.hot ? 1 : 0) + (/generalist|rater|evaluat|annotat/i.test(j.title) ? 1 : 0) - Math.max(0, ((j.min || j.max) - 60) / 20));
+  } else if (mode === "top-pay") {
+    // the best-paid role in different fields, to back up a pay guide
+    const seenField = new Set(); const top = [];
+    for (const j of paid.slice().sort((a, b) => payOf(b) - payOf(a))) {
+      const f = (PAY_FIELDS.find(([, re]) => re.test(`${j.title} ${j.domain || ""}`)) || ["x"])[0];
+      if (seenField.has(f)) continue; seenField.add(f); top.push(j);
+    }
+    return dedupe(top, 3);
+  } else if (mode === "mix") {
+    // a guide comparing platforms: the best role from each of them
+    const plats = g.platforms || ["micro1", "mercor"];
+    const best = (id) => byScore(paid.filter(j => j.platform === id), j => (EASY.test(j.title) ? 2 : 0) - (EXPERT.test(j.title) ? 2 : 0) + (j.hot ? 1 : 0) + Math.min(2, payOf(j) / 50));
+    const lists = plats.map(id => rotate(best(id), 2, g.slug + id));
+    const out = []; for (let i = 0; out.length < 3 && i < 3; i++) for (const l of lists) if (l[i] && out.length < 3) out.push(l[i]);
+    return out;
+  } else {
+    // "micro1" / "mercor" / "ethos" = that platform only; "general" = any platform, roles most people can do, good pay
+    const only = ["micro1", "mercor", "ethos"].includes(mode) ? paid.filter(j => j.platform === mode) : paid;
+    pool = byScore(only, j => (EASY.test(j.title) ? 3 : 0) - (EXPERT.test(j.title) ? 4 : 0) + (j.hot ? 1 : 0) + Math.min(2, payOf(j) / 50));
   }
-  return out;
+  return rotate(pool, 3, g.slug);
 }
 
 // ---------------- GigrAI assistant ----------------
