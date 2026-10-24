@@ -417,7 +417,7 @@ const app = {
       let roles = [];
       // roles from the platform the article is about (or its affiliate), otherwise good general roles
       const about = `${post.affiliate || ""} ${post.title} ${post.summary || ""}`.toLowerCase();
-      try { roles = guideRoles({ slug: "news-" + post.slug, roles: ["micro1", "mercor", "ethos"].find(p => about.includes(p)) || "general" }, await loadFeed(env, ctx)); } catch {}
+      try { roles = guideRoles({ slug: "news-" + post.slug, roles: ["micro1", "mercor", "ethos", "handshake"].find(p => about.includes(p)) || "general" }, await loadFeed(env, ctx)); } catch {}
       const res = postPage({ origin: url.origin, post, more, platforms: PLATFORM_CONFIG.platforms, preview: post.status !== "published", roles });
       if (post.status !== "published") { const h = new Headers(res.headers); h.set("cache-control", "private, no-store"); return new Response(res.body, { headers: h }); }
       return decorate(res, url, env, ctx, "/news");
@@ -862,7 +862,7 @@ function guideRoles(g, feed) {
     return out;
   } else {
     // "micro1" / "mercor" / "ethos" = that platform only; "general" = any platform, roles most people can do, good pay
-    const only = ["micro1", "mercor", "ethos"].includes(mode) ? paid.filter(j => j.platform === mode) : paid;
+    const only = ["micro1", "mercor", "ethos", "handshake"].includes(mode) ? paid.filter(j => j.platform === mode) : paid;
     pool = byScore(only, j => (EASY.test(j.title) ? 3 : 0) - (EXPERT.test(j.title) ? 4 : 0) + (j.hot ? 1 : 0) + Math.min(2, payOf(j) / 50));
   }
   return rotate(pool, 3, g.slug);

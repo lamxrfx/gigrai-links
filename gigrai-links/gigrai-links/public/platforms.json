@@ -45,6 +45,18 @@
       "icon": "mercor-icon.png"
     },
     {
+      "id": "handshake",
+      "name": "Handshake AI",
+      "rowTitle": "Handshake AI",
+      "tagline": "Paid AI fellowship for graduates & PhDs",
+      "signupUrl": "https://joinhandshake.com/move-program/referral?referralCode=C1305C&utm_source=referral",
+      "logo": "handshake-icon.png",
+      "logoShape": "square",
+      "feed": null,
+      "active": true,
+      "icon": "handshake-icon.png"
+    },
+    {
       "id": "alignerr",
       "name": "Alignerr",
       "rowTitle": "Alignerr",
