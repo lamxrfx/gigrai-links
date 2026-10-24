@@ -272,14 +272,25 @@ ${similar.length ? `<section class="block" aria-labelledby="sim"><h2 id="sim">Si
 }
 
 // ---------- /jobs ----------
-// "Back to top" button for long pages: appears after scrolling down, sits bottom-left (the chat button is bottom-right)
+// "Back to top" button for long pages: bottom-right, just above the chat button. The gradient ring fills as you scroll.
 export const TOP_BTN = `<style>
-.totop{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:var(--ggc-y,20px);z-index:44;width:52px;height:52px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(13,16,36,.88);color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.35);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .2s,transform .2s}
-.totop.on{opacity:1;transform:none;pointer-events:auto}.totop:hover{background:rgba(47,107,255,.9)}.totop:focus-visible{outline:2px solid #22d3ee;outline-offset:3px}
-@media (prefers-reduced-motion:reduce){.totop{transition:none}}
+.totop{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(var(--ggc-y,20px) + 66px);z-index:44;width:52px;height:52px;padding:0;border:0;border-radius:999px;background:rgba(13,16,36,.9);color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.08) inset;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;transform:translateY(14px) scale(.85);pointer-events:none;transition:opacity .25s ease,transform .3s cubic-bezier(.2,.9,.3,1.3),box-shadow .2s}
+.totop.on{opacity:1;transform:none;pointer-events:auto}
+.totop:hover{box-shadow:0 12px 34px rgba(47,107,255,.45),0 0 0 1px rgba(255,255,255,.12) inset}
+.totop:focus-visible{outline:2px solid #22d3ee;outline-offset:3px}
+.totop svg.ring{position:absolute;inset:0;width:52px;height:52px;transform:rotate(-90deg)}
+.totop .trk{fill:none;stroke:rgba(255,255,255,.1);stroke-width:3}
+.totop .bar{fill:none;stroke:url(#ttg);stroke-width:3;stroke-linecap:round;transition:stroke-dashoffset .1s linear}
+.totop .ch{position:relative;transition:transform .2s}.totop:hover .ch{transform:translateY(-2px)}
+@media (prefers-reduced-motion:reduce){.totop,.totop .bar,.totop .ch{transition:none}}
 </style>
-<button type="button" class="totop" id="toTop" aria-label="Back to top" title="Back to top"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
-<script>(function(){var b=document.getElementById("toTop");if(!b)return;var t=0;function f(){b.classList.toggle("on",window.scrollY>900)}addEventListener("scroll",function(){if(!t){t=requestAnimationFrame(function(){t=0;f()})}},{passive:true});f();b.addEventListener("click",function(){var r=matchMedia("(prefers-reduced-motion: reduce)").matches;scrollTo({top:0,behavior:r?"auto":"smooth"});var h=document.querySelector("h1");if(h){h.setAttribute("tabindex","-1");h.focus({preventScroll:true})}})})();</script>`;
+<button type="button" class="totop" id="toTop" aria-label="Back to top" title="Back to top">
+<svg class="ring" viewBox="0 0 52 52" aria-hidden="true"><defs><linearGradient id="ttg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset=".55" stop-color="#2f6bff"/><stop offset="1" stop-color="#8b3dff"/></linearGradient></defs><circle class="trk" cx="26" cy="26" r="23"/><circle class="bar" id="toTopBar" cx="26" cy="26" r="23" stroke-dasharray="144.5" stroke-dashoffset="144.5"/></svg>
+<svg class="ch" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
+<script>(function(){var b=document.getElementById("toTop"),bar=document.getElementById("toTopBar");if(!b)return;var L=144.5,t=0;
+function f(){var y=scrollY,h=document.documentElement.scrollHeight-innerHeight;b.classList.toggle("on",y>700);bar.style.strokeDashoffset=String(L-L*Math.min(1,h>0?y/h:0))}
+addEventListener("scroll",function(){if(!t){t=requestAnimationFrame(function(){t=0;f()})}},{passive:true});addEventListener("resize",f);f();
+b.addEventListener("click",function(){var r=matchMedia("(prefers-reduced-motion: reduce)").matches;scrollTo({top:0,behavior:r?"auto":"smooth"});var h=document.querySelector("h1");if(h){h.setAttribute("tabindex","-1");h.focus({preventScroll:true})}})})();</script>`;
 
 export function jobsIndex(feed, origin, platforms, featured = []) {
   const groups = [...(platforms || []), { id: "other", name: "Other companies" }].map((p) => ({ p, jobs: feed.filter((j) => j.platform === p.id).sort((a, b) => (b.posted || "").localeCompare(a.posted || "")) }))
