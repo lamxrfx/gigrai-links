@@ -57,6 +57,38 @@
       "icon": "handshake-icon.png"
     },
     {
+      "id": "scale",
+      "name": "Scale AI",
+      "rowTitle": "Scale AI",
+      "tagline": "Expert AI fellowships (Human Frontier Collective)",
+      "signupUrl": "",
+      "logo": "",
+      "logoShape": "square",
+      "feed": {
+        "type": "greenhouse",
+        "board": "scaleai",
+        "include": "Human Frontier Collective",
+        "applyVia": "listing"
+      },
+      "active": true
+    },
+    {
+      "id": "appen",
+      "name": "Appen",
+      "rowTitle": "Appen",
+      "tagline": "Language and voice data projects",
+      "signupUrl": "",
+      "logo": "",
+      "logoShape": "square",
+      "feed": {
+        "type": "lever",
+        "board": "appen",
+        "include": "Voice Recording|Linguist|Annotat|Rater|Evaluat|Transcri|Search|Language|Translat|Speaker|Native",
+        "domain": "Languages"
+      },
+      "active": true
+    },
+    {
       "id": "alignerr",
       "name": "Alignerr",
       "rowTitle": "Alignerr",

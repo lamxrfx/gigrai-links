@@ -730,25 +730,52 @@ const ADAPTERS = {
   },
 
   // Greenhouse public job boards (e.g. Alignerr). No pay data in this feed.
+  // Greenhouse public job board. feed: { type: "greenhouse", board, include: "regex on title", applyVia: "listing" | "signup" }
   async greenhouse(p, env) {
     const base = env.GREENHOUSE_API || "https://boards-api.greenhouse.io/v1";
-    const r = await fetch(`${base}/boards/${encodeURIComponent(p.feed.board)}/jobs`, { headers: { accept: "application/json" } });
+    const r = await fetch(`${base}/boards/${encodeURIComponent(p.feed.board)}/jobs?content=true`, { headers: { accept: "application/json" } });
     if (!r.ok) throw new Error(`greenhouse ${p.feed.board} ${r.status}`);
     const body = await r.json();
     const viaSignup = p.feed.applyVia !== "listing";
-    return (body.jobs || []).map(j => {
-      const url = viaSignup ? p.signupUrl : withReferral(j.absolute_url, /(^|\.)greenhouse\.io$/, () => {});
-      if (!url || !j.title) return null;
+    const inc = p.feed.include ? new RegExp(p.feed.include, "i") : null;
+    return (body.jobs || []).filter(j => j.title && (!inc || inc.test(j.title))).map(j => {
+      const url = viaSignup ? p.signupUrl : listingUrl(j.absolute_url);
+      if (!url) return null;
       const loc = j.location && j.location.name ? String(j.location.name) : "";
+      const desc = htmlText(j.content || "");
+      const [min, max] = payFromText(desc);
+      const cc = countriesFromText(loc);
       return {
-        id: `${p.id}-${j.id}`,
-        title: String(j.title).trim(),
-        min: null, max: null,
-        skills: loc ? [loc] : [],
-        domain: "",
+        id: `${p.id}-${j.id}`, title: String(j.title).trim(), min, max,
+        skills: loc ? [loc] : [], domain: p.feed.domain || "",
         posted: (j.first_published || j.updated_at || "").replace("T", " ").slice(0, 19) || null,
-        hot: false,
-        url,
+        hot: false, url, desc: desc.slice(0, 4000),
+        ...(cc.length ? { known: true, allow: cc, deny: [] } : {}),
+      };
+    });
+  },
+  // Lever public postings. feed: { type: "lever", board, include: "regex on title" }
+  async lever(p, env) {
+    const base = env.LEVER_API || "https://api.lever.co/v0";
+    const r = await fetch(`${base}/postings/${encodeURIComponent(p.feed.board)}?mode=json`, { headers: { accept: "application/json" } });
+    if (!r.ok) throw new Error(`lever ${p.feed.board} ${r.status}`);
+    const list = await r.json();
+    const inc = p.feed.include ? new RegExp(p.feed.include, "i") : null;
+    return (Array.isArray(list) ? list : []).filter(j => j.text && (!inc || inc.test(j.text))).map(j => {
+      const url = listingUrl(j.hostedUrl || j.applyUrl);
+      if (!url) return null;
+      const desc = String(j.descriptionPlain || htmlText(j.description || "")).replace(/\s+\n/g, "\n").trim();
+      const sr = j.salaryRange || {};
+      let [min, max] = /hour/i.test(sr.interval || "") && /usd/i.test(sr.currency || "USD") ? [hourlyOk(sr.min), hourlyOk(sr.max)] : payFromText(desc);
+      const iso3 = ISO3[String(j.country || "").toUpperCase()];
+      const cc = iso3 ? [iso3] : countriesFromText((j.categories && j.categories.location) || "");
+      const loc = (j.categories && j.categories.location) || "";
+      return {
+        id: `${p.id}-${j.id}`, title: String(j.text).trim(), min: min || null, max: max || null,
+        skills: loc ? [loc] : [], domain: p.feed.domain || "",
+        posted: j.createdAt ? new Date(j.createdAt).toISOString().replace("T", " ").slice(0, 19) : null,
+        hot: false, url, desc: desc.slice(0, 4000),
+        ...(cc.length ? { known: true, allow: cc, deny: [] } : {}),
       };
     });
   },
@@ -844,7 +871,7 @@ function guideRoles(g, feed) {
   let pool;
   if (mode === "beginner") {
     // only roles anyone can try; lower barrier first. Empty is fine: no cards beats unsuitable ones
-    pool = byScore(paid.filter(j => BEGINNER.test(j.title) && !SENIOR.test(j.title) && !EXPERT.test(j.title)),
+    pool = byScore(paid.filter(j => BEGINNER.test(j.title) && (!SENIOR.test(j.title) || /voice record/i.test(j.title)) && !EXPERT.test(j.title)),
       j => (j.hot ? 1 : 0) + (/generalist|rater|evaluat|annotat/i.test(j.title) ? 1 : 0) - Math.max(0, ((j.min || j.max) - 60) / 20));
   } else if (mode === "top-pay") {
     // the best-paid role in different fields, to back up a pay guide
@@ -1226,6 +1253,26 @@ function plainText(md) {
 }
 
 // Only allow https links on the platform's own domain, then apply the referral rule.
+// Company's own listing link (no referral): https only, tagged so they can see the visit came from GigrAI
+function listingUrl(raw) {
+  try { const u = new URL(raw); if (u.protocol !== "https:") return null; if (!u.searchParams.get("utm_source")) u.searchParams.set("utm_source", "gigrai"); return u.toString(); } catch { return null; }
+}
+const htmlText = (h) => String(h || "").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&")
+  .replace(/<\/(p|div|li|h\d|br)\s*>|<br\s*\/?>/gi, "\n").replace(/<li[^>]*>/gi, "- ").replace(/<[^>]+>/g, "").replace(/[ \t]+/g, " ").replace(/\n\s*\n+/g, "\n\n").trim();
+// "$40–$60 per hour" / "$45/hr" / "USD 30 - 50 an hour" -> [min, max] (US dollars an hour only)
+function payFromText(t) {
+  const m = String(t).match(/(?:\$|USD\s?)(\d{2,3}(?:\.\d+)?)(?:\s*(?:-|–|to)\s*(?:\$|USD\s?)?(\d{2,3}(?:\.\d+)?))?\s*(?:USD\s*)?(?:\/\s*h(?:ou)?r|per\s+hour|an\s+hour|\/\s*hour|hourly)/i);
+  if (!m) return [null, null];
+  const a = hourlyOk(Math.round(+m[1])), b = m[2] ? hourlyOk(Math.round(+m[2])) : null;
+  return [a, b || a];
+}
+// "London; United Kingdom" -> ["GBR"]; unknown places -> []
+const PLACE = [["GBR", /united kingdom|\buk\b|london|england|scotland|wales/i], ["USA", /united states|\busa?\b|new york|san francisco|california|texas|washington, dc/i], ["CAN", /canada|toronto|vancouver/i], ["AUS", /australia/i], ["IRL", /ireland|dublin/i], ["IND", /india/i], ["DEU", /germany/i], ["FRA", /france/i], ["ESP", /spain/i], ["ITA", /italy/i], ["NLD", /netherlands/i], ["POL", /poland/i], ["PRT", /portugal/i], ["NGA", /nigeria/i], ["KEN", /kenya/i], ["ZAF", /south africa/i], ["PHL", /philippines/i], ["BRA", /brazil/i], ["MEX", /mexico/i]];
+function countriesFromText(t) {
+  if (!t || /europe|european union|\bemea\b|global|worldwide|anywhere/i.test(t)) return [];
+  return PLACE.filter(([, re]) => re.test(t)).map(([c]) => c);
+}
+
 function withReferral(raw, hostRe, addCode) {
   try {
     const u = new URL(raw);
