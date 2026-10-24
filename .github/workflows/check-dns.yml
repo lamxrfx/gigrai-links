@@ -1,4 +1,4 @@
-# Shows the domain's email records (MX, SPF, DMARC, DKIM) as an annotation. Runs when this file changes.
+# Shows the domain's email records (MX, SPF, DMARC, DKIM, Google verification) as annotations. Runs when this file changes.
 name: Check email DNS
 on:
   push:
