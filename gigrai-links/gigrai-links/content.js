@@ -70,6 +70,18 @@ export class Content extends DurableObject {
   setEnquiryStatus(ref, status) {
     this.sql.exec(`UPDATE enquiries SET status = ? WHERE ref = ?`, status, ref);
   }
+  getEnquiry(ref) {
+    const r = [...this.sql.exec(`SELECT ref, created, data, status FROM enquiries WHERE ref = ?`, ref)][0];
+    return r ? { ...r, data: JSON.parse(r.data) } : null;
+  }
+  // merge new fields into a booking (and optionally change its status)
+  updateEnquiry(ref, patch, status) {
+    const r = this.getEnquiry(ref);
+    if (!r) return null;
+    const data = { ...r.data, ...patch };
+    this.sql.exec(`UPDATE enquiries SET data = ?, status = ? WHERE ref = ?`, JSON.stringify(data), status || r.status, ref);
+    return { ...r, data, status: status || r.status };
+  }
 
   // ---- sponsored listings (/admin/sponsored) ----
   listSponsors() {

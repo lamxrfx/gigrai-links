@@ -16,6 +16,7 @@ import { EmailMessage } from "cloudflare:email";
 import { systemPrompt, askAi, parseAsk } from "./chat.js";
 import SPONSORED from "./sponsored.json";
 import CURATED from "./curated.json";
+import { bookingPage, bookingDone, bookingClosed } from "./booking.js";
 import { menuButton, drawerHtml } from "./nav.js";
 import { GUIDES } from "./guides.js";
 // Serves the static link page from ./public and handles one API route:
@@ -195,6 +196,11 @@ const app = {
       if (isHuman(request)) track(env, ctx, request, "link", link.replace(/[^a-z0-9_-]/gi, "-"), cleanSrc(src));
       return new Response(null, { status: 204 });
     }
+
+    // ---- Client booking checkout: /book/<ref>?t=… (terms, job details, Stripe payment) ----
+    const bk = url.pathname.match(/^\/book\/(GA-[A-F0-9]{6})(\/done)?\/?$/);
+    if (bk) return handleBooking(request, url, env, ctx, bk[1], !!bk[2]);
+    if (url.pathname === "/api/stripe-webhook" && request.method === "POST") return stripeWebhook(request, env, ctx);
 
     // Sponsored listing impressions: a 1x1 image inside the Sponsored cards, loaded when they come on screen
     if (url.pathname === "/api/seen" && request.method === "GET") {
@@ -525,7 +531,7 @@ const app = {
 };
 
 // Security headers on every page and API response from the worker (static files get them from public/_headers)
-const CSP = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'";
+const CSP = "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self' https://checkout.stripe.com";
 function secure(res, url) {
   const r = new Response(res.body, res); // copy, so redirect/asset headers can be changed
   const h = r.headers;
@@ -1023,6 +1029,142 @@ async function mlConfirmDone(env, email) {
 }
 
 // Email the private numbers-page link to our own inbox (Cloudflare Email Routing)
+// ---------------- client booking + Stripe ----------------
+const BOOK_DAYS = 14; // booking links work for 14 days after you send them
+const contactEmail = () => MEDIAKIT.contactEmail || "partners@remotegigrai.com";
+// price of a package in pence, from the Advertise page prices (pay per click = the budget)
+function offerPrice(optionName, budget) {
+  const o = AD_OPTIONS.find(x => x.name === optionName);
+  if (!o) return 0;
+  if (/per click/i.test(o.name)) return Math.round((+budget || 100) * 100);
+  return Math.round(parseFloat(String(o.price).replace(/[^0-9.]/g, "")) * 100) || 0;
+}
+async function bookLink(env, origin, ref) { return `${origin}/book/${ref}?t=${await signKey(env, "book:" + ref)}`; }
+
+async function handleBooking(request, url, env, ctx, ref, done) {
+  const db = content(env);
+  const t = url.searchParams.get("t") || "";
+  if (!db || !(await keyOk(env, "book:" + ref, t))) return bookingClosed("This booking link isn't valid.", contactEmail());
+  const q = await db.getEnquiry(ref);
+  if (!q || !q.data.offer) return bookingClosed("This booking isn't ready yet.", contactEmail());
+  const offer = q.data.offer;
+  const paid = !!q.data.paid;
+  const reportLinkFor = async (q2) => q2.data.sponsorId ? `${url.origin}/report/${q2.data.sponsorId}?k=${await signKey(env, "sponsor:" + q2.data.sponsorId)}` : "";
+
+  if (done) {
+    if (paid) return bookingDone({ ref, q, paid: true, reportLink: await reportLinkFor(q), email: contactEmail() });
+    const sid = url.searchParams.get("session_id") || "";
+    if (sid && env.STRIPE_SECRET_KEY) {
+      const r = await fetch(`${env.STRIPE_API || "https://api.stripe.com"}/v1/checkout/sessions/${encodeURIComponent(sid)}`, { headers: { authorization: `Bearer ${env.STRIPE_SECRET_KEY}` } });
+      const ses = r.ok ? await r.json() : null;
+      if (ses && ses.payment_status === "paid" && ses.client_reference_id === ref) {
+        const q2 = await finaliseBooking(env, url.origin, ref, { amount: ses.amount_total, session: ses.id, email: ses.customer_details && ses.customer_details.email });
+        return bookingDone({ ref, q: q2, paid: true, reportLink: await reportLinkFor(q2), email: contactEmail() });
+      }
+    }
+    if (q.status === "awaiting-payment") return bookingDone({ ref, q, paid: false, pending: true, email: contactEmail() });
+    return bookingDone({ ref, q, paid: false, email: contactEmail() });
+  }
+  if (paid) return Response.redirect(new URL(`/book/${ref}/done?t=${encodeURIComponent(t)}`, url).toString(), 303);
+  if (offer.sentAt && Date.now() - Date.parse(offer.sentAt) > BOOK_DAYS * 864e5) return bookingClosed(`This booking link expired ${BOOK_DAYS} days after it was sent.`, contactEmail());
+  const stripeOn = !!env.STRIPE_SECRET_KEY;
+  if (request.method === "GET") return bookingPage({ ref, t, q, offer, cancelled: url.searchParams.get("cancelled") === "1", stripeOn, email: contactEmail() });
+
+  // POST: save details + terms, then pay
+  const origin = request.headers.get("origin");
+  if (origin && new URL(origin).host !== url.host) return new Response("Forbidden", { status: 403 });
+  if (tooMany(request)) return bookingPage({ ref, t, q, offer, error: "Too many tries. Please wait a minute and try again.", stripeOn, email: contactEmail() });
+  let form; try { form = await request.formData(); } catch { return new Response("Bad request", { status: 400 }); }
+  const f = (n, max) => String(form.get(n) || "").replace(/\r/g, "").trim().slice(0, max);
+  const details = { title: f("title", 120), pay: f("pay", 40), countries: f("countries", 120), blurb: f("blurb", 140), desc: f("desc", 3000), reqs: f("reqs", 1500), url: f("url", 600), logo: f("logo", 400), extra: f("extra", 300) };
+  const again = (error) => bookingPage({ ref, t, q: { ...q, data: { ...q.data, details } }, offer, error, stripeOn, email: contactEmail() });
+  if (!details.title || !details.pay || !details.countries || details.desc.length < 60 || !details.url) return again("Please fill in every required field (the description needs at least a couple of sentences).");
+  if (form.get("agree") !== "1" || f("sign", 80).length < 3) return again("Please type your full name and tick the box to accept the Advertising Terms.");
+  const v = await vetLink(details.url, q.data.site);
+  if (v.result === "fail") return again("We can't accept that application link: " + v.reasons.join(" "));
+  if (details.logo && !/^https:\/\//.test(details.logo)) details.logo = "";
+  const accepted = { name: f("sign", 80), at: new Date().toISOString(), version: AD_TERMS_VERSION, country: request.cf?.country || "" };
+  await db.updateEnquiry(ref, { details, accepted, vet2: v }, "details");
+
+  if (offer.price === 0) { // free week / comp: no payment needed
+    await finaliseBooking(env, url.origin, ref, { amount: 0, free: true });
+    return Response.redirect(new URL(`/book/${ref}/done?t=${encodeURIComponent(t)}`, url).toString(), 303);
+  }
+  if (!stripeOn) {
+    await db.setEnquiryStatus(ref, "awaiting-payment");
+    ctx.waitUntil(sendOwnerText(env, `Booking ${ref}: details in, send a payment link`, [`${q.data.company} filled in their job details and accepted the terms.`, `Package: ${offer.option}, ${money2(offer.price)}`, "", "Card payments aren't switched on (no STRIPE_SECRET_KEY), so send them a payment link yourself, then mark it paid in Admin → Sponsored."].join("\r\n")).catch(() => {}));
+    return Response.redirect(new URL(`/book/${ref}/done?t=${encodeURIComponent(t)}`, url).toString(), 303);
+  }
+  const back = `${url.origin}/book/${ref}`;
+  const params = new URLSearchParams({
+    mode: "payment", client_reference_id: ref, "metadata[ref]": ref,
+    success_url: `${back}/done?t=${t}&session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${back}?t=${t}&cancelled=1`,
+    "line_items[0][quantity]": "1", "line_items[0][price_data][currency]": "gbp", "line_items[0][price_data][unit_amount]": String(offer.price),
+    "line_items[0][price_data][product_data][name]": `GigrAI: ${offer.option}`,
+    "line_items[0][price_data][product_data][description]": `${details.title} · ${offer.start} to ${offer.until} · booking ${ref}`.slice(0, 300),
+    "invoice_creation[enabled]": "true", "payment_intent_data[description]": `GigrAI booking ${ref}`,
+  });
+  if (EMAIL_RE.test(q.data.email || "")) params.set("customer_email", q.data.email);
+  const r = await fetch(`${env.STRIPE_API || "https://api.stripe.com"}/v1/checkout/sessions`, { method: "POST", headers: { authorization: `Bearer ${env.STRIPE_SECRET_KEY}`, "content-type": "application/x-www-form-urlencoded" }, body: params });
+  const ses = await r.json().catch(() => ({}));
+  if (!r.ok || !ses.url) { console.error("stripe session failed", r.status, JSON.stringify(ses).slice(0, 300)); return again("Card payment isn't available right now. Please try again in a few minutes, or email us."); }
+  await db.updateEnquiry(ref, { stripeSession: ses.id }, "checkout");
+  return Response.redirect(ses.url, 303);
+}
+const money2 = (p) => "£" + (p / 100).toFixed(p % 100 ? 2 : 0);
+
+// After payment (or a free booking): create the Sponsored listing, waiting for your approval. Safe to run twice.
+async function finaliseBooking(env, origin, ref, pay) {
+  const db = content(env);
+  const q = await db.getEnquiry(ref);
+  if (!q) return null;
+  if (q.data.paid) return q;
+  const o = q.data.offer, det = q.data.details || {};
+  const base = slugify(q.data.company).slice(0, 24) || "sponsor";
+  let id = base; for (let i = 2; await db.getSponsor(id) || ((SPONSORED.featured || []).some(x => x.id === id)); i++) id = `${base}-${i}`;
+  const ppc = /per click/i.test(o.option);
+  const sp = {
+    id, company: q.data.company, title: det.title || q.data.role, url: det.url || q.data.url, pay: det.pay || q.data.pay || "", blurb: det.blurb || "",
+    option: o.option, start: o.start, until: o.until, pin: !/instagram|whatsapp/i.test(o.option), ref, approved: false,
+    notes: [det.countries && `Who can apply: ${det.countries}`, det.reqs && `Requirements: ${det.reqs}`, det.extra && `Extra: ${det.extra}`].filter(Boolean).join("\n").slice(0, 500),
+    desc: det.desc || "", logo: det.logo || "",
+    ...(ppc ? { cpc: o.cpc || 1.5, budget: o.budget || 100 } : {}),
+  };
+  await db.saveSponsor(sp); sponsorMemo.at = 0;
+  const q2 = await db.updateEnquiry(ref, { paid: { amount: pay.amount || 0, at: new Date().toISOString(), session: pay.session || "", free: !!pay.free }, sponsorId: id }, "paid");
+  await sendOwnerText(env, `${pay.free ? "Confirmed" : "Paid"}: ${q.data.company}, ${o.option}${pay.amount ? " " + money2(pay.amount) : ""}`, [
+    `Booking ${ref} is ${pay.free ? "confirmed (free)" : "paid"}.`, `Company: ${q.data.company} <${q.data.email}>`, `Package: ${o.option}, ${o.start} to ${o.until}`, `Role: ${sp.title} (${sp.pay})`, `Link: ${sp.url}`, "",
+    "Next: open Admin → Sponsored, check the listing and tap Approve. It won't show on the site until you do.", `${origin}/admin`,
+  ].join("\r\n")).catch(e => console.error("owner email failed", String(e)));
+  return q2;
+}
+
+// Stripe webhook (optional backup, if STRIPE_WEBHOOK_SECRET is set): confirms payments even if the customer closes the tab
+async function stripeWebhook(request, env, ctx) {
+  if (!env.STRIPE_WEBHOOK_SECRET) return new Response("not configured", { status: 404 });
+  const body = await request.text();
+  const sig = Object.fromEntries((request.headers.get("stripe-signature") || "").split(",").map(x => x.split("=")));
+  if (!sig.t || !sig.v1 || Math.abs(Date.now() / 1000 - +sig.t) > 600) return new Response("bad signature", { status: 400 });
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(env.STRIPE_WEBHOOK_SECRET), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = [...new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${sig.t}.${body}`)))].map(b => b.toString(16).padStart(2, "0")).join("");
+  if (mac !== sig.v1) return new Response("bad signature", { status: 400 });
+  let ev; try { ev = JSON.parse(body); } catch { return new Response("bad json", { status: 400 }); }
+  if (ev.type === "checkout.session.completed" && ev.data?.object?.payment_status === "paid" && /^GA-[A-F0-9]{6}$/.test(ev.data.object.client_reference_id || "")) {
+    const o = ev.data.object;
+    ctx.waitUntil(finaliseBooking(env, new URL(request.url).origin, o.client_reference_id, { amount: o.amount_total, session: o.id }).catch(e => console.error("webhook finalise failed", String(e))));
+  }
+  return new Response("ok");
+}
+
+async function sendOwnerText(env, subject, text) {
+  if (!env.NOTIFY) return;
+  const from = "partners@remotegigrai.com", to = env.NOTIFY_TO || "remotegigr.ai@gmail.com";
+  const b64 = (str) => btoa(String.fromCharCode(...new TextEncoder().encode(str)));
+  const raw = [`From: GigrAI bookings <${from}>`, `To: ${to}`, `Subject: =?UTF-8?B?${b64(subject)}?=`, `Message-ID: <bk.${Date.now()}@remotegigrai.com>`, `Date: ${new Date().toUTCString()}`,
+    "MIME-Version: 1.0", "Content-Type: text/plain; charset=utf-8", "Content-Transfer-Encoding: base64", "", b64(text).replace(/.{76}/g, "$&\r\n")].join("\r\n");
+  await env.NOTIFY.send(new EmailMessage(from, to, raw));
+}
+
 function reportExpired(origin, sponsor, email) {
   const e = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
   return html(shellPage({ title: "Report closed · GigrAI", desc: "Private.", canonical: "", robots: "noindex,nofollow", body: `<section class="hero sm" style="text-align:center;max-width:620px;margin:0 auto"><span class="eyebrow"><i></i>Campaign report</span><h1>This report has <span class="grad-text">closed</span></h1><p>The report for ${e(sponsor.company || "this campaign")} was available until ${e(reportOpenUntil(sponsor))}, two weeks after the campaign ended. Need a copy or want to run another campaign? Email <a href="mailto:${e(email || "partners@remotegigrai.com")}">${e(email || "partners@remotegigrai.com")}</a>.</p><p><a class="btn btn-grad" href="/advertise" style="color:#fff">Book another campaign</a></p></section>` }), 410);
@@ -1052,7 +1194,7 @@ async function adminDashboard(env, ctx, k, url) {
     loadFeed(env, ctx).catch(() => []), sponsorsCfg(env), db ? db.listEnquiries(30).catch(() => []) : [], db ? db.listRoles().catch(() => []) : [], meta(env, "weekly_sent"),
   ]);
   const sp = cfg.featured.filter(f => f.id !== "example");
-  const liveSp = sp.filter(f => !f.ended && f.start <= today && f.until >= today), soonSp = sp.filter(f => !f.ended && f.start > today);
+  const liveSp = sp.filter(f => !f.ended && f.approved !== false && f.start <= today && f.until >= today), soonSp = sp.filter(f => !f.ended && f.approved !== false && f.start > today);
   const newEnq = enq.filter(x => x.status === "new");
   const expiring = added.filter(r => r.expires <= ukDay(7));
   const nextMon = (() => { for (let i = 0; i < 8; i++) { const d = ukDay(i); if (new Date(d + "T12:00:00Z").getUTCDay() === 1 && (i > 0 || sentWeekly !== d)) return d; } return ""; })();
@@ -1060,7 +1202,9 @@ async function adminDashboard(env, ctx, k, url) {
   const stat = (n, label) => `<div class="ds"><b>${(n ?? 0).toLocaleString("en-GB")}</b><span>${label}</span></div>`;
   const tile = (path, icon, title, line, alert = "") => `<a class="dt" href="${path}?k=${q}"><span class="di">${icon}</span><span class="dtt">${title}${alert ? `<i>${alert}</i>` : ""}</span><span class="dl">${line}</span></a>`;
   const todo = [
-    ...newEnq.slice(0, 3).map(x => `<li>📩 New booking: <b>${e(x.data.company)}</b> · ${e(x.data.option)} · starts ${e(x.data.start)} · <a href="/admin/sponsored?k=${q}&from=${e(x.ref)}">Paid? Set up →</a></li>`),
+    ...sp.filter(f => f.approved === false).map(f => `<li>✅ <b>${e(f.company)}</b> has paid: approve their listing · <a href="/admin/sponsored?k=${q}">Review →</a></li>`),
+    ...enq.filter(x => x.status === "awaiting-payment").map(x => `<li>💳 <b>${e(x.data.company)}</b> needs a payment link · <a href="/admin/sponsored?k=${q}">Open →</a></li>`),
+    ...newEnq.slice(0, 3).map(x => `<li>📩 New booking: <b>${e(x.data.company)}</b> · ${e(x.data.option)} · starts ${e(x.data.start)} · <a href="/admin/sponsored?k=${q}">Send their booking link →</a></li>`),
     ...soonSp.slice(0, 3).map(f => `<li>🗓️ Sponsored <b>${e(f.title)}</b> (${e(f.company)}) goes live ${nice(f.start)}</li>`),
     ...liveSp.filter(f => f.until <= ukDay(2)).map(f => `<li>⏳ Sponsored <b>${e(f.title)}</b> ends ${nice(f.until)}: offer them another week?</li>`),
     ...expiring.slice(0, 3).map(r => `<li>⌛ Added role <b>${e(r.title)}</b> expires ${nice(r.expires)} · <a href="/admin/roles?k=${q}">Check →</a></li>`),
@@ -1088,15 +1232,38 @@ ${tile("/report-weekly", "📧", "Weekly email", `Next send ${nice(nextMon)}, 9a
 }
 
 // ---- /admin/sponsored: paid listings with dates ----
-function adminSponsoredPage({ k, rows, used, links, prefill, origin, msg }) {
+function adminSponsoredPage({ k, rows, used, links, prefill, enquiries = [], bookLinks = {}, stripeOn = false, origin, msg }) {
   const e = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
   const today = ukDay();
   const pf = prefill || {};
-  const status = (r) => (r.ended || r.until < today) ? ["Ended", "#9aa3c7"] : r.start > today ? ["Scheduled", "#ffe0a3"] : (clickCap(r) && (used[r.id] || 0) >= clickCap(r)) ? ["Budget used", "#ffb3b3"] : ["Live", "#9ff0c5"];
+  const STEP = { new: ["New request", "#9fdcf0"], sent: ["Link sent", "#ffe0a3"], details: ["Details in, not paid", "#ffb86b"], checkout: ["At checkout", "#ffb86b"], "awaiting-payment": ["Needs a payment link", "#ffb3b3"], paid: ["Paid ✓", "#9ff0c5"], booked: ["Listing set up ✓", "#9ff0c5"] };
+  const bookingCard = (q) => {
+    const d = q.data, o = d.offer, [lab, col] = STEP[q.status] || [q.status, "#ccc"];
+    const optSel = AD_OPTIONS.map(x => `<option value="${e(x.name)}" ${(o ? o.option : d.option) === x.name ? "selected" : ""}>${e(x.name)} (${e(x.price)}${x.per ? " " + e(x.per) : ""})</option>`).join("");
+    const st0 = (o && o.start) || d.start || today;
+    const link = bookLinks[q.ref];
+    const mail = link ? `mailto:${encodeURIComponent(d.email || "")}?subject=${encodeURIComponent(`Your GigrAI booking ${q.ref}`)}&body=${encodeURIComponent(`Hi ${(d.name || "").split(" ")[0] || "there"},\n\nThanks for booking with GigrAI. Here's your secure booking link to confirm your package (${o.option}, ${o.start} to ${o.until}), add your job details, accept our Advertising Terms and pay:\n\n${link}\n\nIt takes about 3 minutes and works for ${BOOK_DAYS} days. Your listing goes live on the start date, and you'll get a private live report to track it.\n\nThanks,\nGigrAI`)}` : "";
+    return `<div class="sp"><div class="sp-h"><b>${e(d.company)} · ${e(d.role || "")}</b><span class="stb" style="color:${col};border-color:${col}">${lab}</span></div>
+<div class="sp-m">${e(q.ref)} · ${e(d.name)} &lt;${e(d.email)}&gt; · asked for ${e(d.option)} from ${e(d.start)}${d.budget ? ` · £${e(d.budget)} budget` : ""}${d.vet && d.vet.result !== "pass" ? ` · <span style="color:#ffb86b">link check: needs a look</span>` : ""}</div>
+${d.paid ? `<div class="sp-m">${d.paid.free ? "Confirmed free" : `Paid <b>${money2(d.paid.amount || 0)}</b>`} on ${e((d.paid.at || "").slice(0, 10))}${d.accepted ? ` · terms accepted by ${e(d.accepted.name)}` : ""}. Approve the listing under Listings.</div>` : `
+${link ? `<label>Booking link (${o.price ? money2(o.price) : "free"}, works ${BOOK_DAYS} days)<input readonly value="${e(link)}" onclick="this.select()"></label>
+<div class="sp-a"><a class="b tiny primary" href="${e(mail)}">Email them</a><button type="button" class="b tiny" onclick="navigator.clipboard.writeText('${e(link)}').then(()=>{this.textContent='Copied ✓'})">Copy link</button><a class="b tiny" href="${e(link)}" target="_blank">Preview</a></div>` : ""}
+${d.accepted ? `<div class="sp-m">Details in and terms accepted by ${e(d.accepted.name)} on ${e(d.accepted.at.slice(0, 10))}.</div>` : ""}
+<details class="sp-x"${link ? "" : " open"}><summary>${link ? "Change package, dates or price" : "Prepare their booking link"}</summary>
+<form method="post" class="sp-n"><input type="hidden" name="k" value="${e(k)}"><input type="hidden" name="offer" value="${e(q.ref)}">
+<div class="row"><label>Package<select name="option">${optSel}</select></label><label>Price (£) <small>Leave empty for the listed price. 0 = free</small><input name="price" type="number" step="0.01" min="0" value="${o && o.price !== offerPrice(o.option, o.budget) ? (o.price / 100) : ""}"></label></div>
+<div class="row"><label>Start<input name="start" type="date" value="${e(st0)}"></label><label>End <small>Leave empty to set from the package</small><input name="until" type="date" value="${e((o && o.until) || "")}"></label></div>
+<div class="row"><label>Budget (£) <small>Pay per click only</small><input name="budget" type="number" min="1" value="${e((o && o.budget) || d.budget || "")}"></label><label>Price per click (£)<input name="cpc" type="number" step="0.01" min="0.1" value="${e((o && o.cpc) || 1.5)}"></label></div>
+<div class="sp-a"><button class="b tiny primary">Save and create link</button></div></form></details>
+<form method="post" class="sp-a"><input type="hidden" name="k" value="${e(k)}">${d.details && !d.paid ? `<button class="b tiny" name="markpaid" value="${e(q.ref)}">Mark as paid (bank transfer)</button>` : ""}<button class="b tiny" name="archive" value="${e(q.ref)}">Archive</button></form>`}
+</div>`;
+  };
+  const status = (r) => r.approved === false ? ["Needs approval", "#ffb86b"] : (r.ended || r.until < today) ? ["Ended", "#9aa3c7"] : r.start > today ? ["Scheduled", "#ffe0a3"] : (clickCap(r) && (used[r.id] || 0) >= clickCap(r)) ? ["Budget used", "#ffb3b3"] : ["Live", "#9ff0c5"];
   const fileRows = (SPONSORED.featured || []).filter(x => x.id !== "example");
   const card = (r, fromFile) => { const [st, col] = status(r); const cap = clickCap(r); return `<div class="sp">
-<div class="sp-h"><b>${e(r.title)}</b><span class="badge" style="color:${col};border-color:${col}">${st}</span></div>
+<div class="sp-h"><b>${e(r.title)}</b><span class="stb" style="color:${col};border-color:${col}">${st}</span></div>
 <div class="sp-m">${e(r.company)} · ${e(r.option || "Featured")} · ${e(r.start)} → ${e(r.until)}${r.pin !== false ? " · pinned on site" : " · posts only"}${r.ref ? " · " + e(r.ref) : ""}${fromFile ? " · (set in sponsored.json)" : ""}</div>
+${r.approved === false ? `<div class="sp-m" style="color:var(--soft)"><b>Submitted by the advertiser.</b> Check it, then approve.${r.desc ? `<br><i>${e(r.desc.slice(0, 400))}${r.desc.length > 400 ? "…" : ""}</i>` : ""}${r.notes ? `<br>${e(r.notes).replace(/\n/g, "<br>")}` : ""}${r.logo ? `<br>Logo: <a href="${e(r.logo)}" target="_blank" style="color:#9fdcf0">open</a>` : ""}<br>Link: <a href="${e(r.url)}" target="_blank" rel="noopener" style="color:#9fdcf0">${e(r.url)}</a></div><form method="post" class="sp-a"><input type="hidden" name="k" value="${e(k)}"><button class="b tiny primary" name="approve" value="${e(r.id)}">Approve listing</button></form>` : ""}
 <div class="sp-m">Unique clicks: <b>${used[r.id] || 0}</b>${cap ? ` of ${cap} paid for (£${(+r.cpc).toFixed(2)}/click, £${r.budget} budget)` : ""}</div>
 ${links[r.id] ? `<label>Report link to send them <small>Works until ${e(reportOpenUntil(r))}${today > reportOpenUntil(r) ? " (closed for them; you can still open it)" : ""}</small><input readonly value="${e(links[r.id])}" onclick="this.select()"></label>
 <div class="sp-a"><a class="b tiny" href="${e(links[r.id])}" target="_blank">Open report</a><button type="button" class="b tiny" onclick="navigator.clipboard.writeText('${e(links[r.id])}').then(()=>{this.textContent='Copied ✓'})">Copy link</button></div>` : ""}
@@ -1105,7 +1272,7 @@ ${fromFile ? "" : `<details class="sp-x"><summary>Add Instagram / WhatsApp numbe
 <div class="row"><label>Instagram reach <small>Accounts reached (Insights)</small><input name="ig_reach" type="number" min="0" value="${e(r.ig_reach || "")}"></label><label>Instagram link taps<input name="ig_taps" type="number" min="0" value="${e(r.ig_taps || "")}"></label></div>
 <div class="row"><label>WhatsApp channel views<input name="wa_views" type="number" min="0" value="${e(r.wa_views || "")}"></label><label>Keep report open until <small>Optional</small><input name="report_until" type="date" value="${e(r.reportUntil || "")}"></label></div>
 <button class="b tiny">Save numbers</button></form></details>
-<form method="post" class="sp-a"><input type="hidden" name="k" value="${e(k)}">${st === "Live" || st === "Budget used" ? `<button class="b tiny danger" name="end" value="${e(r.id)}">End now</button>` : ""}${st === "Scheduled" ? `<button class="b tiny danger" name="delete" value="${e(r.id)}">Delete</button>` : ""}</form>`}</div>`; };
+<form method="post" class="sp-a"><input type="hidden" name="k" value="${e(k)}">${st === "Live" || st === "Budget used" ? `<button class="b tiny danger" name="end" value="${e(r.id)}">End now</button>` : ""}${st === "Scheduled" || st === "Needs approval" ? `<button class="b tiny danger" name="delete" value="${e(r.id)}">Delete</button>` : ""}</form>`}</div>`; };
   const opts = AD_OPTIONS.map(o => `<option value="${e(o.name)}" ${pf.option === o.name ? "selected" : ""}>${e(o.name)} (${e(o.price)}${o.per ? " " + e(o.per) : ""})</option>`).join("");
   const body = `<style>
 .adm{display:grid;gap:14px;max-width:880px;margin:0 auto}.adm form.add{display:grid;gap:14px}
@@ -1117,7 +1284,7 @@ ${fromFile ? "" : `<details class="sp-x"><summary>Add Instagram / WhatsApp numbe
 .adm .msg{padding:12px 16px;border-radius:12px;background:rgba(61,214,140,.12);border:1px solid rgba(61,214,140,.35)}.adm .help{font-size:13.5px;color:var(--muted);line-height:1.6}
 .adm .tog{display:flex;gap:10px;align-items:center;font-weight:600}.adm .tog input{width:22px;height:22px}
 .sp{padding:16px;border-radius:16px;border:1px solid var(--line);background:var(--glass);display:grid;gap:8px}.sp-h{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.sp-m{font-size:13.5px;color:var(--muted);line-height:1.6}.sp-m code{font-size:12.5px;word-break:break-all}.badge{font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;border:1px solid}
+.sp-m{font-size:13.5px;color:var(--muted);line-height:1.6}.sp-m code{font-size:12.5px;word-break:break-all}.stb{font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;border:1px solid;background:rgba(0,0,0,.25);white-space:nowrap}
 .sp-a{display:flex;gap:8px;flex-wrap:wrap}.sp-x summary{cursor:pointer;color:#9fdcf0;font-size:14px;font-weight:600}.sp-n{display:grid;gap:10px;margin-top:10px}
 .adm [hidden]{display:none!important}.adm input:not([type=checkbox]),.adm select{min-width:0;max-width:100%;box-sizing:border-box;min-height:50px}.adm .tog input{width:24px!important;height:24px!important;flex:0 0 24px;accent-color:#2f6bff}.adm input[type=date]{-webkit-appearance:none;appearance:none;display:block;text-align:left;line-height:1.2}.adm input[type=date]::-webkit-date-and-time-value{text-align:left}.adm .row>label{min-width:0}
 @media (max-width:560px){.adm .row{grid-template-columns:minmax(0,1fr)!important}}
@@ -1126,7 +1293,10 @@ ${fromFile ? "" : `<details class="sp-x"><summary>Add Instagram / WhatsApp numbe
 <p>Set up a paid listing once the advertiser has paid. It goes live on the start date, shows with a "Sponsored" label, and comes down by itself after the end date.</p>
 <p><a class="b" href="/advertise/terms" target="_blank">Advertising Terms</a></p></section>
 ${msg ? `<p class="msg">${e(msg)}</p>` : ""}
-<form method="post" class="add"><input type="hidden" name="k" value="${e(k)}"><input type="hidden" name="ref" value="${e(pf.ref || "")}">
+<section><h2 style="margin:4px 0 6px">Bookings</h2><p class="help" style="margin:0 0 10px">From the form on /advertise. Prepare a booking link, send it, and they confirm the package, add the job details, accept the terms and ${stripeOn ? "pay by card" : "submit (card payments switch on when STRIPE_SECRET_KEY is added)"}. The listing then appears under Listings for you to approve.</p>
+${enquiries.length ? enquiries.map(q => bookingCard(q)).join("") : "<p class='help'>No booking requests yet.</p>"}</section>
+<details class="sp-x"${pf.ref ? " open" : ""}><summary style="font-size:15px">Set up a listing by hand (deals agreed outside the booking flow)</summary>
+<form method="post" class="add" style="margin-top:12px"><input type="hidden" name="k" value="${e(k)}"><input type="hidden" name="ref" value="${e(pf.ref || "")}">
 ${pf.ref ? `<p class="help">Filled in from booking request <b>${e(pf.ref)}</b>. Check everything before saving.</p>` : ""}
 <div class="row"><label>Package bought<select name="option" id="spOpt">${opts}</select></label><label>Company<input name="company" required maxlength="80" value="${e(pf.company || "")}"></label></div>
 <label>Listing title <small>What the Sponsored card says, e.g. "AI Trainer (Maths)"</small><input name="title" required maxlength="120" value="${e(pf.role || "")}"></label>
@@ -1138,7 +1308,7 @@ ${pf.ref ? `<p class="help">Filled in from booking request <b>${e(pf.ref)}</b>. 
 <div class="row" id="spPpc" hidden><label>Price per click (£)<input name="cpc" type="number" step="0.01" min="0.1" value="1.50"></label><label>Budget (£)<input name="budget" type="number" min="1" value="${e(pf.budget || 100)}"></label></div>
 <label>Private notes <small>Only you see these</small><textarea name="notes" maxlength="500">${e(pf.notes || "")}</textarea></label>
 <p class="help">Only set this up after they've paid and you've checked the role is real and free to apply for. They agree to the <a href="/advertise/terms" target="_blank">Advertising Terms</a> when they book.</p>
-<div><button class="primary">Save listing</button></div></form>
+<div><button class="primary">Save listing</button></div></form></details>
 <script>(function(){var o=document.getElementById("spOpt"),s=document.getElementById("spStart"),u=document.getElementById("spUntil"),p=document.getElementById("spPin"),c=document.getElementById("spPpc");
 function days(n){return /monthly/i.test(n)?29:/per click/i.test(n)?29:6}
 function upd(){var n=o.value,d=new Date(s.value+"T12:00:00Z");if(!isNaN(d)){d.setUTCDate(d.getUTCDate()+days(n));u.value=d.toISOString().slice(0,10)}p.checked=!/instagram|whatsapp/i.test(n);c.hidden=!/per click/i.test(n)}
@@ -1339,10 +1509,12 @@ async function handleAdmin(request, url, env, ctx) {
     const rows = await db.listSponsors();
     const used = await countMany(env, "sponsor_u", rows.map(r => ({ k: r.id, from: statsDay(r.start || "2000-01-02", -1) })));
     const links = Object.fromEntries(await Promise.all(rows.map(async r => [r.id, `${url.origin}/report/${r.id}?k=${await signKey(env, "sponsor:" + r.id)}`])));
+    const enquiries = (await db.listEnquiries(40)).filter(x => x.status !== "archived");
+    const bookLinks = Object.fromEntries(await Promise.all(enquiries.filter(x => x.data.offer).map(async x => [x.ref, await bookLink(env, url.origin, x.ref)])));
     let prefill = null;
     const ref = url.searchParams.get("from");
-    if (ref) { const q = (await db.listEnquiries(100)).find(x => x.ref === ref); if (q) prefill = { ...q.data, ref }; }
-    return nav(noStore(adminSponsoredPage({ k, rows, used, links, prefill, origin: url.origin, msg: url.searchParams.get("msg") || "" })), "sponsored");
+    if (ref) { const q = enquiries.find(x => x.ref === ref); if (q) prefill = { ...q.data, ref }; }
+    return nav(noStore(adminSponsoredPage({ k, rows, used, links, prefill, enquiries, bookLinks, stripeOn: !!env.STRIPE_SECRET_KEY, origin: url.origin, msg: url.searchParams.get("msg") || "" })), "sponsored");
   }
   if (url.pathname === "/admin/sponsored" && request.method === "POST") {
     const backS = (msg) => Response.redirect(new URL(`/admin/sponsored?k=${encodeURIComponent(k)}&msg=${encodeURIComponent(msg)}`, url).toString(), 303);
@@ -1353,6 +1525,32 @@ async function handleAdmin(request, url, env, ctx) {
       await db.saveSponsor({ ...s0, until: yesterday, ended: today }); sponsorMemo.at = 0; // comes off the site straight away
       return backS(`Ended "${s0.title}" today. Its report and links keep working for 60 days.`);
     }
+    if (form.get("offer")) { // prepare / update the client's booking link
+      const ref = f("offer", 12), q = await db.getEnquiry(ref); if (!q) return backS("Booking not found.");
+      const option = AD_OPTIONS.find(o => o.name === f("option", 60)); if (!option) return backS("Choose a package.");
+      const start = f("start", 10);
+      let until = f("until", 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(start) && !until) until = statsDay(start, /monthly|per click/i.test(option.name) ? 29 : 6);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(until) || until < start) return backS("Check the dates.");
+      const ppc = /per click/i.test(option.name);
+      const budget = ppc ? Math.max(1, +f("budget", 8) || q.data.budget || 100) : 0, cpc = ppc ? Math.max(0.1, +f("cpc", 6) || 1.5) : 0;
+      const priceIn = f("price", 10);
+      const price = priceIn === "" ? offerPrice(option.name, budget) : Math.max(0, Math.round(parseFloat(priceIn) * 100) || 0);
+      await db.updateEnquiry(ref, { offer: { option: option.name, start, until, price, budget, cpc, sentAt: new Date().toISOString() } }, q.data.paid ? q.status : "sent");
+      return backS(`Booking link ready for ${q.data.company} (${money2(price)}). Copy it or tap "Email them" below. It works for ${BOOK_DAYS} days.`);
+    }
+    if (form.get("approve")) {
+      const s0 = await db.getSponsor(f("approve", 60)); if (!s0) return backS("Listing not found.");
+      await db.saveSponsor({ ...s0, approved: true }); sponsorMemo.at = 0;
+      return backS(`Approved "${s0.title}". It goes live on ${s0.start}.`);
+    }
+    if (form.get("markpaid")) { // paid outside Stripe (bank transfer etc.)
+      const ref = f("markpaid", 12), q = await db.getEnquiry(ref);
+      if (!q || !q.data.offer || !q.data.details) return backS("They need to fill in their details and accept the terms first.");
+      await finaliseBooking(env, url.origin, ref, { amount: q.data.offer.price, session: "manual" });
+      return backS(`Marked ${q.data.company} as paid. Their listing is below, waiting for your approval.`);
+    }
+    if (form.get("archive")) { await db.setEnquiryStatus(f("archive", 12), "archived"); return backS("Booking request archived."); }
     if (form.get("stats")) {
       const s0 = await db.getSponsor(f("stats", 60)); if (!s0) return backS("Listing not found.");
       const num = (n) => { const v = parseInt(f(n, 9)); return Number.isFinite(v) && v >= 0 ? v : null; };

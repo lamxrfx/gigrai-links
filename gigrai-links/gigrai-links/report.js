@@ -478,7 +478,7 @@ ${(() => { const keys = (views && views.byKey || []).map(r => r.k).filter(k => M
   <code>${esc(e.url)}</code>
   <span class="meta" style="color:${v.result === "pass" ? "#9ff0c5" : "#ffe0a3"}">Link check: ${v.result === "pass" ? "passed" : "needs a look: " + esc((v.warns || []).join(" "))}</span>
   ${e.notes ? `<span class="meta">Notes: ${esc(e.notes)}</span>` : ""}
-  ${key ? `<span class="meta">${q.status === "booked" ? "✅ Listing set up" : `<a href="/admin/sponsored?k=${esc(key)}&from=${esc(q.ref)}">Paid? Set up the listing →</a>`}</span>` : ""}
+  ${key ? `<span class="meta">${q.status === "booked" || q.status === "paid" ? "✅ Paid / listing set up" : `<a href="/admin/sponsored?k=${esc(key)}">Manage this booking in Sponsored →</a>`}</span>` : ""}
 </div>`; }).join("")}</div>` : `<p class="note">No requests yet. They arrive from the form on /advertise.</p>`}</section>
 <section class="block"><h2>Advertiser links</h2>${key ? `<p class="note"><a href="/admin/sponsored?k=${esc(key)}">➕ Add or manage sponsored listings</a> (dates, Sponsored label, click reports)</p>` : ""}<div class="rlinks">${sponsorBlocks}</div></section>`;
   return pageOf({ title: "GigrAI numbers (private)", desc: "Private.", canonical: "", body, robots: "noindex,nofollow" });

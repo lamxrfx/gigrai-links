@@ -505,7 +505,7 @@ export const clickCap = (f) => (f && +f.cpc > 0 && +f.budget > 0 ? Math.floor(+f
 export function liveFeatured(cfg) {
   const today = ukDay();
   return ((cfg && cfg.featured) || []).filter((f) =>
-    validSponsor(f) && f.title && f.pin !== false && (f.start || "") <= today && (f.until || "") >= today);
+    validSponsor(f) && f.title && f.pin !== false && f.approved !== false && (f.start || "") <= today && (f.until || "") >= today);
 }
 
 export function featuredHtml(list) {
