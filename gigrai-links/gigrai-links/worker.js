@@ -1,5 +1,5 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
-import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat, setEmail, alertsConfirmedPage } from "./seo.js";
+import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, advertiseTermsPage, AD_TERMS_VERSION, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat, setEmail, alertsConfirmedPage } from "./seo.js";
 import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, netName, flagged, markOwner, isOwner, roleClick, topRoles, meta, pageHit, topPages } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
@@ -177,7 +177,7 @@ const app = {
       if (vet.result === "fail") return json({ ok: false, error: "We can't accept that application link: " + vet.reasons.join(" ") }, 400);
       const ref = "GA-" + [...crypto.getRandomValues(new Uint8Array(3))].map(b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
       const db = content(env);
-      if (db) await db.addEnquiry(ref, { ...e, vet, country: request.cf?.country || "" });
+      if (db) await db.addEnquiry(ref, { ...e, vet, country: request.cf?.country || "", terms: AD_TERMS_VERSION, terms_at: new Date().toISOString() });
       ctx.waitUntil(notifyEnquiry(env, ref, e, vet).catch(err => console.error("notify failed", String(err))));
       console.log(JSON.stringify({ event: "enquiry", ref, option: e.option, vet: vet.result }));
       return json({ ok: true, ref });
@@ -201,7 +201,7 @@ const app = {
       const id = decodeURIComponent(url.pathname.slice(4));
       if (!/^[a-z0-9]{1,30}-[A-Za-z0-9_-]{1,80}$/.test(id)) return Response.redirect(new URL("/", url).toString(), 302);
       if (id.startsWith("sponsored-")) {
-        const f = allSponsors(SPONSORED).find(x => "sponsored-" + x.id === id);
+        const f = allSponsors(await sponsorsCfg(env)).find(x => "sponsored-" + x.id === id);
         const src = cleanSrc(url.searchParams.get("src")) || "direct";
         console.log(JSON.stringify({ event: "apply_click", id, platform: "sponsored", found: !!f, src, country: request.cf?.country || "??" }));
         if (f && isHuman(request)) { track(env, ctx, request, "sponsor", f.id, src); trackUnique(env, ctx, request, f.id, src); track(env, ctx, request, "apply", "sponsored", src); }
@@ -262,6 +262,10 @@ const app = {
     }
     if (url.pathname === "/sitemap.xml") return sitemap(url, env, ctx);
 
+    if (request.method === "GET" && (url.pathname === "/advertise/terms" || url.pathname === "/advertise/terms/")) {
+      view("advertise", "Advertising Terms");
+      return decorate(advertiseTermsPage(url.origin, MEDIAKIT.contactEmail || undefined), url, env, ctx, "/advertise");
+    }
     if (request.method === "GET" && (url.pathname === "/advertise" || url.pathname === "/advertise/")) {
       let feed = [];
       try { feed = await loadFeed(env, ctx); } catch {}
@@ -347,7 +351,7 @@ const app = {
           days = Math.max(1, Math.round((Date.parse(to) - Date.parse(from)) / 864e5) + 1);
         }
         if (views) Object.assign(views, { from, to });
-        const sponsors = allSponsors(SPONSORED).filter(s => s.id !== "example");
+        const sponsors = allSponsors(await sponsorsCfg(env)).filter(s => s.id !== "example");
         const links = await Promise.all(sponsors.map(async s => `${url.origin}/report/${s.id}?k=${await signKey(env, "sponsor:" + s.id)}`));
         const used = await countMany(env, "sponsor_u", sponsors.map(s => ({ k: s.id, from: s.start || "2000-01-01" })));
         sponsors.forEach(s => { s._unique = used[s.id] || 0; s._cap = clickCap(s); });
@@ -368,7 +372,7 @@ const app = {
         }
         return page;
       }
-      const sponsor = ((SPONSORED && SPONSORED.featured) || []).find(s => s.id === rm[1]);
+      const sponsor = (await sponsorsCfg(env)).featured.find(s => s.id === rm[1]);
       if (!sponsor || !(await keyOk(env, "sponsor:" + sponsor.id, k))) return nocache(reportsOff(url.origin));
       const today = new Date().toISOString().slice(0, 10);
       const from = /^\d{4}-\d{2}-\d{2}$/.test(sponsor.start || "") ? sponsor.start : daysAgo(29);
@@ -625,6 +629,7 @@ async function sitemap(url, env, ctx) {
     { loc: `${o}/news`, freq: "hourly", pri: "0.8" },
     { loc: `${o}/advertise`, freq: "monthly", pri: "0.4" },
     { loc: `${o}/media-kit`, freq: "weekly", pri: "0.4" },
+    { loc: `${o}/advertise/terms`, freq: "yearly", pri: "0.3" },
     ...GUIDES.map(g => ({ loc: `${o}/guides/${g.slug}`, freq: "monthly", pri: "0.8", mod: g.updated })),
     ...SITEMAP_SEARCHES.map(s => ({ loc: `${o}/?q=${encodeURIComponent(s)}`, freq: "daily", pri: "0.7" })),
   ];
@@ -1005,6 +1010,59 @@ async function mlConfirmDone(env, email) {
 }
 
 // Email the private numbers-page link to our own inbox (Cloudflare Email Routing)
+// ---- /admin/sponsored: paid listings with dates ----
+function adminSponsoredPage({ k, rows, used, links, prefill, origin, msg }) {
+  const e = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  const today = new Date().toISOString().slice(0, 10);
+  const pf = prefill || {};
+  const status = (r) => (r.ended || r.until < today) ? ["Ended", "#9aa3c7"] : r.start > today ? ["Scheduled", "#ffe0a3"] : (clickCap(r) && (used[r.id] || 0) >= clickCap(r)) ? ["Budget used", "#ffb3b3"] : ["Live", "#9ff0c5"];
+  const fileRows = (SPONSORED.featured || []).filter(x => x.id !== "example");
+  const card = (r, fromFile) => { const [st, col] = status(r); const cap = clickCap(r); return `<div class="sp">
+<div class="sp-h"><b>${e(r.title)}</b><span class="badge" style="color:${col};border-color:${col}">${st}</span></div>
+<div class="sp-m">${e(r.company)} · ${e(r.option || "Featured")} · ${e(r.start)} → ${e(r.until)}${r.pin !== false ? " · pinned on site" : " · posts only"}${r.ref ? " · " + e(r.ref) : ""}${fromFile ? " · (set in sponsored.json)" : ""}</div>
+<div class="sp-m">Unique clicks: <b>${used[r.id] || 0}</b>${cap ? ` of ${cap} paid for (£${(+r.cpc).toFixed(2)}/click, £${r.budget} budget)` : ""}</div>
+${links[r.id] ? `<label>Report link to send them<input readonly value="${e(links[r.id])}" onclick="this.select()"></label>` : ""}
+<div class="sp-m">Instagram link: <code>${e(origin)}/go/sponsored-${e(r.id)}?src=ig</code><br>WhatsApp link: <code>${e(origin)}/go/sponsored-${e(r.id)}?src=wa</code></div>
+${fromFile ? "" : `<form method="post" class="sp-a"><input type="hidden" name="k" value="${e(k)}">${st === "Live" || st === "Budget used" ? `<button class="b tiny danger" name="end" value="${e(r.id)}">End now</button>` : ""}${st === "Scheduled" ? `<button class="b tiny danger" name="delete" value="${e(r.id)}">Delete</button>` : ""}</form>`}</div>`; };
+  const opts = AD_OPTIONS.map(o => `<option value="${e(o.name)}" ${pf.option === o.name ? "selected" : ""}>${e(o.name)} (${e(o.price)}${o.per ? " " + e(o.per) : ""})</option>`).join("");
+  const body = `<style>
+.adm{display:grid;gap:14px;max-width:880px;margin:0 auto}.adm form.add{display:grid;gap:14px}
+.adm label{display:grid;gap:6px;font-weight:700;font-size:14px;color:var(--soft)}.adm label small{font-weight:500;color:var(--muted)}
+.adm input,.adm select,.adm textarea{width:100%;border-radius:12px;border:1px solid var(--line);background:#0d1024;color:var(--text);font:inherit;font-size:15px;padding:12px 14px}
+.adm textarea{min-height:80px;resize:vertical}.adm .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.adm button,.adm .b{height:48px;padding:0 20px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--text);font:inherit;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.adm .primary{background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);border:0;color:#fff}.adm .danger{border-color:rgba(255,107,107,.5);color:#ffb3b3}.adm .tiny{height:34px;padding:0 12px;font-size:13px}
+.adm .msg{padding:12px 16px;border-radius:12px;background:rgba(61,214,140,.12);border:1px solid rgba(61,214,140,.35)}.adm .help{font-size:13.5px;color:var(--muted);line-height:1.6}
+.adm .tog{display:flex;gap:10px;align-items:center;font-weight:600}.adm .tog input{width:22px;height:22px}
+.sp{padding:16px;border-radius:16px;border:1px solid var(--line);background:var(--glass);display:grid;gap:8px}.sp-h{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.sp-m{font-size:13.5px;color:var(--muted);line-height:1.6}.sp-m code{font-size:12.5px;word-break:break-all}.badge{font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;border:1px solid}
+.sp-a{display:flex;gap:8px}
+</style><div class="adm">
+<section class="hero sm" style="padding-bottom:4px"><span class="eyebrow"><i></i>Private · only for you</span><h1>Sponsored <span class="grad-text">listings</span></h1>
+<p>Set up a paid listing once the advertiser has paid. It goes live on the start date, shows with a "Sponsored" label, and comes down by itself after the end date.</p>
+<p><a class="b" href="/admin/roles?k=${e(k)}">Add roles</a> <a class="b" href="/admin?k=${e(k)}">Blog editor</a> <a class="b" href="/report?k=${e(k)}">Site numbers</a> <a class="b" href="/advertise/terms" target="_blank">Advertising Terms</a></p></section>
+${msg ? `<p class="msg">${e(msg)}</p>` : ""}
+<form method="post" class="add"><input type="hidden" name="k" value="${e(k)}"><input type="hidden" name="ref" value="${e(pf.ref || "")}">
+${pf.ref ? `<p class="help">Filled in from booking request <b>${e(pf.ref)}</b>. Check everything before saving.</p>` : ""}
+<div class="row"><label>Package bought<select name="option" id="spOpt">${opts}</select></label><label>Company<input name="company" required maxlength="80" value="${e(pf.company || "")}"></label></div>
+<label>Listing title <small>What the Sponsored card says, e.g. "AI Trainer (Maths)"</small><input name="title" required maxlength="120" value="${e(pf.role || "")}"></label>
+<div class="row"><label>Pay <small>e.g. "$40–60/hr"</small><input name="pay" maxlength="40" value="${e(pf.pay || "")}"></label><label>Short line <small>e.g. "Remote, flexible hours. Free to apply."</small><input name="blurb" maxlength="140"></label></div>
+<label>Their application link <small>Must be their own https page. Checked automatically.</small><input name="url" type="url" required value="${e(pf.url || "")}"></label>
+<input type="hidden" name="site" value="${e(pf.site || "")}">
+<div class="row"><label>Start date<input name="start" id="spStart" type="date" required value="${e(pf.start || today)}"></label><label>End date <small>Set from the package, change if agreed</small><input name="until" id="spUntil" type="date" required></label></div>
+<label class="tog"><input type="checkbox" name="pin" value="1" id="spPin" checked> Pin on the website (homepage and All roles, labelled Sponsored). Untick for Instagram/WhatsApp-only packages.</label>
+<div class="row" id="spPpc" hidden><label>Price per click (£)<input name="cpc" type="number" step="0.01" min="0.1" value="1.50"></label><label>Budget (£)<input name="budget" type="number" min="1" value="${e(pf.budget || 100)}"></label></div>
+<label>Private notes <small>Only you see these</small><textarea name="notes" maxlength="500">${e(pf.notes || "")}</textarea></label>
+<p class="help">Only set this up after they've paid and you've checked the role is real and free to apply for. They agree to the <a href="/advertise/terms" target="_blank">Advertising Terms</a> when they book.</p>
+<div><button class="primary">Save listing</button></div></form>
+<script>(function(){var o=document.getElementById("spOpt"),s=document.getElementById("spStart"),u=document.getElementById("spUntil"),p=document.getElementById("spPin"),c=document.getElementById("spPpc");
+function days(n){return /monthly/i.test(n)?29:/per click/i.test(n)?29:6}
+function upd(){var n=o.value,d=new Date(s.value+"T12:00:00Z");if(!isNaN(d)){d.setUTCDate(d.getUTCDate()+days(n));u.value=d.toISOString().slice(0,10)}p.checked=!/instagram|whatsapp/i.test(n);c.hidden=!/per click/i.test(n)}
+o.addEventListener("change",upd);s.addEventListener("change",upd);upd()})();</script>
+<section><h2>Listings</h2>${rows.length || fileRows.length ? [...rows.map(r => card(r, false)), ...fileRows.map(r => card(r, true))].join("") : "<p class='help'>No sponsored listings yet.</p>"}</section></div>`;
+  return html(shellPage({ title: "Sponsored listings · GigrAI admin", desc: "Private.", canonical: "", robots: "noindex,nofollow", body }));
+}
+
 // ---- /admin/roles: add roles by hand ----
 function adminRolesPage({ k, roles, msg }) {
   const e = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
@@ -1024,7 +1082,8 @@ function adminRolesPage({ k, roles, msg }) {
 </style><div class="adm">
 <section class="hero sm" style="padding-bottom:4px"><span class="eyebrow"><i></i>Private · only for you</span><h1>Add <span class="grad-text">roles</span></h1>
 <p>Add roles you find (Handshake, Mindrift, Instagram finds). They appear in search, role pages, guides and the Monday email straight away, and disappear on their expiry date.</p>
-<p><a class="b" href="/admin?k=${e(k)}">Blog editor</a> <a class="b" href="/report?k=${e(k)}">Site numbers</a></p></section>
+<p><a class="b" href="/admin/sponsored?k=${e(k)}">Sponsored listings</a> <a class="b" href="/admin?k=${e(k)}">Blog editor</a> <a class="b" href="/report?k=${e(k)}">Site numbers</a></p>
+<p class="help">Paid or sponsored roles go in <a href="/admin/sponsored?k=${e(k)}">Sponsored listings</a> instead, so they get dates, a Sponsored label and a click report.</p></section>
 ${msg ? `<p class="msg">${e(msg)}</p>` : ""}
 <form method="post" class="add"><input type="hidden" name="k" value="${e(k)}">
 <label>Role title<input name="title" required maxlength="140" placeholder="e.g. Generalist AI Trainer (English)"></label>
@@ -1081,9 +1140,19 @@ const emailLinkPage = (msg) => `<!doctype html><html lang="en"><head><meta chars
 <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#070914;color:#eef1ff;font:16px/1.5 system-ui,sans-serif;padding:20px}main{max-width:420px;text-align:center}button{margin-top:14px;height:48px;padding:0 22px;border:0;border-radius:999px;color:#fff;font-weight:700;font-size:15px;background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);cursor:pointer}p{color:#a9b0cc}</style></head>
 <body><main><h1>Email the numbers link</h1><p>This sends the private numbers-page link to the GigrAI inbox. It never shows the link here.</p>${msg ? `<p><b style="color:#fff">${msg}</b></p>` : `<form method="post"><button type="submit">Email me the link</button></form>`}</main></body></html>`;
 
+// Sponsored listings: sponsored.json plus ones added in /admin/sponsored (cached for a minute)
+let sponsorMemo = { at: 0, rows: [] };
+async function sponsorsCfg(env) {
+  if (Date.now() - sponsorMemo.at > 60000) {
+    const db = content(env);
+    try { sponsorMemo = { at: Date.now(), rows: db ? await db.listSponsors() : [] }; } catch {}
+  }
+  return { featured: [...((SPONSORED && SPONSORED.featured) || []), ...sponsorMemo.rows] };
+}
+
 // Pinned sponsors, minus pay-per-click ones whose budget is used up
 async function activeFeatured(env) {
-  const live = liveFeatured(SPONSORED);
+  const live = liveFeatured(await sponsorsCfg(env));
   const cpc = live.filter(f => clickCap(f));
   if (!cpc.length) return live;
   const used = await countMany(env, "sponsor_u", cpc.map(f => ({ k: f.id, from: f.start || "2000-01-01" })));
@@ -1169,6 +1238,50 @@ async function handleAdmin(request, url, env, ctx) {
     const r = await db.savePost(post, original);
     if (!r.ok) return noStore(adminEditor({ k, post, isNew: !original, error: r.error, platforms }));
     return back(status === "published" ? `Published: "${title}" is live at /news/${post.slug}` : `Saved as a draft: "${title}"`);
+  }
+  // ---- sponsored listings ----
+  if (url.pathname === "/admin/sponsored" && request.method === "GET") {
+    const rows = await db.listSponsors();
+    const used = await countMany(env, "sponsor_u", rows.map(r => ({ k: r.id, from: r.start || "2000-01-01" })));
+    const links = Object.fromEntries(await Promise.all(rows.map(async r => [r.id, `${url.origin}/report/${r.id}?k=${await signKey(env, "sponsor:" + r.id)}`])));
+    let prefill = null;
+    const ref = url.searchParams.get("from");
+    if (ref) { const q = (await db.listEnquiries(100)).find(x => x.ref === ref); if (q) prefill = { ...q.data, ref }; }
+    return noStore(adminSponsoredPage({ k, rows, used, links, prefill, origin: url.origin, msg: url.searchParams.get("msg") || "" }));
+  }
+  if (url.pathname === "/admin/sponsored" && request.method === "POST") {
+    const backS = (msg) => Response.redirect(new URL(`/admin/sponsored?k=${encodeURIComponent(k)}&msg=${encodeURIComponent(msg)}`, url).toString(), 303);
+    const f = (n, max) => String(form.get(n) || "").replace(/\r/g, "").trim().slice(0, max);
+    const today = new Date().toISOString().slice(0, 10), yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+    if (form.get("end")) {
+      const s0 = await db.getSponsor(f("end", 60)); if (!s0) return backS("Listing not found.");
+      await db.saveSponsor({ ...s0, until: yesterday, ended: today }); sponsorMemo.at = 0; // comes off the site straight away
+      return backS(`Ended "${s0.title}" today. Its report and links keep working for 60 days.`);
+    }
+    if (form.get("delete")) {
+      const s0 = await db.getSponsor(f("delete", 60));
+      if (s0 && s0.start <= today) return backS("This listing has already started, so it can't be deleted (its click report is needed for billing). Use End now instead.");
+      await db.deleteSponsor(f("delete", 60)); sponsorMemo.at = 0; return backS("Scheduled listing deleted.");
+    }
+    const option = AD_OPTIONS.find(o => o.name === f("option", 60));
+    const company = f("company", 80), title = f("title", 120), link = f("url", 600);
+    const start = /^\d{4}-\d{2}-\d{2}$/.test(f("start", 10)) ? f("start", 10) : "", until = /^\d{4}-\d{2}-\d{2}$/.test(f("until", 10)) ? f("until", 10) : "";
+    if (!option) return backS("Choose the package they bought.");
+    if (!company || !title || !link) return backS("Company, title and application link are all needed.");
+    if (!start || !until || until < start) return backS("Check the dates: the end date must be on or after the start date.");
+    const v = await vetLink(link, f("site", 300));
+    if (v.result === "fail") return backS("Link not accepted: " + (v.reasons || []).join(" "));
+    const base = slugify(company).slice(0, 24) || "sponsor";
+    let id = base; for (let i = 2; await db.getSponsor(id) || ((SPONSORED.featured || []).some(x => x.id === id)); i++) id = `${base}-${i}`;
+    const ppc = /per click/i.test(option.name);
+    const sp = {
+      id, company, title, url: link, pay: f("pay", 40), blurb: f("blurb", 140), option: option.name, start, until,
+      pin: form.get("pin") === "1", ref: f("ref", 20), notes: f("notes", 500),
+      ...(ppc ? { cpc: Math.max(0.1, Math.min(20, +f("cpc", 6) || 1.5)), budget: Math.max(1, Math.min(100000, +f("budget", 8) || 100)) } : {}),
+    };
+    await db.saveSponsor(sp); sponsorMemo.at = 0;
+    if (sp.ref) await db.setEnquiryStatus(sp.ref, "booked");
+    return backS(`Saved "${title}" for ${company}: ${start} to ${until}${sp.pin ? ", pinned on the site" : ", posts only"}. Send them the report link below.`);
   }
   // ---- hand-added roles ----
   if (url.pathname === "/admin/roles" && request.method === "GET") {

@@ -563,7 +563,7 @@ export function bookingForm(email = "") {
 </div>
 <label>Anything else? <small>optional: who you're looking for, countries, deadlines</small><textarea name="notes" maxlength="1500"></textarea></label>
 <div class="hp" aria-hidden="true"><label>Leave empty<input name="website" tabindex="-1" autocomplete="off"></label></div>
-<label class="agree"><input type="checkbox" name="agree" required><span>The role is real and <b>free to apply for</b>, and I'm happy for it to be labelled Sponsored. I understand GigrAI may decline roles that aren't a good fit.</span></label>
+<label class="agree"><input type="checkbox" name="agree" required><span>The role is real and <b>free to apply for</b>, and I'm happy for it to be labelled Sponsored. I agree to the <a href="/advertise/terms" target="_blank">Advertising Terms</a>.</span></label>
 <button type="submit">Send booking request</button>
 <p class="msg" aria-live="polite"></p>
 <p class="note" style="margin:0;font-size:13px">Prefer to talk first? ${email ? `Email <a href="mailto:${esc(email)}">${esc(email)}</a> or ` : ""}message <a href="${DM}" target="_blank" rel="noopener">@gigr.ai</a> on Instagram.</p>
@@ -647,7 +647,7 @@ ${AD_OPTIONS.map(adOption).join("\n")}
   <li class="glass">${CHECK}<span>We only feature real roles that are <b>free to apply for</b>. We never promote anything that charges applicants.</span></li>
   <li class="glass">${CHECK}<span>Everything paid is clearly labelled as Sponsored or Ad.</span></li>
   <li class="glass">${CHECK}<span>We may decline roles that aren't a good fit for our audience.</span></li>
-</ul></section>
+</ul><p class="lead" style="margin-top:14px">Full details: <a href="/advertise/terms">Advertising Terms</a>.</p></section>
 
 ${bookingForm(email)}`;
   return html(shell({
@@ -655,6 +655,100 @@ ${bookingForm(email)}`;
     desc: "Put your AI training roles in front of people actively looking for remote AI work. Featured roles from £49 a week, sponsored Instagram posts and WhatsApp shout-outs.",
     canonical: origin + "/advertise", body, active: "/advertise",
   }), 200, 3600);
+}
+
+// ---------- /advertise/terms ----------
+export const AD_TERMS_VERSION = "2026-10-25";
+export function advertiseTermsPage(origin, email = "partners@remotegigrai.com") {
+  const body = `${crumbs([["/", "GigrAI"], ["/advertise", "Advertise"], ["", "Advertising Terms"]])}
+<article class="read"><header class="hero sm"><span class="eyebrow"><i></i>Last updated 25 October 2026</span><h1>Advertising <span class="grad-text">Terms</span></h1>
+<p>These terms apply when you book a paid listing or post with GigrAI. They're written in plain English. If anything's unclear, email <a href="mailto:${esc(email)}">${esc(email)}</a> before you book.</p></header>
+<div class="prose">
+<h2>1. Who we are</h2>
+<p>GigrAI (remotegigrai.com) is a free search engine for remote AI training work, run from Suite RA01, 195-197 Wood Street, London E17 3NU, United Kingdom. "We" means GigrAI. "You" means the business booking the advertising.</p>
+
+<h2>2. What you can book</h2>
+<p>The packages and prices are on our <a href="/advertise">Advertise page</a>. In short:</p>
+<ul>
+<li><strong>Featured role (weekly or monthly):</strong> your role pinned near the top of the homepage and the All roles page, labelled "Sponsored", linking to your application page, for the dates we agree. It may also appear in our weekly email while it's running.</li>
+<li><strong>Pay per click:</strong> the same Featured listing, charged per unique click (see section 6).</li>
+<li><strong>Sponsored Instagram post and WhatsApp shout-out:</strong> one post about your role on @gigr.ai (shared to our Story) or the GigrAI Jobs WhatsApp channel, labelled as an ad.</li>
+<li><strong>Launch bundle:</strong> the items listed for it on the Advertise page.</li>
+</ul>
+<p>We write and design the posts and cards so they fit the site, using the details you give us.</p>
+
+<h2>3. Booking and payment</h2>
+<ul>
+<li>Sending the booking form is a request, not a contract. A booking is confirmed when we've agreed the dates with you and you've paid.</li>
+<li>Prices are in GBP (British pounds). We'll confirm the total before you pay. Payment is due in full before your listing or post goes live.</li>
+<li>Launch prices may change for future bookings, but never for a booking you've already paid for.</li>
+</ul>
+
+<h2>4. Dates</h2>
+<ul>
+<li>Featured listings run from the start of the start date to the end of the end date (UK time), then come down automatically.</li>
+<li>Instagram and WhatsApp posts go out on the agreed day. Posts stay up unless you ask us to remove them, but we don't guarantee how long a platform keeps them visible.</li>
+<li>If we need to move your start date (for example for a technical problem), we'll agree a new date with you.</li>
+</ul>
+
+<h2>5. What we accept</h2>
+<p>To keep job seekers' trust, every role must be real, currently open and <strong>free to apply for</strong>. We don't accept:</p>
+<ul>
+<li>anything that charges applicants (fees for training, equipment, "verification", starter kits or placement);</li>
+<li>pyramid, MLM (multi-level marketing), investment, crypto or "get rich" schemes;</li>
+<li>gambling, adult or illegal content;</li>
+<li>misleading pay, job titles or company details;</li>
+<li>roles that just collect personal data, or aren't genuinely hiring;</li>
+<li>job ads that discriminate unlawfully (for example under the Equality Act 2010).</li>
+</ul>
+<p>We check every application link, and we can decline any booking. If we decline before you've paid, there's nothing to pay. If we decline after you've paid and before going live, we refund you in full.</p>
+
+<h2>6. Pay per click</h2>
+<ul>
+<li>A <strong>unique click</strong> is one person clicking through to your application page from GigrAI, counted once per person per day. Clicks we identify as bots, link previews or our own team aren't counted.</li>
+<li>Your listing stops being pinned when your budget divided by the price per click is reached. Links already shared keep working, and later clicks aren't charged.</li>
+<li>If your campaign ends with budget unused, we'll refund the unused amount or carry it over to a new campaign within 6 months, as you prefer.</li>
+<li>Our click report is the record we bill from. It shows clicks by day, channel and country.</li>
+</ul>
+
+<h2>7. Your responsibilities</h2>
+<ul>
+<li>The information you give us is accurate, and your application link works for the whole campaign. Tell us straight away if the role closes or changes.</li>
+<li>You have the right to use any names, logos or text you send us.</li>
+<li>You're the hiring organisation. Applicants apply to you directly, on your own site. You're responsible for your recruitment process, contracts, pay and how you handle applicants' personal data, in line with the law.</li>
+<li>GigrAI isn't a recruitment agency or employment business. We don't screen, select or employ anyone, and we don't take part in hiring decisions.</li>
+</ul>
+
+<h2>8. Labelling</h2>
+<p>Everything paid is clearly labelled "Sponsored" or "Ad", in line with UK advertising rules (the CAP Code). We won't remove the label.</p>
+
+<h2>9. Results</h2>
+<p>We'll show your listing or post as agreed, but we can't guarantee a number of clicks, applications or hires. Audience numbers in our media kit are a guide, not a promise.</p>
+
+<h2>10. Cancelling and refunds</h2>
+<ul>
+<li><strong>More than 48 hours before your start date:</strong> cancel for a full refund.</li>
+<li><strong>Less than 48 hours before, or once live:</strong> no refund, except as below.</li>
+<li><strong>If we don't deliver what you paid for</strong> (for example the site is down for more than 24 hours during your campaign, or a post doesn't go out), we'll extend your campaign by the time lost or give you a matching partial refund, as you prefer.</li>
+<li><strong>If we remove your listing because it breaks section 5 or 7</strong> (for example the role turns out to charge applicants), there's no refund.</li>
+</ul>
+
+<h2>11. Liability</h2>
+<p>Our total liability to you for any booking is limited to the amount you paid for it. We aren't liable for indirect losses such as lost profits or lost hires. Nothing in these terms limits liability that can't be limited by law, such as for fraud, or death or personal injury caused by negligence.</p>
+
+<h2>12. Data and reports</h2>
+<p>Your click report shows anonymous totals only. We don't share applicants' personal data with you, and you won't receive any from us. See our <a href="/privacy">privacy page</a>.</p>
+
+<h2>13. Changes to these terms</h2>
+<p>We may update these terms. The version on this page when you book is the one that applies to that booking.</p>
+
+<h2>14. Law</h2>
+<p>These terms are governed by the law of England and Wales, and the courts of England and Wales handle any disputes.</p>
+
+<h2>Questions</h2>
+<p>Email <a href="mailto:${esc(email)}">${esc(email)}</a> or <a href="/advertise#book">book your spot</a>.</p>
+</div></article>`;
+  return html(shell({ title: "Advertising Terms · GigrAI", desc: "The terms for booking paid listings and posts with GigrAI: what's included, payment, dates, what we accept, pay per click, cancellations and refunds.", canonical: origin + "/advertise/terms", body, active: "/advertise" }), 200, 3600);
 }
 
 // ---------- /alerts/confirmed (MailerLite sends people here after they confirm their email) ----------

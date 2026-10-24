@@ -21,6 +21,7 @@ export class Content extends DurableObject {
       created TEXT NOT NULL, updated TEXT NOT NULL, published_at TEXT)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS enquiries (ref TEXT PRIMARY KEY, created TEXT NOT NULL, data TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new')`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS sponsors (id TEXT PRIMARY KEY, data TEXT NOT NULL, created TEXT NOT NULL)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS roles (id TEXT PRIMARY KEY, data TEXT NOT NULL, created TEXT NOT NULL, expires TEXT NOT NULL)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS images (id TEXT PRIMARY KEY, type TEXT NOT NULL, data BLOB NOT NULL, size INTEGER NOT NULL, created TEXT NOT NULL)`);
   }
@@ -68,6 +69,21 @@ export class Content extends DurableObject {
   }
   setEnquiryStatus(ref, status) {
     this.sql.exec(`UPDATE enquiries SET status = ? WHERE ref = ?`, status, ref);
+  }
+
+  // ---- sponsored listings (/admin/sponsored) ----
+  listSponsors() {
+    return [...this.sql.exec(`SELECT id, data, created FROM sponsors ORDER BY created DESC LIMIT 200`)].map((r) => ({ ...JSON.parse(r.data), id: r.id, created: r.created }));
+  }
+  getSponsor(id) {
+    const r = [...this.sql.exec(`SELECT id, data, created FROM sponsors WHERE id = ?`, id)][0];
+    return r ? { ...JSON.parse(r.data), id: r.id, created: r.created } : null;
+  }
+  saveSponsor(s) {
+    this.sql.exec(`INSERT OR REPLACE INTO sponsors (id, data, created) VALUES (?, ?, ?)`, s.id, JSON.stringify(s), s.created || now());
+  }
+  deleteSponsor(id) {
+    this.sql.exec(`DELETE FROM sponsors WHERE id = ?`, id);
   }
 
   // ---- hand-added roles (/admin/roles) ----
