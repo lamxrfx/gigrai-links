@@ -766,7 +766,7 @@ const ADAPTERS = {
       if (!url) return null;
       const desc = String(j.descriptionPlain || htmlText(j.description || "")).replace(/\s+\n/g, "\n").trim();
       const sr = j.salaryRange || {};
-      let [min, max] = /hour/i.test(sr.interval || "") && /usd/i.test(sr.currency || "USD") ? [hourlyOk(sr.min), hourlyOk(sr.max)] : payFromText(desc);
+      let [min, max] = /hour/i.test(sr.interval || "") && /usd/i.test(sr.currency || "USD") ? [hourlyOk(Math.round(sr.min)), hourlyOk(Math.round(sr.max))] : payFromText(desc);
       const iso3 = ISO3[String(j.country || "").toUpperCase()];
       const cc = iso3 ? [iso3] : countriesFromText((j.categories && j.categories.location) || "");
       const loc = (j.categories && j.categories.location) || "";
