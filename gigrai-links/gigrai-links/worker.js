@@ -1,6 +1,6 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
 import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat, setEmail, alertsConfirmedPage } from "./seo.js";
-import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, flagged, markOwner, isOwner, roleClick, topRoles, meta, pageHit, topPages } from "./stats.js";
+import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, netName, flagged, markOwner, isOwner, roleClick, topRoles, meta, pageHit, topPages } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
 import DRAFTS from "./drafts.json";
@@ -75,7 +75,11 @@ const app = {
     const view = (section, title = "") => {
       if (request.method !== "GET") return;
       if (isHuman(request)) { track(env, ctx, request, "view", section, visitSource(request, url)); presence(env, ctx, request, section, true); pageHit(env, ctx, request, url.pathname.replace(/\/+$/, "") || "/", title, section); }
-      else track(env, ctx, request, "bot", botKind(request), section); // counted separately, never in the visitor numbers
+      else { // counted separately, never in the visitor numbers
+        const kind = botKind(request);
+        track(env, ctx, request, "bot", kind, section);
+        if (kind === "server") track(env, ctx, request, "botnet", netName(request), section); // which company's servers
+      }
     };
 
     // Email job alerts sign-up -> MailerLite (double opt-in). Only open when EMAIL_SIGNUP is "on".
@@ -321,7 +325,7 @@ const app = {
         let days = pickDays(url);
         let from = allTime ? "2000-01-01" : daysAgo(days - 1);
         const to = new Date().toISOString().slice(0, 10);
-        const [views, applies, geo, ccViews, bots, flags, roles, pages] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to), countryTotals(env, "view", from, to), readStats(env, { kind: "bot", from }), flagged(env, from, to), topRoles(env, from, to), topPages(env, from, to)]);
+        const [views, applies, geo, ccViews, bots, flags, roles, pages, botnets] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to), countryTotals(env, "view", from, to), readStats(env, { kind: "bot", from }), flagged(env, from, to), topRoles(env, from, to), topPages(env, from, to), readStats(env, { kind: "botnet", from })]);
         if (allTime) { // from the day counting started
           from = (views && views.since) || to;
           days = Math.max(1, Math.round((Date.parse(to) - Date.parse(from)) / 864e5) + 1);
@@ -337,7 +341,7 @@ const app = {
         const countMe = url.searchParams.get("count") === "1";
         const chose = /(?:^|;\s*)gg_count=1(?:;|$)/.test(request.headers.get("cookie") || "");
         const hidden = countMe ? false : (isOwner(request) || url.searchParams.get("count") === "0" || (!nt && !chose));
-        const page = nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags, hidden, roles, pages }));
+        const page = nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags, hidden, roles, pages, botnets }));
         const secure = url.protocol === "https:" ? "; Secure" : "";
         if (countMe) {
           page.headers.append("set-cookie", `gg_nt=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure}`);

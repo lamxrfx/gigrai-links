@@ -182,12 +182,26 @@ export function botKind(request) {
   if (/googlebot|google|bingbot|bing|yandex|baidu|duckduck|applebot|petal|seznam|sogou|naver/i.test(ua)) return "search";
   if (/semrush|ahrefs|mj12|dotbot|rogerbot|screaming frog|serpstat|dataforseo|blexbot/i.test(ua)) return "seo";
   if (/curl|wget|python|go-http|node|axios|scrapy|headless|puppeteer|playwright|selenium|phantom|lighthouse|monitor|pingdom|uptime|java\/|okhttp|libwww|httpclient/i.test(ua)) return "script";
+  if (isServerNet(request)) return "server";
   return "other";
 }
+
+// Visits from server / hosting companies (not home or mobile internet). Bots there often pretend
+// to be a normal Chrome browser, so the browser label alone doesn't catch them.
+// Cloudflare, Akamai and Fastly are left out on purpose: iPhone "Private Relay" users come through them.
+const SERVER_ASN = new Set([16509, 14618, 8987, 396982, 8075, 31898, 45102, 37963, 132203, 14061, 16276, 24940, 213230, 63949, 20473, 51167, 60781, 28753, 9009, 212238, 12876, 47583, 36352, 199524, 202425, 49981, 62240, 46606, 26496, 55286, 40021, 53667, 136907, 135377, 45090, 23470, 8100, 29802, 30633, 32613, 57523, 44477, 50673, 210644, 211252]);
+const SERVER_ORG = /hosting|\bhost|data ?cent(er|re)|datacamp|\bvps\b|server|colo(cation|crossing)|cloud(?!flare)|amazon|aws|digitalocean|\bovh|hetzner|linode|akamai connected cloud|vultr|choopa|contabo|leaseweb|m247|scaleway|hostinger|oracle|alibaba|tencent|huawei cloud|g-?core|ipxo|worldstream|clouvider|psychz|quadranet|zenlayer|frantech|buyvm|hostwinds|serverion|aeza|stark industries|superhosting|icdsoft/i;
+export function isServerNet(request) {
+  const asn = +(request.cf?.asn || 0), org = String(request.cf?.asOrganization || "");
+  return SERVER_ASN.has(asn) || SERVER_ORG.test(org);
+}
+// Stored as a short tag, e.g. "digitalocean-llc" (keys can only hold letters, numbers and dashes)
+export const netName = (request) => String(request.cf?.asOrganization || (request.cf?.asn ? "AS" + request.cf.asn : "unknown")).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 
 export function isHuman(request) {
   const ua = request.headers.get("user-agent") || "";
   if (!ua || BOT.test(ua) || !/mozilla/i.test(ua)) return false;
+  if (isServerNet(request)) return false;
   const purpose = request.headers.get("purpose") || request.headers.get("sec-purpose") || "";
   if (/prefetch|prerender/i.test(purpose)) return false;
   return true;

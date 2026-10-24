@@ -17,13 +17,16 @@ const SRC = { ig: "Instagram", wa: "WhatsApp", featured: "Featured on site", sit
 const source = (s) => SRC[s] || (s ? s.charAt(0).toUpperCase() + s.slice(1) : "Other");
 
 // Thresholds: a number only appears in the public media kit once it's worth showing
-const BOT_KINDS = { search: "Search engines (Google, Bing…)", preview: "Link previews (WhatsApp, Instagram…)", ai: "AI crawlers (ChatGPT, Claude…)", seo: "SEO tools (Ahrefs, Semrush…)", ads: "Google AdSense checker", script: "Scripts and test tools", prefetch: "Browser preloading", "no-ua": "No browser details", other: "Other bots" };
+const BOT_KINDS = { search: "Search engines (Google, Bing…)", preview: "Link previews (WhatsApp, Instagram…)", ai: "AI crawlers (ChatGPT, Claude…)", seo: "SEO tools (Ahrefs, Semrush…)", ads: "Google AdSense checker", script: "Scripts and test tools", prefetch: "Browser preloading", server: "Servers and data centres (pretending to be a browser)", "no-ua": "No browser details", other: "Other bots" };
 const SECTIONS = { home: "Homepage (job search)", role: "Role pages", jobs: "All roles list", guides: "Guides", news: "News headlines", post: "News articles", platforms: "Platforms", advertise: "Advertise page", "media-kit": "Media kit", privacy: "Privacy page", confirmed: "Email confirmed page" };
 // Ideas for earning from each kind of page (shown under "Popular pages")
 const MONEY = { guides: "Guides: add sponsored slots or affiliate boxes for the platforms they cover", post: "News articles: sell a sponsored article or an in-article ad", news: "News: a featured headline spot for advertisers", role: "Role pages: featured roles from the same company or field", jobs: "All roles: a pinned sponsored role at the top", platforms: "Platforms: paid placement for new platforms (clearly labelled)", home: "Homepage: featured roles and the email sign-up" };
+// "digitalocean-llc" -> "Digitalocean Llc"
+const netLabel = (k) => k === "-" ? "Unknown network" : k.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 const SHOW_VIEWS = 300, SHOW_APPLIES = 30, SHOW_COUNTRIES = 100;
 
 const STYLE = `<style>
+.subh{margin:20px 0 8px;font-size:15px;font-weight:700;color:var(--muted)}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
 .kpi{padding:20px;border-radius:var(--r-md)}
 .kpi b{display:block;font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1.1;font-variant-numeric:tabular-nums}
@@ -417,7 +420,7 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
 </script>`;
 }
 
-export function adminPage({ origin, views, applies, sponsors, links, days = 30, allTime = false, key = "", enquiries = [], geo = [], ccViews = [], bots = null, flags = [], hidden = true, roles = [], pages = [] }) {
+export function adminPage({ origin, views, applies, sponsors, links, days = 30, allTime = false, key = "", enquiries = [], geo = [], ccViews = [], bots = null, flags = [], hidden = true, roles = [], pages = [], botnets = null }) {
   const period = allTime ? "All time" : `Last ${days} days`;
   const sponsorBlocks = sponsors.length ? sponsors.map((s, i) => `<div class="rlink glass">
   <b>${esc(s.company || s.id)}</b> <span class="meta">${esc(s.start || "?")} to ${esc(s.until || "?")}${s.pin === false ? " · posts only" : " · pinned on site"} · ${fmt(s._unique || 0)} unique clicks${s._cap ? ` of ${fmt(s._cap)} paid for (£${(Math.min(s._unique || 0, s._cap) * s.cpc).toFixed(2)} of £${s.budget})${(s._unique || 0) >= s._cap ? " · <b>budget used, unpinned</b>" : ""}` : ""}</span>
@@ -451,7 +454,7 @@ ${applies ? `<section class="block"><h2>Apply clicks per day</h2><div class="pan
 ${(() => { const keys = (views && views.byKey || []).map(r => r.k).filter(k => MONEY[k]).slice(0, 4); return keys.length ? `<div class="panel glass" style="margin-top:12px"><h3 class="mini" style="margin-top:0">Ideas for your busiest pages</h3><ul class="ideas">${keys.map(k => `<li>${esc(MONEY[k])}</li>`).join("")}</ul></div>` : ""; })()}
 </section>
 <section class="block"><h2>Most-clicked roles</h2><div class="panel glass">${roles.length ? `<ol class="rolelist">${roles.map((r, i) => { const top = roles[0].n || 1; return `<li><span class="rk">${i + 1}</span><div class="rt"><a href="${esc(r.path || "/jobs")}" target="_blank" rel="noopener">${esc(r.title || r.id)}</a><span>${esc(r.via || "")}${r.pay ? " · " + esc(r.pay) : ""}</span><i style="width:${Math.max(4, Math.round(r.n / top * 100))}%"></i></div><b>${fmt(r.n)}</b></li>`; }).join("")}</ol><p class="note" style="margin:12px 0 0">Apply clicks per role (${esc(period.toLowerCase())}). Counting per role started 23 Oct 2026. Roles that have closed still show their last title.</p>` : `<p class="note" style="margin:0">No apply clicks on individual roles yet for this period. Counting per role started 23 Oct 2026.</p>`}</div></section>
-<section class="block"><h2>Bots filtered out</h2><div class="panel glass">${bots && bots.total ? `<p class="note" style="margin:0 0 12px"><b>${fmt(bots.total)}</b> bot visits ignored (${esc(period.toLowerCase())}). None of these are in your visitor numbers above.</p>${barList(bots.byKey, (r) => BOT_KINDS[r.k] || "Other bots", bots.total, "bot visits")}` : `<p class="note" style="margin:0">No bot visits recorded for this period yet. Counting started 23 Oct 2026.</p>`}</div></section>
+<section class="block"><h2>Bots filtered out</h2><div class="panel glass">${bots && bots.total ? `<p class="note" style="margin:0 0 12px"><b>${fmt(bots.total)}</b> bot visits ignored (${esc(period.toLowerCase())}). None of these are in your visitor numbers above.</p>${barList(bots.byKey, (r) => BOT_KINDS[r.k] || "Other bots", bots.total, "bot visits")}<h3 class="subh">Where the bots came from</h3>${barList(bots.byCountry, (r) => country(r.cc), bots.total, "bot visits")}${botnets && botnets.total ? `<h3 class="subh">Server companies they used</h3>${barList(botnets.byKey, (r) => netLabel(r.k), botnets.total, "bot visits")}` : ""}` : `<p class="note" style="margin:0">No bot visits recorded for this period yet. Counting started 23 Oct 2026.</p>`}</div></section>
 <section class="block"><h2>Unusual activity</h2><div class="panel glass">${flags.length ? `<p class="note" style="margin:0 0 12px">Visitors who did more than 60 things in one minute, which is faster than most people browse. They're still counted. Have a look and judge for yourself.</p><ul class="flaglist">${flags.map((f) => `<li><b>${esc(f.city || "Unknown town")}, ${esc(country(f.cc))}</b><span>${longDate(f.day)} · ${esc(f.first)}${f.last && f.last !== f.first ? "–" + esc(f.last) : ""} UTC · up to ${fmt(f.peak)} actions a minute</span></li>`).join("")}</ul>` : `<p class="note" style="margin:0">Nothing unusual. We flag any visitor doing more than 60 things a minute.</p>`}</div></section>
 <section class="block"><h2>Booking requests</h2>${enquiries.length ? `<div class="rlinks">${enquiries.map((q) => { const e = q.data, v = e.vet || {}; return `<div class="rlink glass">
   <b>${esc(e.company)} · ${esc(e.option)}${e.budget ? ` · £${fmt(e.budget)} budget` : ""}</b>
