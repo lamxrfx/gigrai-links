@@ -10,11 +10,12 @@ import { content, refreshNews } from "./content.js";
 import { pickWeekly, weeklyEmail, londonNow, mlSendCampaign } from "./weekly.js";
 import { newsIndex, postPage, postsRss, adminHome, adminEditor } from "./news.js";
 import { CATEGORIES } from "./news-sources.js";
-import { slugify, AD_OPTIONS } from "./seo.js";
+import { slugify, AD_OPTIONS, shell as shellPage, html } from "./seo.js";
 import { vetLink } from "./vet.js";
 import { EmailMessage } from "cloudflare:email";
 import { systemPrompt, askAi, parseAsk } from "./chat.js";
 import SPONSORED from "./sponsored.json";
+import CURATED from "./curated.json";
 import { menuButton, drawerHtml } from "./nav.js";
 import { GUIDES } from "./guides.js";
 // Serves the static link page from ./public and handles one API route:
@@ -977,6 +978,41 @@ async function mlConfirmDone(env, email) {
 }
 
 // Email the private numbers-page link to our own inbox (Cloudflare Email Routing)
+// ---- /admin/roles: add roles by hand ----
+function adminRolesPage({ k, roles, msg }) {
+  const e = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+  const plats = (PLATFORM_CONFIG.platforms || []).filter(p => p.active);
+  const today = new Date().toISOString().slice(0, 10), month = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+  const fileRoles = (CURATED.roles || []).map(r => `<tr><td><b>${e(r.title)}</b><br><small>${e(r.platform)} · built in (curated.json)</small></td><td>${r.min || ""}${r.max ? "–" + r.max : ""}</td><td>${e(r.expires)}</td><td></td></tr>`).join("");
+  const rows = roles.map(r => `<tr><td><b>${e(r.title)}</b><br><small>${e(r.company || r.platform)}${r.url ? " · own link" : " · our referral link"}</small></td><td>${r.min || ""}${r.max ? "–" + r.max : ""}</td><td>${r.expires < today ? `<span style="color:#ffb3b3">Expired ${e(r.expires)}</span>` : e(r.expires)}</td><td><form method="post" style="margin:0"><input type="hidden" name="k" value="${e(k)}"><button class="b tiny danger" name="delete" value="${e(r.id)}">Remove</button></form></td></tr>`).join("");
+  const body = `<style>
+.adm{display:grid;gap:14px;max-width:860px;margin:0 auto}.adm form.add{display:grid;gap:14px}
+.adm label{display:grid;gap:6px;font-weight:700;font-size:14px;color:var(--soft)}.adm label small{font-weight:500;color:var(--muted)}
+.adm input,.adm select,.adm textarea{width:100%;border-radius:12px;border:1px solid var(--line);background:#0d1024;color:var(--text);font:inherit;font-size:15px;padding:12px 14px}
+.adm textarea{min-height:110px;resize:vertical}.adm .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.adm button,.adm .b{height:48px;padding:0 20px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:var(--text);font:inherit;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.adm .primary{background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff);border:0;color:#fff}.adm .danger{border-color:rgba(255,107,107,.5);color:#ffb3b3}.adm .tiny{height:34px;padding:0 12px;font-size:13px}
+.adm table{width:100%;border-collapse:collapse;font-size:14.5px}.adm th,.adm td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}.adm th{color:var(--muted);font-size:13px}.adm small{color:var(--muted)}
+.adm .msg{padding:12px 16px;border-radius:12px;background:rgba(61,214,140,.12);border:1px solid rgba(61,214,140,.35)}.adm .help{font-size:13.5px;color:var(--muted);line-height:1.6}
+</style><div class="adm">
+<section class="hero sm" style="padding-bottom:4px"><span class="eyebrow"><i></i>Private · only for you</span><h1>Add <span class="grad-text">roles</span></h1>
+<p>Add roles you find (Handshake, Mindrift, Instagram finds). They appear in search, role pages, guides and the Monday email straight away, and disappear on their expiry date.</p>
+<p><a class="b" href="/admin?k=${e(k)}">Blog editor</a> <a class="b" href="/report?k=${e(k)}">Site numbers</a></p></section>
+${msg ? `<p class="msg">${e(msg)}</p>` : ""}
+<form method="post" class="add"><input type="hidden" name="k" value="${e(k)}">
+<label>Role title<input name="title" required maxlength="140" placeholder="e.g. Generalist AI Trainer (English)"></label>
+<div class="row"><label>Platform<select name="platform">${plats.map(p => `<option value="${e(p.id)}">${e(p.name)}</option>`).join("")}<option value="other">Other company…</option></select></label>
+<label>Company <small>(only for "Other")</small><input name="company" maxlength="60"></label></div>
+<label>Application link <small>Leave empty to use our referral link for that platform. Must start with https://</small><input name="url" type="url" placeholder="https://"></label>
+<div class="row"><label>Pay from ($/hr)<input name="min" type="number" min="0" max="1000"></label><label>Pay to ($/hr)<input name="max" type="number" min="0" max="1000"></label><label>Field <small>e.g. Writing, Law</small><input name="domain" maxlength="60"></label></div>
+<label>Short description <small>What the work is, who it's for, any country limits. Only facts from the listing.</small><textarea name="desc" maxlength="3000"></textarea></label>
+<div class="row"><label>Expires<input name="expires" type="date" value="${month}" min="${today}"></label></div>
+<p class="help">Only add real roles from the company's own site. Never add anything that charges people to apply. Links are checked automatically.</p>
+<div><button class="primary">Add role</button></div></form>
+<section><h2>Your added roles</h2><table><thead><tr><th>Role</th><th>$/hr</th><th>Expires</th><th></th></tr></thead><tbody>${fileRoles}${rows || ""}</tbody></table>${!rows && !fileRoles ? "<p class='help'>None yet.</p>" : ""}</section></div>`;
+  return html(shellPage({ title: "Add roles · GigrAI admin", desc: "Private.", canonical: "", robots: "noindex,nofollow", body }));
+}
+
 // ---- Weekly "Top roles" email ----
 async function buildWeekly(env, ctx) {
   const feed = await loadFeed(env, ctx);
@@ -1107,6 +1143,34 @@ async function handleAdmin(request, url, env, ctx) {
     if (!r.ok) return noStore(adminEditor({ k, post, isNew: !original, error: r.error, platforms }));
     return back(status === "published" ? `Published: "${title}" is live at /news/${post.slug}` : `Saved as a draft: "${title}"`);
   }
+  // ---- hand-added roles ----
+  if (url.pathname === "/admin/roles" && request.method === "GET") {
+    return noStore(adminRolesPage({ k, roles: await db.listRoles({ includeExpired: true }), msg: url.searchParams.get("msg") || "" }));
+  }
+  if (url.pathname === "/admin/roles" && request.method === "POST") {
+    const backR = (msg) => Response.redirect(new URL(`/admin/roles?k=${encodeURIComponent(k)}&msg=${encodeURIComponent(msg)}`, url).toString(), 303);
+    if (form.get("delete")) { await db.deleteRole(String(form.get("delete"))); curatedMemo.at = 0; return backR("Role removed."); }
+    const f = (n, max) => String(form.get(n) || "").replace(/\r/g, "").trim().slice(0, max);
+    const platform = f("platform", 30);
+    const p = platforms.find(x => x.id === platform && x.active);
+    const role = {
+      id: "c-" + (f("id", 40) || [...crypto.getRandomValues(new Uint8Array(5))].map(b => b.toString(16).padStart(2, "0")).join("")),
+      title: f("title", 140), platform: p ? p.id : "other", company: p ? "" : f("company", 60),
+      url: f("url", 600), min: Math.min(1000, Math.max(0, parseInt(f("min", 5)) || 0)) || null, max: Math.min(1000, Math.max(0, parseInt(f("max", 5)) || 0)) || null,
+      domain: f("domain", 60), desc: f("desc", 3000), posted: new Date().toISOString().slice(0, 10),
+      expires: /^\d{4}-\d{2}-\d{2}$/.test(f("expires", 10)) ? f("expires", 10) : new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10),
+    };
+    if (!role.title) return backR("Add a role title.");
+    if (!p && !role.company) return backR("Pick a platform, or type the company name for 'Other'.");
+    if (!role.url && !p) return backR("Add the application link (needed when the platform isn't one of ours).");
+    if (role.url) {
+      const v = await vetLink(role.url);
+      if (v.result === "fail") return backR("Link not added: " + (v.reasons || []).join(" "));
+    }
+    if (role.min && role.max && role.min > role.max) [role.min, role.max] = [role.max, role.min];
+    await db.saveRole(role); curatedMemo.at = 0;
+    return backR(`Added "${role.title}". It's live now and drops off on ${role.expires}.`);
+  }
   if (url.pathname === "/admin/delete" && request.method === "POST") {
     await db.deletePost(String(form.get("slug") || ""));
     return back("Post deleted.");
@@ -1172,7 +1236,36 @@ function withReferral(raw, hostRe, addCode) {
   } catch { return null; }
 }
 
+// Every live role: the platform feeds plus hand-added roles (curated.json and /admin/roles)
 async function loadFeed(env, ctx) {
+  const [feed, extra] = await Promise.all([loadPlatformFeed(env, ctx).catch(e => ({ error: e })), curatedRoles(env)]);
+  if (feed.error) { if (extra.length) return extra; throw feed.error; }
+  return [...feed, ...extra];
+}
+// Hand-added roles become normal feed roles. They expire on their date and drop off by themselves.
+let curatedMemo = { at: 0, rows: [] };
+async function curatedRoles(env) {
+  const today = new Date().toISOString().slice(0, 10);
+  let stored = curatedMemo.rows;
+  if (Date.now() - curatedMemo.at > 60000) {
+    const db = content(env);
+    try { stored = db ? await db.listRoles() : []; curatedMemo = { at: Date.now(), rows: stored }; } catch { stored = curatedMemo.rows; }
+  }
+  const plats = PLATFORM_CONFIG.platforms || [];
+  return [...(CURATED.roles || []), ...stored].filter(r => r && r.id && r.title && (r.expires || "") >= today).map(r => {
+    const p = plats.find(x => x.id === r.platform && x.active);
+    const url = r.url || (p && p.signupUrl) || "";
+    if (!/^https:\/\//.test(url)) return null;
+    return {
+      id: String(r.id).startsWith("c-") || String(r.id).includes("-") ? String(r.id) : "c-" + r.id,
+      title: r.title, min: +r.min || null, max: +r.max || null,
+      via: p ? p.name : (r.company || "Other"), platform: p ? p.id : "other",
+      domain: r.domain || "", skills: [], desc: r.desc || "", hot: false, url,
+      posted: r.posted || (r.created || "").slice(0, 10) || today, expires: r.expires, curated: true,
+    };
+  }).filter(Boolean);
+}
+async function loadPlatformFeed(env, ctx) {
   const sources = livePlatforms();
   const cacheKey = new Request(`https://cache.remotegigrai.internal/feed-v3/${sources.map(p => p.id).join(",")}`);
   const cache = typeof caches !== "undefined" ? caches.default : null;

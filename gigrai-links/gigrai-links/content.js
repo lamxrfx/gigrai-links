@@ -21,6 +21,7 @@ export class Content extends DurableObject {
       created TEXT NOT NULL, updated TEXT NOT NULL, published_at TEXT)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS enquiries (ref TEXT PRIMARY KEY, created TEXT NOT NULL, data TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'new')`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS roles (id TEXT PRIMARY KEY, data TEXT NOT NULL, created TEXT NOT NULL, expires TEXT NOT NULL)`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS images (id TEXT PRIMARY KEY, type TEXT NOT NULL, data BLOB NOT NULL, size INTEGER NOT NULL, created TEXT NOT NULL)`);
   }
 
@@ -67,6 +68,21 @@ export class Content extends DurableObject {
   }
   setEnquiryStatus(ref, status) {
     this.sql.exec(`UPDATE enquiries SET status = ? WHERE ref = ?`, status, ref);
+  }
+
+  // ---- hand-added roles (/admin/roles) ----
+  listRoles({ includeExpired = false } = {}) {
+    const today = now().slice(0, 10);
+    const rows = [...this.sql.exec(`SELECT id, data, created, expires FROM roles ${includeExpired ? "" : "WHERE expires >= ?"} ORDER BY created DESC LIMIT 200`, ...(includeExpired ? [] : [today]))];
+    return rows.map((r) => ({ ...JSON.parse(r.data), id: r.id, created: r.created, expires: r.expires }));
+  }
+  saveRole(role) {
+    this.sql.exec(`INSERT OR REPLACE INTO roles (id, data, created, expires) VALUES (?, ?, ?, ?)`, role.id, JSON.stringify(role), role.created || now(), role.expires);
+    // tidy up roles that expired more than 90 days ago
+    this.sql.exec(`DELETE FROM roles WHERE expires < ?`, new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10));
+  }
+  deleteRole(id) {
+    this.sql.exec(`DELETE FROM roles WHERE id = ?`, id);
   }
 
   // ---- uploaded images (resized in the browser before upload, so each is small) ----

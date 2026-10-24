@@ -1,0 +1,16 @@
+{
+  "_help": "Hand-picked roles that aren't in any platform feed. They're merged into search, role pages, guides and the Monday email. Roles added in /admin/roles are stored separately and show alongside these. Each needs: id, title, platform (a platform id from platforms.json, or \"other\" with a company name), url (https; leave empty to use the platform's referral link), expires (YYYY-MM-DD).",
+  "roles": [
+    {
+      "id": "handshake-fellow",
+      "title": "Handshake AI Fellow (Master's, PhD or postdoc)",
+      "platform": "handshake",
+      "min": 30,
+      "max": 125,
+      "domain": "All subjects",
+      "desc": "Handshake AI pays graduate-level experts to train and test AI models in their own subject: writing hard questions, checking AI answers and correcting mistakes. Fully remote and part-time, with no minimum hours. Most roles want a Master's, PhD or postdoc, though some people with strong subject expertise but no formal degree are considered. Some roles are open to the UK. You apply on Handshake's own site, are placed on projects that match your skills, and are paid hourly by Handshake. Placement depends on project availability, so it isn't guaranteed.",
+      "posted": "2026-10-24",
+      "expires": "2027-04-30"
+    }
+  ]
+}

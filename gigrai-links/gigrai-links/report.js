@@ -430,7 +430,7 @@ export function adminPage({ origin, views, applies, sponsors, links, days = 30, 
 </div>`).join("") : `<p class="note">No campaigns yet. Add one to sponsored.json and its links appear here.</p>`;
   const body = `<section class="hero sm"><span class="eyebrow"><i></i>Private · only for you</span><h1>GigrAI <span class="grad-text">numbers</span></h1>
 <p>${period}. Counting started ${views ? longDate(views.since) : "-"}. Bookmark this page and don't share the link.</p>
-${key ? `<p class="note" style="margin-top:6px">📧 <a href="/report-weekly?k=${esc(key)}">Preview next Monday's weekly email</a> (sent automatically at 9am UK time to everyone on the email list)</p>` : ""}
+${key ? `<p class="note" style="margin-top:6px">📧 <a href="/report-weekly?k=${esc(key)}">Preview next Monday's weekly email</a> (sent automatically at 9am UK time to everyone on the email list) · ➕ <a href="/admin/roles?k=${esc(key)}">Add a role by hand</a></p>` : ""}
 <p class="note" style="margin-top:6px">${hidden ? `🔒 <b>This device isn't counted</b> in your numbers or on the map. <a href="/report?k=${encodeURIComponent(key)}&count=1">Count it again</a>` : `This device is counted like any visitor. <a href="/report?k=${encodeURIComponent(key)}&count=0">Stop counting this device</a>`}</p>
 ${rangeSwitch("/report", days, `k=${encodeURIComponent(key)}&`, allTime)}</section>
 ${liveMap(key, period, geo, ccViews)}
