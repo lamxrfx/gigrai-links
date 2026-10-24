@@ -1,4 +1,4 @@
-# Shows the domain's email (MX/SPF) records as an annotation. Runs when this file changes.
+# Shows the domain's email records (MX, SPF, DMARC, DKIM) as an annotation. Runs when this file changes.
 name: Check email DNS
 on:
   push:
@@ -11,7 +11,13 @@ jobs:
     timeout-minutes: 3
     steps:
       - run: |
-          MX=$(dig +short MX remotegigrai.com @1.1.1.1 | tr '\n' ' ')
-          TXT=$(dig +short TXT remotegigrai.com @1.1.1.1 | grep -i spf | tr '\n' ' ')
-          NS=$(dig +short NS remotegigrai.com @1.1.1.1 | tr '\n' ' ')
-          echo "::notice title=Email DNS::MX: ${MX:-none}%0ASPF: ${TXT:-none}%0ANS: ${NS:-none}"
+          d=remotegigrai.com
+          q() { dig +short "$@" @1.1.1.1 | tr '\n' ' '; }
+          echo "::notice title=MX::$(q MX $d)"
+          echo "::notice title=SPF::$(q TXT $d | grep -o '"v=spf1[^"]*"')"
+          echo "::notice title=All TXT::$(q TXT $d | cut -c1-900)"
+          echo "::notice title=DMARC::$(q TXT _dmarc.$d)"
+          for s in ml litesrv mlsend mlsend2 mailerlite k1 google default cf2024-1; do r=$(q TXT $s._domainkey.$d; q CNAME $s._domainkey.$d); [ -n "$r" ] && echo "::notice title=DKIM $s::$(echo $r | cut -c1-300)"; done
+          echo "::notice title=NS::$(q NS $d)"
+          echo "::notice title=alerts subdomain::$(q TXT alerts.$d) $(q CNAME alerts.$d) $(q MX alerts.$d)"
+          echo done
