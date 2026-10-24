@@ -113,7 +113,8 @@
     if (!a || TRIGGERS.indexOf(a.getAttribute("data-track")) < 0) return;
     e.preventDefault();
     var gm = document.getElementById("gm"); if (gm && gm.open) gm.close();
-    open(a.getAttribute("data-track").replace(/-whatsapp$/, "").replace("search-empty", "no-results"));
+    if (a.getAttribute("data-src")) open(a.getAttribute("data-src"), { title: a.getAttribute("data-title") || "" }); // cards in guides and news say where they are
+    else open(a.getAttribute("data-track").replace(/-whatsapp$/, "").replace("search-empty", "no-results"));
   }, true);
 
   // Reword the prompts that mentioned WhatsApp

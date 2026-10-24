@@ -160,7 +160,7 @@ export class Stats extends DurableObject {
       since: this.since(),
       total: rows(`SELECT COALESCE(SUM(n), 0) AS n FROM hits WHERE ${where}`)[0].n,
       byDay: rows(`SELECT day, SUM(n) AS n FROM hits WHERE ${where} GROUP BY day ORDER BY day`),
-      bySrc: rows(`SELECT src, SUM(n) AS n FROM hits WHERE ${where} GROUP BY src ORDER BY n DESC LIMIT 8`),
+      bySrc: rows(`SELECT src, SUM(n) AS n FROM hits WHERE ${where} GROUP BY src ORDER BY n DESC LIMIT 30`),
       byCountry: rows(`SELECT cc, SUM(n) AS n FROM hits WHERE ${where} GROUP BY cc ORDER BY n DESC LIMIT 8`),
       byKey: rows(`SELECT k, SUM(n) AS n FROM hits WHERE ${where} GROUP BY k ORDER BY n DESC LIMIT 12`),
     };

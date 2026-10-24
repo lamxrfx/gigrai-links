@@ -183,7 +183,7 @@ ${body}
 ${FOOTER.replace("__YEAR__", String(new Date().getFullYear()))}
 ${drawerHtml()}
 ${chatOn && !/noindex/.test(robots) ? '<script src="/chat.js?v=9" defer></script>' : ""}
-${emailOn ? '<script src="/alerts.js?v=4" defer></script>' : ""}
+${emailOn ? '<script src="/alerts.js?v=5" defer></script>' : ""}
 </body>
 </html>`;
 }
@@ -209,8 +209,8 @@ const payHtml = (j) => {
   return `${v}<small>/hr</small>`;
 };
 
-function roleCard(x, platforms) {
-  return `<a class="card" href="${jobPath(x)}">
+export function roleCard(x, platforms, from = "") {
+  return `<a class="card" href="${jobPath(x)}${from ? `?from=${from}` : ""}">
   <div class="c-top">${avatar(platforms, x.platform, x.via)}<div class="c-title"><span class="c-name">${esc(x.title)}</span><span class="meta">via ${esc(x.via)}</span></div></div>
   ${payHtml(x) ? `<div class="pay">${payHtml(x)}</div>` : ""}
   ${x.domain ? `<div class="tags"><span class="tag">${esc(x.domain)}</span><span class="tag">Remote</span></div>` : `<div class="tags"><span class="tag">Remote</span></div>`}
@@ -218,11 +218,11 @@ function roleCard(x, platforms) {
 }
 
 // ---------- /jobs/<id>/<slug> ----------
-export function rolePage(j, feed, origin, platforms) {
+export function rolePage(j, feed, origin, platforms, from = "") {
   const p = pay(j);
   const platform = (platforms || []).find((x) => x.id === j.platform);
   const canonical = origin + jobPath(j);
-  const applyHref = `/go/${encodeURIComponent(j.id)}?src=seo`;
+  const applyHref = `/go/${encodeURIComponent(j.id)}?src=${from === "guide" || from === "news" ? from + "-role" : "seo"}`;
   const tags = ['<span class="tag new">Remote</span>', j.kind && `<span class="tag">${esc(j.kind)}</span>`, j.domain && `<span class="tag">${esc(j.domain)}</span>`,
     ...(j.skills || []).slice(0, 5).map((s) => `<span class="tag">${esc(s)}</span>`)].filter(Boolean).join("");
 
@@ -301,6 +301,41 @@ export function roleGone(origin) {
   }), 404, 300);
 }
 
+// ---------- Earning blocks for guides and news ----------
+export const MONEY_CSS = `<style>
+.refbox{margin:28px 0;padding:22px;border-radius:var(--r-lg);background:linear-gradient(160deg,rgba(47,107,255,.2),rgba(139,61,255,.12) 60%,rgba(255,255,255,.04));border:1px solid rgba(139,61,255,.4)}
+.refbox h2,.refbox h3{margin:0 0 4px;font-size:20px}.refbox>p{margin:0 0 14px;color:var(--muted);font-size:14.5px}
+.refrow{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:12px 0;border-top:1px solid rgba(255,255,255,.08)}
+.refrow:first-of-type{border-top:0}
+.refrow img{width:46px;height:46px;border-radius:12px;background:#fff;flex:none}
+.refrow .t{flex:1;min-width:180px}.refrow b{display:block;font-size:16.5px}.refrow span{color:var(--muted);font-size:14px}
+.refrow .btn{height:46px;padding:0 20px;color:#fff;white-space:nowrap}
+.refbox .disc{margin:10px 0 0;font-size:12.5px;color:var(--muted)}
+.mailcard{margin:28px 0;padding:22px;border-radius:var(--r-lg);display:flex;gap:16px;align-items:center;flex-wrap:wrap;border:1px solid rgba(34,211,238,.35);background:linear-gradient(140deg,rgba(34,211,238,.12),rgba(47,107,255,.08))}
+.mailcard .t{flex:1;min-width:220px}.mailcard b{display:block;font-size:18px;margin-bottom:2px}.mailcard span{color:var(--muted);font-size:14.5px}
+.mailcard .go{display:inline-flex;align-items:center;gap:8px;height:48px;padding:0 22px;border-radius:999px;border:0;cursor:pointer;font:inherit;font-weight:700;color:#fff;text-decoration:none;background:linear-gradient(110deg,#22d3ee,#2f6bff 55%,#8b3dff)}
+</style>`;
+
+// Platforms a page is about (named in the text), or our two main ones
+export function pagePlatforms(text, platforms, fallback = ["micro1", "mercor"]) {
+  const live = (platforms || []).filter((p) => p.active && /^https:\/\//.test(p.signupUrl || ""));
+  const t = String(text || "").toLowerCase();
+  const named = live.filter((p) => t.includes(p.id) || t.includes(String(p.name).toLowerCase()));
+  return named.length ? named : live.filter((p) => fallback.includes(p.id));
+}
+
+// "Ready to apply?" box with our tracked sign-up links (/join/<id>?src=...)
+export function refBox(plats, src, { title = "Ready to apply?", text = "Free to join. You apply on the platform's own site.", h = "h2" } = {}) {
+  if (!plats.length) return "";
+  return `<aside class="refbox" aria-label="${esc(title)}"><${h}>${esc(title)}</${h}><p>${esc(text)}</p>${plats.map((p) => `<div class="refrow">${p.icon ? `<img src="/${esc(p.icon)}" alt="" loading="lazy">` : ""}<div class="t"><b>${esc(p.name)}</b><span>${esc(p.tagline || "")}. Free to join.</span></div><a class="btn btn-grad" href="/join/${esc(p.id)}?src=${esc(src)}" target="_blank" rel="sponsored noopener">Join ${esc(p.name)} ${ARROW}</a></div>`).join("")}<p class="disc">Referral link: GigrAI may earn a reward if you join. It costs you nothing and doesn't change your pay.</p></aside>`;
+}
+
+// Email sign-up card (falls back to WhatsApp when email alerts are switched off)
+export function mailCard(src, title = "Get new roles like these by email", text = "The best new remote AI roles, with the pay shown. Free, unsubscribe any time.") {
+  if (!emailOn) return `<div class="mailcard"><div class="t"><b>${esc(title)}</b><span>New roles first on the free GigrAI Jobs WhatsApp channel.</span></div><a class="go" href="${WA}" target="_blank" rel="noopener">Join on WhatsApp</a></div>`;
+  return `<div class="mailcard"><div class="t"><b>${esc(title)}</b><span>${esc(text)}</span></div><button type="button" class="go" data-track="email-alerts" data-src="${esc(src)}" data-title="${esc(title)}">Get email alerts</button></div>`;
+}
+
 // ---------- /guides and /guides/<slug> ----------
 const longDate = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
@@ -311,15 +346,22 @@ function guideCard(g) {
 export function guidePage(g, guides, origin, roles = [], platforms = []) {
   const canonical = `${origin}/guides/${g.slug}`;
   const more = guides.filter((x) => x.slug !== g.slug);
-  const body = `${crumbs([["/", "GigrAI"], ["/guides", "Guides"], ["", g.title]])}
+  const plats = pagePlatforms(g.slug, platforms);
+  // a box half way through the guide, and one at the end
+  const parts = g.body.split(/(?=<h2)/);
+  const mid = refBox(plats.slice(0, 1), "guide-mid", { title: `Want to try ${plats[0] ? plats[0].name : "it"}?`, h: "h3" });
+  const prose = parts.length >= 3 ? [...parts.slice(0, Math.ceil(parts.length / 2)), mid, ...parts.slice(Math.ceil(parts.length / 2))].join("") : g.body + mid;
+  const body = `${MONEY_CSS}${crumbs([["/", "GigrAI"], ["/guides", "Guides"], ["", g.title]])}
 <article class="read">
   <header class="hero sm">
     <span class="eyebrow"><i></i>Guide · Updated ${longDate(g.updated)}</span>
     <h1>${esc(g.title)}</h1>
     <p class="fine">GigrAI earns a referral fee if you join a platform through our links. It costs you nothing and doesn't change your pay.</p>
   </header>
-  <div class="prose">${g.body}</div>
-  ${roles.length ? `<section class="block" aria-labelledby="gr"><h2 id="gr">Live roles you can apply for now</h2><p class="lead">Open right now, with the pay shown. Free to apply.</p><div class="cards">${roles.map((x) => roleCard(x, platforms)).join("")}</div></section>` : ""}
+  <div class="prose">${prose}</div>
+  ${refBox(plats, "guide-end", { text: plats.length > 1 ? "Join more than one: work comes in waves, so being in several talent pools means less waiting." : "Free to join. You apply on the platform's own site." })}
+  ${roles.length ? `<section class="block" aria-labelledby="gr"><h2 id="gr">Live roles you can apply for now</h2><p class="lead">Open right now, with the pay shown. Free to apply.</p><div class="cards">${roles.map((x) => roleCard(x, platforms, "guide")).join("")}</div></section>` : ""}
+  ${mailCard("guide-" + g.slug.slice(0, 14))}
   <div class="cta-panel"><h2>Find your next remote AI role</h2><p>Search live roles from every platform in one place, with real pay rates.</p><a class="btn btn-grad" href="/">Search GigrAI ${ARROW}</a></div>
 </article>
 ${more.length ? `<section class="block" aria-labelledby="mg"><h2 id="mg">More guides</h2><p class="lead">Plain-English guides to getting paid for AI work.</p><div class="cards">${more.map(guideCard).join("")}</div></section>` : ""}`;

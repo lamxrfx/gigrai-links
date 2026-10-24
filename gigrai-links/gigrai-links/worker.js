@@ -325,7 +325,7 @@ const app = {
         let days = pickDays(url);
         let from = allTime ? "2000-01-01" : daysAgo(days - 1);
         const to = new Date().toISOString().slice(0, 10);
-        const [views, applies, geo, ccViews, bots, flags, roles, pages, botnets] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to), countryTotals(env, "view", from, to), readStats(env, { kind: "bot", from }), flagged(env, from, to), topRoles(env, from, to), topPages(env, from, to), readStats(env, { kind: "botnet", from })]);
+        const [views, applies, geo, ccViews, bots, flags, roles, pages, botnets, joins] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to), countryTotals(env, "view", from, to), readStats(env, { kind: "bot", from }), flagged(env, from, to), topRoles(env, from, to), topPages(env, from, to), readStats(env, { kind: "botnet", from }), readStats(env, { kind: "join", from })]);
         if (allTime) { // from the day counting started
           from = (views && views.since) || to;
           days = Math.max(1, Math.round((Date.parse(to) - Date.parse(from)) / 864e5) + 1);
@@ -341,7 +341,7 @@ const app = {
         const countMe = url.searchParams.get("count") === "1";
         const chose = /(?:^|;\s*)gg_count=1(?:;|$)/.test(request.headers.get("cookie") || "");
         const hidden = countMe ? false : (isOwner(request) || url.searchParams.get("count") === "0" || (!nt && !chose));
-        const page = nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags, hidden, roles, pages, botnets }));
+        const page = nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags, hidden, roles, pages, botnets, joins }));
         const secure = url.protocol === "https:" ? "; Secure" : "";
         if (countMe) {
           page.headers.append("set-cookie", `gg_nt=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure}`);
@@ -399,7 +399,9 @@ const app = {
       if (!post || (post.status !== "published" && !preview)) return Response.redirect(new URL("/news", url).toString(), 302);
       const more = (await db.listPosts({ limit: 4 })).filter(p => p.slug !== post.slug).slice(0, 3);
       view("post", post.title);
-      const res = postPage({ origin: url.origin, post, more, platforms: PLATFORM_CONFIG.platforms, preview: post.status !== "published" });
+      let roles = [];
+      try { roles = guideRoles({ slug: `${post.affiliate || ""} ${post.title} ${post.summary || ""}`.toLowerCase() }, await loadFeed(env, ctx)); } catch {}
+      const res = postPage({ origin: url.origin, post, more, platforms: PLATFORM_CONFIG.platforms, preview: post.status !== "published", roles });
       if (post.status !== "published") { const h = new Headers(res.headers); h.set("cache-control", "private, no-store"); return new Response(res.body, { headers: h }); }
       return decorate(res, url, env, ctx, "/news");
     }
@@ -430,7 +432,7 @@ const app = {
       const p = (PLATFORM_CONFIG.platforms || []).find(x => x.id === joinM[1] && x.active && /^https:\/\//.test(x.signupUrl || ""));
       const src = cleanSrc(url.searchParams.get("src")) || "site";
       console.log(JSON.stringify({ event: "link_click", link: "platform-" + joinM[1], src, country: request.cf?.country || "??" }));
-      if (p && isHuman(request)) track(env, ctx, request, "link", "platform-" + p.id, src);
+      if (p && isHuman(request)) { track(env, ctx, request, "link", "platform-" + p.id, src); track(env, ctx, request, "join", p.id, src); } // "join" feeds the numbers page
       return Response.redirect(p ? p.signupUrl : new URL("/platforms", url).toString(), 302);
     }
 
@@ -469,7 +471,7 @@ const app = {
       // One address per role: fix old or missing title slugs
       if (url.pathname !== jobPath(j)) return Response.redirect(new URL(jobPath(j), url).toString(), 301);
       view("role", `${j.title} (${j.via})`);
-      return decorate(rolePage(j, feed, url.origin, PLATFORM_CONFIG.platforms), url, env, ctx, "/jobs");
+      return decorate(rolePage(j, feed, url.origin, PLATFORM_CONFIG.platforms, url.searchParams.get("from") || ""), url, env, ctx, "/jobs");
     }
 
     const res = await env.ASSETS.fetch(request);
@@ -553,7 +555,7 @@ async function decorate(res, url, env, ctx, page) {
 
   let rw = new HTMLRewriter().on("head", {
     element(el) {
-      if (env.EMAIL_SIGNUP === "on") el.append(`<script src="/alerts.js?v=4" defer></script>`, { html: true });
+      if (env.EMAIL_SIGNUP === "on") el.append(`<script src="/alerts.js?v=5" defer></script>`, { html: true });
       if (env.CHAT !== "off") el.append(`<script src="/chat.js?v=9" defer></script>`, { html: true });
       if (verify) el.append(`<meta name="google-site-verification" content="${verify}">`, { html: true });
       if (client) {

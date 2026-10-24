@@ -13,7 +13,7 @@ const country = (cc) => {
   if (!/^[A-Z]{2}$/.test(c) || c === "XX") return "Unknown";
   try { return (regionNames && regionNames.of(c)) || c; } catch { return c; }
 };
-const SRC = { ig: "Instagram", wa: "WhatsApp", featured: "Featured on site", site: "Website", direct: "Website", picks: "WhatsApp", x: "X", li: "LinkedIn", tt: "TikTok", fb: "Facebook", google: "Google", bing: "Bing", reddit: "Reddit", internal: "Browsing the site", other: "Other websites" };
+const SRC = { ig: "Instagram", wa: "WhatsApp", featured: "Featured on site", site: "Website", direct: "Website", picks: "WhatsApp", x: "X", li: "LinkedIn", tt: "TikTok", fb: "Facebook", google: "Google", bing: "Bing", reddit: "Reddit", internal: "Browsing the site", other: "Other websites", "guide-mid": "Guides: box mid-article", "guide-end": "Guides: box at the end", "guide-role": "Guides: role cards", "news-box": "News: platform box", news: "News: platform box", "news-role": "News: role cards", platforms: "Platforms page", email: "Emails", seo: "Role pages (Google)" };
 const source = (s) => SRC[s] || (s ? s.charAt(0).toUpperCase() + s.slice(1) : "Other");
 
 // Thresholds: a number only appears in the public media kit once it's worth showing
@@ -242,7 +242,7 @@ export function sponsorReportPage({ origin, sponsor, stats, uniq = { total: 0, b
 ${billing && billing.billable >= billing.cap ? `<p class="note" style="padding:12px 16px;border-radius:12px;background:rgba(61,214,140,.12);border:1px solid rgba(61,214,140,.35);color:#c9f5dd">Your budget has been fully used, so your listing is no longer pinned. Get in touch to top up.</p>` : ""}
 <section class="block" aria-labelledby="pd"><h2 id="pd">Unique clicks per day</h2><div class="panel glass">${dayChart(uniq.byDay, from, to, "unique clicks")}</div></section>
 <div class="two">
-<section class="block" aria-labelledby="bc"><h2 id="bc">By channel</h2><div class="panel glass">${barList(stats.bySrc, (r) => source(r.src), stats.total, "clicks")}</div></section>
+<section class="block" aria-labelledby="bc"><h2 id="bc">By channel</h2><div class="panel glass">${barList(stats.bySrc.slice(0, 8), (r) => source(r.src), stats.total, "clicks")}</div></section>
 <section class="block" aria-labelledby="bco"><h2 id="bco">By country</h2><div class="panel glass">${barList(stats.byCountry, (r) => country(r.cc), stats.total, "clicks")}</div></section>
 </div>
 <p class="note" style="margin-top:24px">A unique click is one person tapping through to your application page from GigrAI, counted once per day however many times they tap. ${billing ? "Billing uses unique clicks only. " : ""}Automated traffic (bots and link previews) is excluded. No personal data is collected or shared.</p>
@@ -420,7 +420,7 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
 </script>`;
 }
 
-export function adminPage({ origin, views, applies, sponsors, links, days = 30, allTime = false, key = "", enquiries = [], geo = [], ccViews = [], bots = null, flags = [], hidden = true, roles = [], pages = [], botnets = null }) {
+export function adminPage({ origin, views, applies, sponsors, links, days = 30, allTime = false, key = "", enquiries = [], geo = [], ccViews = [], bots = null, flags = [], hidden = true, roles = [], pages = [], botnets = null, joins = null }) {
   const period = allTime ? "All time" : `Last ${days} days`;
   const sponsorBlocks = sponsors.length ? sponsors.map((s, i) => `<div class="rlink glass">
   <b>${esc(s.company || s.id)}</b> <span class="meta">${esc(s.start || "?")} to ${esc(s.until || "?")}${s.pin === false ? " · posts only" : " · pinned on site"} · ${fmt(s._unique || 0)} unique clicks${s._cap ? ` of ${fmt(s._cap)} paid for (£${(Math.min(s._unique || 0, s._cap) * s.cpc).toFixed(2)} of £${s.budget})${(s._unique || 0) >= s._cap ? " · <b>budget used, unpinned</b>" : ""}` : ""}</span>
@@ -441,11 +441,19 @@ ${liveMap(key, period, geo, ccViews)}
 ${views ? `<section class="block"><h2>Page views per day</h2><div class="panel glass">${dayChart(views.byDay, views.from, views.to, "page views")}</div></section>` : ""}
 ${applies ? `<section class="block"><h2>Apply clicks per day</h2><div class="panel glass">${dayChart(applies.byDay, views ? views.from : applies.byDay[0]?.day, views ? views.to : new Date().toISOString().slice(0, 10), "apply clicks")}</div></section>` : ""}
 <div class="two">
-<section class="block"><h2>Where visitors came from</h2><div class="panel glass">${views ? barList(views.bySrc, (r) => source(r.src), views.total, "page views") : ""}</div></section>
+<section class="block"><h2>Where visitors came from</h2><div class="panel glass">${views ? barList(views.bySrc.slice(0, 8), (r) => source(r.src), views.total, "page views") : ""}</div></section>
 <section class="block"><h2>Countries</h2><div class="panel glass">${views ? barList(views.byCountry, (r) => country(r.cc), views.total, "page views") : ""}</div></section>
 <section class="block"><h2>Apply clicks by platform</h2><div class="panel glass">${applies ? barList(applies.byKey, (r) => r.k === "-" ? "Unknown" : r.k, applies.total, "apply clicks") : ""}</div></section>
-<section class="block"><h2>Apply clicks by channel</h2><div class="panel glass">${applies ? barList(applies.bySrc, (r) => source(r.src), applies.total, "apply clicks") : ""}</div></section>
+<section class="block"><h2>Apply clicks by channel</h2><div class="panel glass">${applies ? barList(applies.bySrc.slice(0, 8), (r) => source(r.src), applies.total, "apply clicks") : ""}</div></section>
 </div>
+<section class="block"><h2>Money from guides and news</h2><div class="panel glass">${(() => {
+  const g = (r) => /^(guide|news)/.test(r.src);
+  const ap = (applies && applies.bySrc || []).filter(g), jn = (joins && joins.bySrc || []).filter(g);
+  const sum = (a) => a.reduce((t, r) => t + r.n, 0);
+  if (!ap.length && !jn.length) return `<p class="note" style="margin:0">No clicks from guides or news yet. Tracking started 24 Oct 2026: the "Ready to apply?" boxes, role cards and email cards are counted here.</p>`;
+  return `<p class="note" style="margin:0 0 12px"><b>${fmt(sum(jn))}</b> platform sign-up clicks and <b>${fmt(sum(ap))}</b> role apply clicks from guides and news (${esc(period.toLowerCase())}).</p>${barList([...jn.map((r) => ({ ...r, k: "j" })), ...ap.map((r) => ({ ...r, k: "a" }))].sort((a, b) => b.n - a.n), (r) => source(r.src) + (r.k === "j" ? " → sign-up" : " → apply"), sum(jn) + sum(ap), "clicks")}`;
+})()}</div></section>
+${joins && joins.total ? `<section class="block"><h2>Platform sign-up clicks</h2><div class="two" style="margin-top:0"><section><h3 class="mini" style="margin-top:0">By platform</h3><div class="panel glass">${barList(joins.byKey, (r) => r.k, joins.total, "sign-up clicks")}</div></section><section><h3 class="mini" style="margin-top:0">From where</h3><div class="panel glass">${barList(joins.bySrc.slice(0, 10), (r) => source(r.src), joins.total, "sign-up clicks")}</div></section></div></section>` : ""}
 <section class="block"><h2>Popular pages</h2>
 <div class="two" style="margin-top:0">
 <section><h3 class="mini" style="margin-top:0">By section</h3><div class="panel glass">${views && views.byKey && views.byKey.length ? barList(views.byKey, (r) => SECTIONS[r.k] || r.k, views.total, "page views") : `<p class="note" style="margin:0">No page views yet for this period.</p>`}</div></section>

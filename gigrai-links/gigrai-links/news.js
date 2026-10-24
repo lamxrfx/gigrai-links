@@ -1,5 +1,5 @@
 // /news (headlines + GigrAI's own posts), /news/<slug> (one post) and the private editor at /admin
-import { shell, html, esc, crumbs, ARROW, WA } from "./seo.js";
+import { shell, html, esc, crumbs, ARROW, WA, MONEY_CSS, refBox, mailCard, roleCard, pagePlatforms } from "./seo.js";
 import { CATEGORIES } from "./news-sources.js";
 
 const catName = (id) => (CATEGORIES.find((c) => c.id === id) || { name: "News" }).name;
@@ -107,7 +107,7 @@ const postCard = (p, lead) => `<a class="pcard glass${lead ? " lead" : ""}" href
 export function newsIndex({ origin, posts, news, total, cat, page, perPage, fetched }) {
   const pages = Math.max(1, Math.ceil(total / perPage));
   const q = (p) => `/news?${cat ? `cat=${cat}&` : ""}page=${p}`;
-  const body = `${STYLE}${crumbs([["/", "GigrAI"], ["", "News"]])}
+  const body = `${STYLE}${MONEY_CSS}${crumbs([["/", "GigrAI"], ["", "News"]])}
 <section class="hero sm">
   <span class="eyebrow"><i></i>Updated every hour</span>
   <h1>Remote work &amp; <span class="grad-text">AI news</span></h1>
@@ -123,7 +123,7 @@ ${news.length ? `<ul class="wire">${news.map((n) => `<li class="glass"><a href="
   <span class="go">Read on ${esc(n.source)} ${EXT}</span></a></li>`).join("")}</ul>` : `<p class="note">Headlines are being collected. Check back in a few minutes.</p>`}
 ${pages > 1 ? `<nav class="pager" aria-label="More headlines">${page > 1 ? `<a href="${q(page - 1)}">Newer</a>` : ""}${page < pages ? `<a href="${q(page + 1)}">Older</a>` : ""}</nav>` : ""}
 </section>
-<div class="wa-cta"><p><b>Get new roles before anyone else.</b> Join the free GigrAI Jobs WhatsApp channel.</p><a href="${WA}" target="_blank" rel="noopener" data-track="news-whatsapp">Join on WhatsApp</a></div>
+${MONEY_CSS}${mailCard("news-list", "Get new roles before anyone else", "The best new remote AI roles and news, once a week by email. Free.")}
 <p class="disc">Headlines and short summaries belong to their publishers and link to the original articles.</p>`;
   return html(shell({
     title: `${cat ? catName(cat) + " · " : ""}Remote work & AI news · GigrAI`,
@@ -134,9 +134,11 @@ ${pages > 1 ? `<nav class="pager" aria-label="More headlines">${page > 1 ? `<a h
 }
 
 // ---------- /news/<slug> ----------
-export function postPage({ origin, post, more, platforms, preview }) {
+export function postPage({ origin, post, more, platforms, preview, roles = [] }) {
   const sources = parseSources(post.sources);
   const plat = (platforms || []).find((p) => p.id === post.affiliate && p.active && p.signupUrl);
+  // platforms the article talks about (no box if it doesn't name one and has no affiliate set)
+  const named = plat ? [] : pagePlatforms(`${post.title} ${post.summary || ""} ${post.body || ""}`, platforms, []);
   const when = post.published_at || post.updated;
   const ld = {
     "@context": "https://schema.org", "@type": "NewsArticle", headline: post.title, description: post.summary || "",
@@ -155,7 +157,9 @@ ${preview ? `<p class="note" style="padding:12px 16px;border-radius:12px;backgro
   <div class="body">${md(post.body)}</div>
   ${plat ? `<div class="affbox">${plat.icon ? `<img src="/${esc(plat.icon)}" alt="">` : ""}<div class="t"><b>Try ${esc(plat.name)}</b><span>${esc(plat.tagline || "")}. Free to join.</span></div><a class="btn btn-grad" href="/join/${esc(plat.id)}?src=news" target="_blank" rel="sponsored noopener">Sign up free ${ARROW}</a></div>` : ""}
   ${sources.length ? `<section class="srcbox glass" aria-labelledby="srcs"><h2 id="srcs">Sources</h2><ol>${sources.map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join("")}</ol></section>` : ""}
-  <div class="wa-cta"><p><b>Never miss a new role.</b> Join the free GigrAI Jobs WhatsApp channel.</p><a href="${WA}" target="_blank" rel="noopener" data-track="post-whatsapp">Join on WhatsApp</a></div>
+  ${named.length ? refBox(named.slice(0, 2), "news-box", { title: "Want to try it yourself?", h: "h3" }) : ""}
+  ${roles.length ? `<section class="block" aria-labelledby="nr"><h2 id="nr">Live roles you can apply for now</h2><p class="lead">Open right now, with the pay shown. Free to apply.</p><div class="cards">${roles.map((x) => roleCard(x, platforms, "news")).join("")}</div></section>` : ""}
+  ${mailCard("news-post", "Never miss a new role", "The best new remote AI roles and news, once a week by email. Free.")}
   ${plat ? `<p class="disc">Some links are referral links. It costs you nothing and doesn't change your pay.</p>` : ""}
 </article>
 ${more.length ? `<section class="block" aria-labelledby="more"><h2 id="more">More from GigrAI</h2><div class="posts">${more.map((p) => postCard(p)).join("")}</div></section>` : ""}`;
