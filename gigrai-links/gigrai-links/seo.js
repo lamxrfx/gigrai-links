@@ -183,7 +183,7 @@ ${body}
 ${FOOTER.replace("__YEAR__", String(new Date().getFullYear()))}
 ${drawerHtml()}
 ${chatOn && !/noindex/.test(robots) ? '<script src="/chat.js?v=9" defer></script>' : ""}
-${emailOn ? '<script src="/alerts.js?v=5" defer></script>' : ""}
+${emailOn ? '<script src="/alerts.js?v=6" defer></script>' : ""}
 </body>
 </html>`;
 }
@@ -644,6 +644,7 @@ export function alertsConfirmedPage(origin, state = "") {
 <span class="eyebrow"><i></i>You're subscribed</span>
 <h1>You're in. <span class="grad-text">Welcome to GigrAI.</span></h1>
 <p>Your first email is on its way, with where to start. After that, we'll send the best new remote AI roles once a week, with the pay shown up front.</p>
+<div style="margin:22px auto 0;max-width:520px;padding:16px 18px;border-radius:16px;background:rgba(255,200,80,.1);border:1px solid rgba(255,200,80,.35);color:#ffe9bf;font-size:15.5px;line-height:1.55;text-align:left"><b style="color:#fff">One quick thing so you don't miss a week:</b> add <b style="color:#fff">alerts@remotegigrai.com</b> to your contacts. If our emails land in <b style="color:#fff">spam or junk</b>, mark them <b style="color:#fff">&ldquo;Not spam&rdquo;</b> and they'll go to your inbox from then on.</div>
 <p style="margin-top:22px"><a class="btn btn-grad" href="/?src=email-confirmed">See roles open to you ${ARROW}</a></p>
 </section>
 <section class="block" style="max-width:760px;margin:0 auto"><div class="cards">

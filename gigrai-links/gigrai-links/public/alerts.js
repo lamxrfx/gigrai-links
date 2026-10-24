@@ -28,6 +28,7 @@
     ".ga .wa{background:none!important;border:0;display:flex;align-items:center;justify-content:center;gap:8px;color:#9ff0c5;font-size:14px;font-weight:700;text-decoration:none;padding:6px}",
     ".ga .msg{font-size:14px;min-height:20px}.ga .msg.err{color:#ffb3b3}",
     ".ga .done{text-align:center;display:grid;gap:12px;padding:10px 0}.ga .done b{font-size:21px}",
+    ".ga .done .ga-tip{margin:0;padding:12px 14px;border-radius:14px;background:rgba(255,200,80,.1);border:1px solid rgba(255,200,80,.35);color:#ffe9bf;font-size:14px;line-height:1.5}.ga .done .ga-tip b{font-size:inherit;color:#fff}",
     ".ga-hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}"
   ].join("\n");
   document.head.appendChild(css);
@@ -84,7 +85,7 @@
       var d = await r.json();
       if (!d.ok) throw new Error(d.error || "Something went wrong. Please try again.");
       if (d.already) f.innerHTML = '<div class="done"><b>You\'re already subscribed ✅</b><p>' + esc(email) + ' is already getting GigrAI job alerts. Check your inbox (and spam) for our emails.</p><button class="go" type="button" data-x>Done</button></div>';
-      else f.innerHTML = '<div class="done"><b>Check your inbox ✉️</b><p>We\'ve sent a confirmation email to <strong>' + esc(email) + '</strong>. Tap the link inside to start getting roles. (Check spam if it doesn\'t arrive.)</p><button type="button" class="go" data-x>Done</button></div>';
+      else f.innerHTML = '<div class="done"><b>Check your inbox ✉️</b><p>We\'ve sent a confirmation email to <strong>' + esc(email) + '</strong>. Tap the link inside to start getting roles.</p><p class="ga-tip"><b>Not there in 2 minutes?</b> Check your <b>spam or junk</b> folder and mark it <b>&ldquo;Not spam&rdquo;</b>, then add <b>alerts@remotegigrai.com</b> to your contacts so every week\'s roles reach your inbox.</p><button type="button" class="go" data-x>Done</button></div>';
       f.querySelector("[data-x]").addEventListener("click", function () { dlg.close(); });
       try { localStorage.setItem("gg_alerts", "1"); } catch (_) {}
     } catch (err) {

@@ -570,7 +570,7 @@ async function decorate(res, url, env, ctx, page) {
 
   let rw = new HTMLRewriter().on("head", {
     element(el) {
-      if (env.EMAIL_SIGNUP === "on") el.append(`<script src="/alerts.js?v=5" defer></script>`, { html: true });
+      if (env.EMAIL_SIGNUP === "on") el.append(`<script src="/alerts.js?v=6" defer></script>`, { html: true });
       if (env.CHAT !== "off") el.append(`<script src="/chat.js?v=9" defer></script>`, { html: true });
       if (verify) el.append(`<meta name="google-site-verification" content="${verify}">`, { html: true });
       if (client) {
