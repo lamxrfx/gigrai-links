@@ -1350,7 +1350,9 @@ async function handleJobs(url, env, ctx) {
   const counts = {};
   for (const j of list) if (j.domain) counts[j.domain] = (counts[j.domain] || 0) + 1;
   const fields = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([name, n]) => ({ name, n }));
-  const sources = livePlatforms().map(p => ({ id: p.id, name: p.name, n: feed.filter(j => j.platform === p.id).length }));
+  // platform filter: every platform with live roles, including ones added by hand (Handshake AI, "Other")
+  const sources = [...(PLATFORM_CONFIG.platforms || []).filter(p => p.active).map(p => ({ id: p.id, name: p.name, n: feed.filter(j => j.platform === p.id).length })),
+    { id: "other", name: "Other companies", n: feed.filter(j => j.platform === "other").length }].filter(x => x.n);
   if (field) list = list.filter(j => j.domain === field);
 
   list = list.slice().sort(sort === "pay"
