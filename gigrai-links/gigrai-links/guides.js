@@ -170,4 +170,173 @@ export const GUIDES = [
 <p><a href="/jobs">Browse every live remote AI role</a>, or <a href="https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u" rel="noopener">join the GigrAI WhatsApp channel</a> for new roles as they go live.</p>
 `,
   },
+  {
+    slug: "is-mercor-legit",
+    title: "Is Mercor legit? Pay, the AI interview and real complaints (2026)",
+    desc: "Is Mercor a real way to get paid for AI work? How it works, what it pays, the AI interview, the common complaints and how to spot fake Mercor recruiters.",
+    updated: "2026-10-24",
+    body: `
+<p class="lead">Short answer: yes, Mercor is a real, well-funded company that pays experts to help train AI. It's best for people with a profession or strong skill, and like every platform, passing the interview doesn't guarantee steady work. Here's what to know before you apply.</p>
+
+<h2>What Mercor is</h2>
+<p>Mercor connects AI labs with experts (doctors, lawyers, engineers, finance professionals, writers and more) who review and improve AI answers in their field. You work remotely as a contractor on projects for Mercor's clients.</p>
+<p>It's big and growing. In October 2025 Mercor raised $350 million at a $10 billion valuation, and said it was paying contractors more than $1.5 million a day. In October 2026, a CBS 60 Minutes report put its network at over 100,000 freelancers, with about 30,000 working in a given week.</p>
+
+<h2>How applying works</h2>
+<ol>
+<li><strong>Create a profile</strong> on Mercor with your CV, education and skills. Their system matches you to roles from it, so make it detailed.</li>
+<li><strong>Do the AI interview.</strong> A short video interview, usually around 20 minutes, with your camera on. It asks about your background and checks how you communicate. You'll need a computer with a webcam, not a phone.</li>
+<li><strong>Take a skills test</strong> if the role needs one, for example a coding or subject assessment.</li>
+<li><strong>Wait for a match.</strong> Replies often take 2 to 6 weeks, and you may not get a formal "no". If you've heard nothing after six weeks, apply for other roles.</li>
+</ol>
+<p>Tip: the interview uses your CV, so tailor it to the role first. Our <a href="/guides/micro1-ai-interview">AI interview guide</a> is written for micro1, but the same tips work for Mercor.</p>
+
+<h2>What Mercor pays</h2>
+<p>Mercor's listings show hourly pay up front. Rough ranges seen in 2026:</p>
+<div class="tbl"><table>
+<thead><tr><th>Type of role</th><th>Typical advertised pay</th></tr></thead>
+<tbody>
+<tr><th>General evaluation and writing</th><td>About $15 to $30/hr</td></tr>
+<tr><th>Coding and software</th><td>About $35 to $90/hr</td></tr>
+<tr><th>Medicine, law and finance experts</th><td>About $60 to $150+/hr</td></tr>
+<tr><th>Top specialists</th><td>Reported up to around $375/hr</td></tr>
+</tbody></table></div>
+<p class="note">Based on live listings and published reports, October 2026. These are advertised rates, not guaranteed earnings. Check each listing.</p>
+<p>Pay is usually weekly, through Stripe (or Wise or bank transfer in some countries). As a contractor, you handle your own tax.</p>
+
+<h2>The common complaints</h2>
+<ul>
+<li><strong>Projects end suddenly.</strong> Work is project-based and can stop early. In November 2025, a Meta-related project paying $21/hr was cancelled and workers were offered a different project at $16/hr. Mercor said its listings make clear the work is temporary.</li>
+<li><strong>Offboarding for failed quizzes or rule breaks.</strong> Some projects remove people who fail a project test or break task rules, sometimes in large waves.</li>
+<li><strong>Silence after applying.</strong> Little or no feedback if you're not selected.</li>
+<li><strong>Gaps between projects</strong> and limited support.</li>
+</ul>
+<p>None of this means it's a scam. It means Mercor works best as flexible, well-paid extra income, not a guaranteed full-time job. Joining more than one platform smooths out the gaps.</p>
+
+<h2>How to spot fake Mercor recruiters</h2>
+<ul>
+<li><strong>Apply on mercor.com</strong> (work.mercor.com), not through someone who messages you first on WhatsApp, Telegram or LinkedIn.</li>
+<li><strong>Mercor never charges you</strong> to apply, to "unlock" a project or for training. Anyone asking for money is a scammer.</li>
+<li><strong>Check the email address</strong> of anyone who contacts you. It should end in mercor.com.</li>
+<li><strong>Only share ID</strong> through Mercor's own verification step on its site.</li>
+</ul>
+
+<h2>Who Mercor suits best</h2>
+<ul>
+<li>People with a degree, profession or specialist skill (medicine, law, finance, engineering, coding, maths, science).</li>
+<li>People who want weekly pay and clear rates up front.</li>
+<li>Anyone happy with flexible, project-based work rather than fixed hours.</li>
+</ul>
+<p>Still deciding? See <a href="/guides/micro1-vs-mercor">micro1 vs Mercor</a>, or <a href="/jobs">browse live Mercor roles</a> with the pay shown.</p>
+`,
+  },
+  {
+    slug: "ai-trainer-pay",
+    title: "How much do AI trainers get paid? Pay by field (2026)",
+    desc: "Real hourly pay for AI training work in 2026, by field: general, coding, languages, maths and science, finance, law and medicine. Includes live rates from current roles.",
+    updated: "2026-10-24",
+    live: "pay",
+    body: `
+<p class="lead">AI training pay depends almost entirely on what you know. General roles pay around $15 to $30 an hour, and credentialed experts like doctors and lawyers can earn $100+ an hour. Here are real numbers, including a live table from the roles on GigrAI today.</p>
+
+<h2>Live pay on GigrAI right now</h2>
+<!--LIVE_PAY-->
+
+<h2>Typical pay by level</h2>
+<div class="tbl"><table>
+<thead><tr><th>Level</th><th>Typical pay</th><th>Example work</th></tr></thead>
+<tbody>
+<tr><th>Entry level / generalist</th><td>About $12 to $25/hr</td><td>Rating AI answers, simple labelling, transcript checks</td></tr>
+<tr><th>Mid level</th><td>About $25 to $55/hr</td><td>Code review, translation checks, finance or science labelling</td></tr>
+<tr><th>Expert</th><td>About $75 to $200+/hr</td><td>Medical, legal and finance review, advanced maths, senior software engineering</td></tr>
+</tbody></table></div>
+<p class="note">Ranges from published 2026 pay surveys and live listings. Advertised rates, not guaranteed earnings.</p>
+
+<h2>Why the pay varies so much</h2>
+<ul>
+<li><strong>Your field.</strong> AI labs pay most for knowledge that's rare and checkable: a doctor spotting a wrong diagnosis, a lawyer catching a bad citation.</li>
+<li><strong>Credentials.</strong> Degrees, licences and years of experience unlock the top-paying roles.</li>
+<li><strong>Task difficulty.</strong> Writing hard questions or checking expert answers pays more than ranking simple replies.</li>
+<li><strong>Country.</strong> Some roles are open only to certain countries, and a few pay more for specific locations or languages.</li>
+</ul>
+
+<h2>What you actually take home</h2>
+<p>The hourly rate isn't the whole story:</p>
+<ul>
+<li><strong>Hours go up and down.</strong> Projects start, pause and end, so a $40/hr role might give you 30 hours one week and none the next.</li>
+<li><strong>You're a contractor.</strong> There's no holiday or sick pay, and you pay your own tax (in the UK, through Self Assessment).</li>
+<li><strong>Payment fees.</strong> Platforms pay in US dollars through Deel, Stripe or Wise, so check the conversion and any fees.</li>
+</ul>
+<p>Most people treat it as flexible extra income and join two or three platforms so there's usually something to work on.</p>
+
+<h2>How to earn more</h2>
+<ol>
+<li><strong>Lead with your expertise.</strong> Apply for roles in your own field, not just general ones.</li>
+<li><strong>Do the qualification tests.</strong> Passing them often unlocks better-paid work on the same platform.</li>
+<li><strong>Join more than one platform.</strong> Compare them in <a href="/guides/micro1-vs-mercor">micro1 vs Mercor</a>.</li>
+<li><strong>Keep your profile and CV up to date.</strong> AI matching and interviews are built from it.</li>
+<li><strong>Do great work early.</strong> Reliable contributors tend to be picked for the next project.</li>
+</ol>
+<p>Ready to look? <a href="/">Search live roles by pay</a>, or read <a href="/guides/is-mercor-legit">Is Mercor legit?</a> for the platform with the highest expert rates.</p>
+`,
+  },
+  {
+    slug: "ai-training-jobs-no-experience",
+    title: "AI training jobs with no experience: where to start in 2026",
+    desc: "Can you get AI training work with no experience? What 'experience' really means, which roles to apply for first, how to pass the AI interview, and the scams to avoid.",
+    updated: "2026-10-24",
+    body: `
+<p class="lead">Yes, you can start AI training work without any AI experience. Platforms aren't looking for AI skills; they're looking for people who are good at something. The catch: general roles pay less and fill up fast, so it helps to know where you have an edge.</p>
+
+<h2>What "no experience" really means</h2>
+<p>You almost certainly have more to offer than you think. Platforms value:</p>
+<ul>
+<li><strong>Strong writing</strong> in English or another language.</li>
+<li><strong>A second language</strong>, especially one spoken by millions (Spanish, French, Arabic, Hindi, Portuguese and more).</li>
+<li><strong>Your degree or studies</strong>, in any subject: biology, history, accounting, nursing, engineering.</li>
+<li><strong>Your job or past jobs</strong>: retail, care work, teaching, admin, trades. Real-world knowledge is useful for checking AI answers.</li>
+<li><strong>Hobbies with real depth</strong>: coding, photography, music, sport, cooking.</li>
+</ul>
+<p>Put all of this on your CV. AI interviews build their questions from it.</p>
+
+<h2>Roles to apply for first</h2>
+<ul>
+<li><strong>General AI evaluator or rater:</strong> compare AI answers and explain which is better. Usually about $15 to $30/hr.</li>
+<li><strong>Writing and editing roles:</strong> write or fix answers so they're clear and correct.</li>
+<li><strong>Language and translation roles:</strong> check AI answers in your native language. Often less competition than English-only roles.</li>
+<li><strong>Roles in your own field:</strong> even without "expert" credentials, a relevant degree or job can get you into better-paid work.</li>
+</ul>
+<p>On GigrAI, sort by pay and look for roles open to your country. A green dot means the listing says it's open where you live.</p>
+
+<h2>How to get started, step by step</h2>
+<ol>
+<li><strong>Update your CV.</strong> Lead with writing, languages, studies and anything you know well.</li>
+<li><strong>Pick 3 to 5 live roles</strong> that fit. <a href="/">Search GigrAI</a> by field or pay.</li>
+<li><strong>Join a platform that lets one application cover many roles.</strong> micro1 puts you in a talent pool for similar roles from one application.</li>
+<li><strong>Prepare for the AI interview.</strong> Quiet room, camera on, real examples. Read <a href="/guides/micro1-ai-interview">how to pass the AI interview</a>.</li>
+<li><strong>Apply to more than one platform.</strong> Work comes in waves, and being in several pools means less waiting.</li>
+<li><strong>Be patient.</strong> Replies can take 2 to 6 weeks. Keep applying while you wait.</li>
+</ol>
+
+<h2>What to expect</h2>
+<ul>
+<li>Work is flexible and remote, but hours aren't guaranteed.</li>
+<li>You'll be a contractor, paid in US dollars, and responsible for your own tax.</li>
+<li>Your first project is the hardest to get. After that, good work often leads to more.</li>
+</ul>
+
+<h2>Scams that target beginners</h2>
+<p>Beginners are the main target for fake "AI job" offers. Walk away if anyone:</p>
+<ul>
+<li><strong>Asks you to pay</strong> for training, a starter kit, equipment or "verification". Real platforms are free.</li>
+<li><strong>Messages you first</strong> on WhatsApp or Telegram with a job you didn't apply for.</li>
+<li><strong>Promises high pay</strong> with no interview and no test.</li>
+<li><strong>Asks for your bank login</strong> or wants to send you money to "forward on".</li>
+</ul>
+<p>Always apply on the platform's own website. Every role on GigrAI links straight to the real platform.</p>
+
+<h2>Start here</h2>
+<p><a href="/jobs">Browse every live role</a>, see <a href="/guides/ai-trainer-pay">what AI trainers get paid</a>, or read <a href="/guides/get-paid-ai-training-work">our beginner's guide to getting paid</a>.</p>
+`,
+  },
 ];

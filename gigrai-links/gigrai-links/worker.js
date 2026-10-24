@@ -462,8 +462,11 @@ const app = {
       if (g) view("guides", g.title);
       if (g) {
         let roles = [];
-        try { roles = guideRoles(g, await loadFeed(env, ctx)); } catch {}
-        return decorate(guidePage(g, GUIDES, url.origin, roles, PLATFORM_CONFIG.platforms), url, env, ctx, "/guides");
+        let feed = [];
+        try { feed = await loadFeed(env, ctx); roles = guideRoles(g, feed); } catch {}
+        // Guides marked live: "pay" get a pay table worked out from today's roles
+        const page = g.live === "pay" ? { ...g, body: g.body.replace("<!--LIVE_PAY-->", livePayTable(feed)) } : g;
+        return decorate(guidePage(page, GUIDES, url.origin, roles, PLATFORM_CONFIG.platforms), url, env, ctx, "/guides");
       }
       return Response.redirect(new URL("/guides", url).toString(), 301);
     }
@@ -781,6 +784,35 @@ async function notifyEnquiry(env, ref, e, vet) {
     "MIME-Version: 1.0", "Content-Type: text/plain; charset=utf-8", "Content-Transfer-Encoding: base64", "", b64(body).replace(/.{76}/g, "$&\r\n"),
   ].join("\r\n");
   await env.NOTIFY.send(new EmailMessage(from, to, raw));
+}
+
+// Live pay by field, from today's roles (for /guides/ai-trainer-pay)
+const PAY_FIELDS = [
+  ["Medicine and health", /medic|health|nurs|doctor|physician|clinic|pharmac|dent|radiolog|psychiatr|surgeon|therap/i],
+  ["Law", /\blaw|legal|attorney|lawyer|paralegal|solicitor|barrister/i],
+  ["Finance and accounting", /financ|account|bank|invest|\btax|audit|econom|actuar/i],
+  ["Coding and software", /software|engineer|develop|coding|\bcode|python|javascript|typescript|programm|data scien|machine learning|devops/i],
+  ["Maths and science", /math|physic|chemist|biolog|scien|statistic/i],
+  ["Languages and translation", /translat|language|linguist|spanish|french|german|arabic|hindi|portuguese|japanese|chinese|mandarin|korean|italian|dutch|polish|turkish|swahili|yoruba/i],
+  ["Writing and general", /./],
+];
+function livePayTable(feed) {
+  const paid = (feed || []).filter(j => j.min || j.max);
+  if (paid.length < 5) return `<p>Live pay data isn't available right now. <a href="/">Search live roles</a> to see current rates.</p>`;
+  const groups = PAY_FIELDS.map(([name]) => ({ name, lo: [], hi: [] }));
+  for (const j of paid) {
+    const text = `${j.title} ${j.domain || ""}`;
+    const i = PAY_FIELDS.findIndex(([, re]) => re.test(text));
+    groups[i].lo.push(j.min || j.max); groups[i].hi.push(j.max || j.min);
+  }
+  const med = (a) => { const b = a.slice().sort((x, y) => x - y); const m = b.length >> 1; return Math.round(b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2); };
+  const rows = groups.filter(g => g.hi.length).sort((a, b) => med(b.hi) - med(a.hi)).map(g => {
+    const lo = med(g.lo), hi = med(g.hi);
+    return `<tr><th>${g.name}</th><td>${lo === hi ? `$${lo}/hr` : `$${lo} to $${hi}/hr`}</td><td>$${Math.max(...g.hi)}/hr</td><td>${g.hi.length}</td></tr>`;
+  }).join("");
+  const day = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/London" });
+  return `<div class="tbl"><table><thead><tr><th>Field</th><th>Typical pay</th><th>Highest</th><th>Live roles</th></tr></thead><tbody>${rows}</tbody></table></div>
+<p class="note">Worked out from ${paid.length} live roles with pay shown on GigrAI, ${day}. "Typical pay" is the middle of the advertised ranges. Updates automatically as roles change.</p>`;
 }
 
 // 3 live roles for the end of a guide: the guide's platform first, roles most people can do, best pay
