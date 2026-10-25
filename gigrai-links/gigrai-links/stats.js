@@ -183,6 +183,7 @@ export function botKind(request) {
   if (/semrush|ahrefs|mj12|dotbot|rogerbot|screaming frog|serpstat|dataforseo|blexbot/i.test(ua)) return "seo";
   if (/curl|wget|python|go-http|node|axios|scrapy|headless|puppeteer|playwright|selenium|phantom|lighthouse|monitor|pingdom|uptime|java\/|okhttp|libwww|httpclient/i.test(ua)) return "script";
   if (isServerNet(request)) return "server";
+  if (fakeBrowser(request)) return fakeBrowser(request);
   return "other";
 }
 
@@ -198,10 +199,21 @@ export function isServerNet(request) {
 // Stored as a short tag, e.g. "digitalocean-llc" (keys can only hold letters, numbers and dashes)
 export const netName = (request) => String(request.cf?.asOrganization || (request.cf?.asn ? "AS" + request.cf.asn : "unknown")).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40);
 
+// Bots that pretend to be Chrome/Safari usually give themselves away: real browsers always send a
+// language (Accept-Language), and scraping tools often use a years-old browser version.
+export function fakeBrowser(request) {
+  const ua = request.headers.get("user-agent") || "";
+  if (!request.headers.get("accept-language")) return "nolang";
+  const chrome = ua.match(/(?:Chrome|CriOS)\/(\d+)/), firefox = ua.match(/Firefox\/(\d+)/);
+  if ((chrome && +chrome[1] < 100) || (firefox && +firefox[1] < 100)) return "oldua";
+  return "";
+}
+
 export function isHuman(request) {
   const ua = request.headers.get("user-agent") || "";
   if (!ua || BOT.test(ua) || !/mozilla/i.test(ua)) return false;
   if (isServerNet(request)) return false;
+  if (fakeBrowser(request)) return false;
   const purpose = request.headers.get("purpose") || request.headers.get("sec-purpose") || "";
   if (/prefetch|prerender/i.test(purpose)) return false;
   return true;

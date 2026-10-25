@@ -78,7 +78,7 @@ const app = {
     // Count a human page view (anonymous daily totals for the media kit)
     const view = (section, title = "") => {
       if (request.method !== "GET") return;
-      if (isHuman(request)) { track(env, ctx, request, "view", section, visitSource(request, url)); presence(env, ctx, request, section, true); pageHit(env, ctx, request, url.pathname.replace(/\/+$/, "") || "/", title, section); }
+      if (isHuman(request)) { track(env, ctx, request, "view", section, visitSource(request, url)); track(env, ctx, request, "vnet", `${(request.cf?.country || "xx").toLowerCase()}-${netName(request)}`, section); presence(env, ctx, request, section, true); pageHit(env, ctx, request, url.pathname.replace(/\/+$/, "") || "/", title, section); }
       else { // counted separately, never in the visitor numbers
         const kind = botKind(request);
         track(env, ctx, request, "bot", kind, section);
@@ -359,7 +359,7 @@ const app = {
         let days = pickDays(url);
         let from = allTime ? "2000-01-01" : daysAgo(days - 1);
         const to = new Date().toISOString().slice(0, 10);
-        const [views, applies, geo, ccViews, bots, flags, roles, pages, botnets, joins] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to), countryTotals(env, "view", from, to), readStats(env, { kind: "bot", from }), flagged(env, from, to), topRoles(env, from, to), topPages(env, from, to), readStats(env, { kind: "botnet", from }), readStats(env, { kind: "join", from })]);
+        const [views, applies, geo, ccViews, bots, flags, roles, pages, botnets, joins, vnets] = await Promise.all([readStats(env, { kind: "view", from }), readStats(env, { kind: "apply", from }), geoReport(env, from, to), countryTotals(env, "view", from, to), readStats(env, { kind: "bot", from }), flagged(env, from, to), topRoles(env, from, to), topPages(env, from, to), readStats(env, { kind: "botnet", from }), readStats(env, { kind: "join", from }), readStats(env, { kind: "vnet", from })]);
         if (allTime) { // from the day counting started
           from = (views && views.since) || to;
           days = Math.max(1, Math.round((Date.parse(to) - Date.parse(from)) / 864e5) + 1);
@@ -375,7 +375,7 @@ const app = {
         const countMe = url.searchParams.get("count") === "1";
         const chose = /(?:^|;\s*)gg_count=1(?:;|$)/.test(request.headers.get("cookie") || "");
         const hidden = countMe ? false : (isOwner(request) || url.searchParams.get("count") === "0" || (!nt && !chose));
-        const page = withAdminNav(nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags, hidden, roles, pages, botnets, joins })), k, "numbers");
+        const page = withAdminNav(nocache(adminPage({ origin: url.origin, views, applies, sponsors, links, days, allTime, key: k, enquiries, geo, ccViews, bots, flags, hidden, roles, pages, botnets, joins, vnets })), k, "numbers");
         const secure = url.protocol === "https:" ? "; Secure" : "";
         if (countMe) {
           page.headers.append("set-cookie", `gg_nt=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secure}`);

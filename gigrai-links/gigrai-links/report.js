@@ -17,7 +17,7 @@ const SRC = { ig: "Instagram", wa: "WhatsApp", featured: "Featured on site", sit
 const source = (s) => SRC[s] || (s ? s.charAt(0).toUpperCase() + s.slice(1) : "Other");
 
 // Thresholds: a number only appears in the public media kit once it's worth showing
-const BOT_KINDS = { search: "Search engines (Google, Bing…)", preview: "Link previews (WhatsApp, Instagram…)", ai: "AI crawlers (ChatGPT, Claude…)", seo: "SEO tools (Ahrefs, Semrush…)", ads: "Google AdSense checker", script: "Scripts and test tools", prefetch: "Browser preloading", server: "Servers and data centres (pretending to be a browser)", "no-ua": "No browser details", other: "Other bots" };
+const BOT_KINDS = { search: "Search engines (Google, Bing…)", preview: "Link previews (WhatsApp, Instagram…)", ai: "AI crawlers (ChatGPT, Claude…)", seo: "SEO tools (Ahrefs, Semrush…)", ads: "Google AdSense checker", script: "Scripts and test tools", prefetch: "Browser preloading", server: "Servers and data centres (pretending to be a browser)", "no-ua": "No browser details", nolang: "Fake browsers (no language set)", oldua: "Fake browsers (years-old version)", other: "Other bots" };
 const SECTIONS = { home: "Homepage (job search)", role: "Role pages", jobs: "All roles list", guides: "Guides", news: "News headlines", post: "News articles", platforms: "Platforms", advertise: "Advertise page", "media-kit": "Media kit", privacy: "Privacy page", confirmed: "Email confirmed page" };
 // Ideas for earning from each kind of page (shown under "Popular pages")
 const MONEY = { guides: "Guides: add sponsored slots or affiliate boxes for the platforms they cover", post: "News articles: sell a sponsored article or an in-article ad", news: "News: a featured headline spot for advertisers", role: "Role pages: featured roles from the same company or field", jobs: "All roles: a pinned sponsored role at the top", platforms: "Platforms: paid placement for new platforms (clearly labelled)", home: "Homepage: featured roles and the email sign-up" };
@@ -426,7 +426,7 @@ h3.mini{font-size:14px;color:var(--muted);margin:14px 0 8px}
 </script>`;
 }
 
-export function adminPage({ origin, views, applies, sponsors, links, days = 30, allTime = false, key = "", enquiries = [], geo = [], ccViews = [], bots = null, flags = [], hidden = true, roles = [], pages = [], botnets = null, joins = null }) {
+export function adminPage({ origin, views, applies, sponsors, links, days = 30, allTime = false, key = "", enquiries = [], geo = [], ccViews = [], bots = null, flags = [], hidden = true, roles = [], pages = [], botnets = null, joins = null, vnets = null }) {
   const period = allTime ? "All time" : `Last ${days} days`;
   const sponsorBlocks = sponsors.length ? sponsors.map((s, i) => `<div class="rlink glass">
   <b>${esc(s.company || s.id)}</b> <span class="meta">${esc(s.start || "?")} to ${esc(s.until || "?")}${s.pin === false ? " · posts only" : " · pinned on site"} · ${fmt(s._unique || 0)} unique clicks${s._cap ? ` of ${fmt(s._cap)} paid for (£${(Math.min(s._unique || 0, s._cap) * s.cpc).toFixed(2)} of £${s.budget})${(s._unique || 0) >= s._cap ? " · <b>budget used, unpinned</b>" : ""}` : ""}</span>
@@ -453,6 +453,7 @@ ${applies ? `<section class="block"><h2>Apply clicks per day</h2><div class="pan
 <section class="block"><h2>Apply clicks by platform</h2><div class="panel glass">${applies ? barList(applies.byKey, (r) => r.k === "-" ? "Unknown" : r.k, applies.total, "apply clicks") : ""}</div></section>
 <section class="block"><h2>Apply clicks by channel</h2><div class="panel glass">${applies ? barList(applies.bySrc.slice(0, 8), (r) => source(r.src), applies.total, "apply clicks") : ""}</div></section>
 </div>
+<section class="block"><h2>Visitor networks</h2><div class="panel glass">${vnets && vnets.total ? `<p class="note" style="margin:0 0 12px">Which internet provider real visitors came from. Lots of visits from one network in one country (and no apply clicks) usually means a bot. Tracking started 25 Oct 2026.</p>${barList(vnets.byKey.slice(0, 12), (r) => { const m = String(r.k).match(/^([a-z]{2})-(.*)$/); return m ? `${country(m[1])} · ${netLabel(m[2])}` : netLabel(r.k); }, vnets.total, "page views")}` : `<p class="note" style="margin:0">No data yet. Tracking started 25 Oct 2026.</p>`}</div></section>
 <section class="block"><h2>Money from guides and news</h2><div class="panel glass">${(() => {
   const g = (r) => /^(guide|news)/.test(r.src);
   const ap = (applies && applies.bySrc || []).filter(g), jn = (joins && joins.bySrc || []).filter(g);
