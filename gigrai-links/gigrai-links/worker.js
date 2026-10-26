@@ -548,7 +548,17 @@ function secure(res, url) {
 export default {
   scheduled: (event, env, ctx) => app.scheduled(event, env, ctx),
   async fetch(request, env, ctx) {
-    return secure(await app.route(request, env, ctx), new URL(request.url));
+    const url = new URL(request.url);
+    try {
+      return secure(await app.route(request, env, ctx), url);
+    } catch (e) {
+      // Instead of Cloudflare's blank "Error 1101", log it and show a friendly page.
+      // On private pages (admin, numbers) the error message is shown too, so problems can be fixed quickly.
+      console.error("unhandled", url.pathname, String(e && e.stack || e));
+      const priv = /^\/(admin|report)/.test(url.pathname);
+      const msg = String(e && e.message || e).replace(/[<>&]/g, "").slice(0, 300);
+      return secure(new Response(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Something went wrong · GigrAI</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#070914;color:#eef1ff;font:16px/1.55 system-ui,sans-serif;padding:20px"><main style="max-width:520px;text-align:center"><h1 style="font-size:26px">Something went wrong</h1><p>Please go back and try again in a moment.</p>${priv ? `<p style="margin-top:18px;padding:12px 14px;border-radius:12px;background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.4);text-align:left;font-size:14px"><b>Error details (only shown on private pages):</b><br>${msg}<br><small>${url.pathname} · ${new Date().toISOString()}</small></p>` : ""}<p><a href="/" style="color:#9fdcf0">Back to GigrAI</a></p></main></body>`, { status: 500, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } }), url);
+    }
   },
 };
 
