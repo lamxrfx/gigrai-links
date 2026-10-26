@@ -20,6 +20,22 @@
         }
       ],
       "affiliate": "micro1"
+    },
+    {
+      "id": "2026-10-26-ai-job-postings-record-high",
+      "created": "2026-10-26T06:43:56.396Z",
+      "title": "AI now appears in a record share of job adverts, but pay is lagging prices",
+      "slug": "ai-job-postings-record-high",
+      "cat": "ai-work",
+      "summary": "Indeed says 7.3% of US job adverts now mention AI skills, a record high, while advertised pay trails inflation. Here is what that means for AI trainers and remote workers.",
+      "body": "More job adverts than ever now mention artificial intelligence, even as the wider hiring picture stays lukewarm. That's the headline from Indeed Hiring Lab's latest US labour market snapshot, published on 22 October. If you train AI models for a living, or you're hoping to, the numbers say a lot about where demand for AI-literate people is heading.\n\n## AI mentions hit a new high\n\nAccording to Indeed, AI-related postings now make up **7.3% of all job adverts** on its US site. The previous peak was 3.3%, back in 2022, so the share has more than doubled.\n\nIndeed counts a posting as AI-related when it uses terms such as \"machine learning\", \"data science\", \"generative AI\", \"large language models\" or \"ChatGPT\". So this isn't only about AI engineers: plenty of ordinary roles now ask for people who can work with these tools.\n\n## The wider market: steady, not strong\n\nAway from AI, the picture is mixed:\n\n- Overall US postings are almost 4% above their February 2020 level and 2.8% higher than a year ago (a year earlier they were down 8.1%).\n- 68% of job sectors now have more openings than a year ago, up from 49% at the start of September.\n- Even so, Indeed is cautious. In its words, \"it would be premature to say the labor market is strengthening.\"\n\nPay is the sore point. Advertised wages rose 2.4% year on year in September, while inflation ran at 3.7%. In other words, posted pay isn't keeping up with prices for most people.\n\n## Winners and losers\n\nEngineering is the stand-out. Mechanical, civil and electrical engineering are among the five strongest sectors, and electrical engineering pay in job adverts is up 5.6% on last year. Postings linked to data centres, the huge buildings that run AI models, have grown another 20% in three months and are now 147% above their June 2024 level.\n\nSoftware development, by contrast, is the weakest sector Indeed tracks. Tech-heavy cities feel it most, with Seattle and San Francisco among the softest job markets in the country. So \"AI is booming\" and \"tech hiring is weak\" are both true at once: companies want AI skills spread across many roles, not simply more developers.\n\n## What it means for you\n\nIndeed's data covers the US, but the trend is a useful signal for remote workers anywhere.\n\n1. **AI skills are becoming a general requirement.** If you already do AI training work, such as rating chatbot answers, writing prompts or checking model reasoning, that's real, relevant experience. Put it on your CV in plain terms: which kinds of tasks, which domains, and roughly how many hours.\n2. **Your specialism is your edge.** With engineering and healthcare roles in demand, people with expertise in those fields are well placed for higher-paid expert AI training projects, not just general tasks.\n3. **Don't rely on one income stream.** With pay lagging inflation, many people are topping up their earnings. AI training work can fill that gap, but projects come and go, so spread yourself across more than one reputable platform.\n4. **Watch out for fake \"AI jobs\".** When a buzzword is hot, scammers copy it. A genuine platform will never ask you to pay to join, buy a \"starter kit\" or deposit money to unlock tasks.\n\nYou can browse current remote AI training roles from established platforms on [GigrAI](https://remotegigrai.com), all free to search.",
+      "sources": [
+        {
+          "title": "Indeed Hiring Lab: US Labor Market Snapshot — October 2026",
+          "url": "https://hiringlab.indeed.com/2026/10/22/us-labor-market-snapshot-october-2026/"
+        }
+      ],
+      "affiliate": ""
     }
   ]
 }
