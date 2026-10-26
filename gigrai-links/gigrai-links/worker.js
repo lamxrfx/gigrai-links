@@ -33,6 +33,16 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 // Best-effort limit: 5 sign-up attempts a minute per visitor (per server location)
 const HITS = new Map();
+// Is this form/API request coming from our own site? Some browsers send "Origin: null" (e.g. on pages that hide
+// the referrer), so fall back to the browser's Sec-Fetch-Site header. Never throws.
+function sameSite(request, url, required = true) {
+  const o = request.headers.get("origin");
+  if (o && o !== "null") { try { return new URL(o).host === url.host; } catch { return false; } }
+  const sf = request.headers.get("sec-fetch-site");
+  if (sf) return sf === "same-origin";
+  return !required; // no headers at all (old browsers, scripts): only allowed where the check is optional
+}
+
 function tooMany(request) {
   const ip = request.headers.get("cf-connecting-ip") || "?";
   const now = Date.now(), list = (HITS.get(ip) || []).filter(t => now - t < 60000);
@@ -91,7 +101,7 @@ const app = {
       if (request.method !== "POST") return json({ ok: false, error: "Method not allowed" }, 405);
       if (env.EMAIL_SIGNUP !== "on") return json({ ok: false, error: "Email alerts are coming soon. Join our WhatsApp channel for now." }, 403);
       const origin = request.headers.get("origin");
-      if (!origin || new URL(origin).host !== url.host) return json({ ok: false, error: "Forbidden" }, 403);
+      if (!sameSite(request, url)) return json({ ok: false, error: "Forbidden" }, 403);
       if (tooMany(request)) return json({ ok: false, error: "Too many tries. Please wait a minute and try again." }, 429);
 
       let data;
@@ -157,7 +167,7 @@ const app = {
     // Advertiser booking request from /advertise -> saved, link checked, emailed to us
     if (url.pathname === "/api/enquiry" && request.method === "POST") {
       const origin = request.headers.get("origin");
-      if (!origin || new URL(origin).host !== url.host) return json({ ok: false, error: "Forbidden" }, 403);
+      if (!sameSite(request, url)) return json({ ok: false, error: "Forbidden" }, 403);
       if (tooMany(request)) return json({ ok: false, error: "Too many tries. Please wait a minute and try again." }, 429);
       let d;
       try { d = JSON.parse((await request.text()).slice(0, 8000)); } catch { return json({ ok: false, error: "Bad request" }, 400); }
@@ -966,7 +976,7 @@ function chatRoles(feed, text, country) {
 async function handleChat(request, url, env, ctx) {
   if (env.CHAT === "off") return json({ ok: false, error: "The assistant is switched off." }, 404);
   const origin = request.headers.get("origin");
-  if (!origin || new URL(origin).host !== url.host) return json({ ok: false, error: "Forbidden" }, 403);
+  if (!sameSite(request, url)) return json({ ok: false, error: "Forbidden" }, 403);
   if (chatTooMany(request)) return json({ ok: false, error: "You've sent a lot of messages. Please wait a few minutes and try again." }, 429);
   let d;
   try { d = JSON.parse((await request.text()).slice(0, 12000)); } catch { return json({ ok: false, error: "Bad request" }, 400); }
@@ -1082,7 +1092,7 @@ async function handleBooking(request, url, env, ctx, ref, done) {
 
   // POST: save details + terms, then pay
   const origin = request.headers.get("origin");
-  if (origin && new URL(origin).host !== url.host) return new Response("Forbidden", { status: 403 });
+  if (!sameSite(request, url, false)) return new Response("Forbidden", { status: 403 });
   if (tooMany(request)) return bookingPage({ ref, t, q, offer, error: "Too many tries. Please wait a minute and try again.", stripeOn, email: contactEmail() });
   let form; try { form = await request.formData(); } catch { return new Response("Bad request", { status: 400 }); }
   const f = (n, max) => String(form.get(n) || "").replace(/\r/g, "").trim().slice(0, max);
@@ -1434,7 +1444,7 @@ async function handleAdmin(request, url, env, ctx) {
   if (url.pathname === "/admin/upload" && request.method === "POST") {
     if (!db || !(await keyOk(env, "owner", url.searchParams.get("k") || ""))) return json({ ok: false, error: "Not allowed" }, 403);
     const origin = request.headers.get("origin");
-    if (origin && new URL(origin).host !== url.host) return json({ ok: false, error: "Not allowed" }, 403);
+    if (!sameSite(request, url, false)) return json({ ok: false, error: "Not allowed" }, 403);
     const TYPES = { "image/webp": "webp", "image/jpeg": "jpg", "image/png": "png", "image/gif": "gif" };
     const type = (request.headers.get("content-type") || "").split(";")[0].trim();
     if (!TYPES[type]) return json({ ok: false, error: "Use a JPG, PNG, WebP or GIF image." }, 400);
@@ -1453,7 +1463,7 @@ async function handleAdmin(request, url, env, ctx) {
   if (request.method === "POST") {
     try { form = await request.formData(); } catch { return new Response("Bad request", { status: 400 }); }
     const origin = request.headers.get("origin");
-    if (origin && new URL(origin).host !== url.host) return new Response("Forbidden", { status: 403 });
+    if (!sameSite(request, url, false)) return new Response("Forbidden", { status: 403 });
   }
   const k = (form ? form.get("k") : url.searchParams.get("k")) || "";
   if (!db || !(await keyOk(env, "owner", String(k)))) return noStore(reportsOff(url.origin));
