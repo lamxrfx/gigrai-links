@@ -168,6 +168,7 @@ export const GUIDES = [
 </ol>
 
 <!--WISE-->
+<p>More detail: <a href="/guides/get-paid-in-us-dollars">getting paid in US dollars as a remote worker</a>.</p>
 <h2>How to avoid scams</h2>
 <ul>
 <li><strong>Never pay to apply,</strong> for "training" or for equipment. Real platforms are free to join.</li>
@@ -285,6 +286,7 @@ export const GUIDES = [
 <p>Most people treat it as flexible extra income and join two or three platforms so there's usually something to work on.</p>
 
 <!--WISE-->
+<p>More detail: <a href="/guides/get-paid-in-us-dollars">getting paid in US dollars as a remote worker</a>.</p>
 <h2>How to earn more</h2>
 <ol>
 <li><strong>Lead with your expertise.</strong> Apply for roles in your own field, not just general ones.</li>
@@ -356,6 +358,71 @@ export const GUIDES = [
 
 <h2>Start here</h2>
 <p><a href="/jobs">Browse every live role</a>, see <a href="/guides/ai-trainer-pay">what AI trainers get paid</a>, or read <a href="/guides/get-paid-ai-training-work">our beginner's guide to getting paid</a>.</p>
+`,
+  },
+  {
+    slug: "get-paid-in-us-dollars",
+    title: "Getting paid in US dollars as a remote worker or freelancer (2026)",
+    desc: "Most AI training platforms and overseas clients pay in US dollars. How international pay works, what to check before you withdraw, how Wise fits in, and keeping records for tax.",
+    updated: "2026-10-30",
+    roles: "general",
+    body: `
+<p class="lead">If you do remote AI training work or freelance for overseas clients, you'll often be paid in US dollars, even if you live in the UK, Nigeria, India or anywhere else. Here's how that money gets to you, what to check along the way, and how to keep more of it.</p>
+
+<h2>How remote platforms pay you</h2>
+<p>Most AI training platforms treat you as an independent contractor and pay you in US dollars through a payment service:</p>
+<ul>
+<li><strong>Deel:</strong> used by micro1 and many other remote companies. You withdraw from your Deel balance to a bank account or another payout method.</li>
+<li><strong>Stripe:</strong> used by Mercor and many platforms. Payouts go to a bank account you add.</li>
+<li><strong>Direct bank transfer or Wise:</strong> some platforms and clients pay straight into an account you give them, sometimes via Wise in certain countries.</li>
+</ul>
+<p>Payout options differ by platform and by country, so check each platform's payment page before you start work.</p>
+
+<h2>What to check before you withdraw</h2>
+<ol>
+<li><strong>The exchange rate you'll get.</strong> When dollars are converted to your local currency, the rate used can vary between providers. Compare the rate you're offered with the mid-market rate (the rate you see on Google or XE).</li>
+<li><strong>All the fees.</strong> Look for a transfer fee, a conversion fee, and any fee your own bank charges to receive international money.</li>
+<li><strong>How long it takes.</strong> Some withdrawals arrive within minutes, others take several working days.</li>
+<li><strong>Minimum withdrawal amounts.</strong> Some services only let you withdraw once your balance reaches a set amount.</li>
+<li><strong>Your bank's rules.</strong> Ask whether your bank accepts international payments into your account, and what it charges.</li>
+</ol>
+
+<h2>Where Wise fits in</h2>
+<p>Wise is a money transfer service and account that lets you hold, receive and convert money in different currencies. People doing remote work often use it to receive US dollar earnings and convert them when they're ready.</p>
+<ul>
+<li><strong>Account details in different currencies:</strong> depending on your country, you can get account details to receive money in currencies like US dollars, so a client or platform can pay you as if you had a local account.</li>
+<li><strong>Convert when you choose:</strong> keep money in dollars or convert it to your own currency, with the fee shown before you confirm.</li>
+<li><strong>Send in local currency:</strong> Wise says you can send to 45+ currencies and 70+ countries in local currency, and that 74% of its transfers are instant (under 20 seconds).</li>
+</ul>
+<p>Features and availability depend on where you live, so <strong>check that Wise supports your country</strong> on Wise's own website before you sign up. In the UK, Wise is authorised by the Financial Conduct Authority under the Electronic Money Regulations 2011.</p>
+<!--WISE-->
+
+<h2>Setting it up, step by step</h2>
+<ol>
+<li><strong>Check your country is supported</strong> for the features you need, such as receiving US dollars.</li>
+<li><strong>Open your account</strong> and complete the identity check. Use your real name exactly as it appears on your ID and on your platform profiles.</li>
+<li><strong>Get your account details</strong> for the currency you'll be paid in.</li>
+<li><strong>Add them to your platform's payout settings</strong> (for example in Deel or Stripe), or give them to your client.</li>
+<li><strong>Do a small test</strong> with your first payment before relying on it for larger amounts.</li>
+</ol>
+
+<h2>Keep records for tax</h2>
+<p>As a contractor, you're responsible for your own tax. Whichever way you're paid:</p>
+<ul>
+<li>Keep every payout statement, with the date and the amount in dollars and in your own currency.</li>
+<li>Note the exchange rate used for each payment.</li>
+<li>In the UK, income from self-employment over the £1,000 trading allowance usually needs to be declared through HMRC Self Assessment. Rules differ in other countries, so check with your local tax authority.</li>
+</ul>
+
+<h2>Avoid payment scams</h2>
+<ul>
+<li><strong>Never pay to receive your earnings,</strong> or to "unlock" a withdrawal. Real platforms don't charge you to get paid.</li>
+<li><strong>Don't share your login or one-time codes</strong> with anyone, including people claiming to be from a platform or from Wise.</li>
+<li><strong>Be wary of anyone who asks you to receive money and forward it on.</strong> This is a common scam that can get you into serious trouble.</li>
+</ul>
+
+<h2>Find paid remote work</h2>
+<p>Ready to start earning? <a href="/jobs">Browse every live role</a>, see <a href="/guides/ai-trainer-pay">what AI trainers get paid</a>, or read <a href="/guides/get-paid-ai-training-work">our beginner's guide to AI training work</a>.</p>
 `,
   },
 ];
