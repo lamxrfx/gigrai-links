@@ -282,7 +282,7 @@ const app = {
       return text(`google.com, ${pub}, DIRECT, f08c47fec0942fa0\n`, 3600);
     }
     if (url.pathname === "/robots.txt") {
-      return text(`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /go/\nDisallow: /join/\nDisallow: /picks\nDisallow: /report\nDisallow: /admin\n\nSitemap: ${url.origin}/sitemap.xml\n`, 3600);
+      return text(`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /go/\nDisallow: /join/\nDisallow: /aff/\nDisallow: /picks\nDisallow: /report\nDisallow: /admin\n\nSitemap: ${url.origin}/sitemap.xml\n`, 3600);
     }
     if (url.pathname === "/sitemap.xml") return sitemap(url, env, ctx);
 
@@ -477,6 +477,12 @@ const app = {
       try { feed = await loadFeed(env, ctx); } catch {}
       view("platforms");
       return decorate(platformsPage(feed, url.origin, PLATFORM_CONFIG.platforms, GUIDES), url, env, ctx, "/platforms");
+    }
+    // Wise affiliate (only linked from inside our guides, as Wise requires): tracked, then on to Wise
+    if (request.method === "GET" && url.pathname === "/aff/wise") {
+      const src = cleanSrc(url.searchParams.get("src")) || "site";
+      if (isHuman(request)) { track(env, ctx, request, "link", "wise", src); track(env, ctx, request, "join", "wise", src); }
+      return Response.redirect("https://wise.prf.hn/click/camref:1110lSbzS", 302);
     }
     const joinM = request.method === "GET" && url.pathname.match(/^\/join\/([a-z0-9-]{1,30})\/?$/);
     if (joinM) {

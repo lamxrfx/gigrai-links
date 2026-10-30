@@ -167,6 +167,7 @@ export const GUIDES = [
 <li><strong>Set up payments and tax.</strong> You'll be a contractor, so keep records and declare your earnings.</li>
 </ol>
 
+<!--WISE-->
 <h2>How to avoid scams</h2>
 <ul>
 <li><strong>Never pay to apply,</strong> for "training" or for equipment. Real platforms are free to join.</li>
@@ -283,6 +284,7 @@ export const GUIDES = [
 </ul>
 <p>Most people treat it as flexible extra income and join two or three platforms so there's usually something to work on.</p>
 
+<!--WISE-->
 <h2>How to earn more</h2>
 <ol>
 <li><strong>Lead with your expertise.</strong> Apply for roles in your own field, not just general ones.</li>
