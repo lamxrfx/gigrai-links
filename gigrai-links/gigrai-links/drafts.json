@@ -56,6 +56,30 @@
         }
       ],
       "affiliate": ""
+    },
+    {
+      "id": "2026-10-30-remote-work-from-the-office",
+      "created": "2026-10-30T06:43:21.212Z",
+      "title": "Back in the office, still on Zoom: New York Fed finds many office days are remote in all but name",
+      "slug": "remote-work-from-the-office-new-york-fed",
+      "cat": "remote",
+      "summary": "A New York Fed study finds roughly half of in-office days are spent entirely on video calls or solo work, and official figures may miss most remote work.",
+      "body": "Plenty of employers have spent the last few years calling staff back to their desks. A new paper from the Federal Reserve Bank of New York suggests that, for many of those workers, the office day looks a lot like a day at home, just with a commute bolted on.\n\nThe study, titled *Remote Work from the Office* and written by economists Natalia Emanuel and Emma Harrington, was published as a New York Fed staff report this month. It is based on a survey of college-educated Americans, plus other data on how teams are spread out.\n\n## What the research found\n\nThe headline finding is striking: roughly half of in-office days are spent entirely on video calls or doing solo work. In the authors' words, these workers \"commute in just to work remotely from the office\".\n\nA few other points stand out:\n\n- **Official figures undercount remote work.** The authors argue that measures which only count working from home miss up to three quarters of how much remote work really happens.\n- **Distance is the biggest driver.** Teammates are often based in different offices or work fully remotely, so even people who go in end up on calls.\n- **Coordination is patchy.** People don't always follow in-office rules, and teams often fail to line up the same days.\n- **Habits stick.** Many people take calls from their desks rather than booking a meeting room, even when everyone is in the same building.\n\n## Why it matters for the return-to-office debate\n\nReturn-to-office mandates are usually justified by collaboration: the idea that being together sparks better teamwork. This research doesn't say offices are pointless, but it does suggest that simply requiring attendance doesn't guarantee much face-to-face work.\n\nForbes, covering the paper, framed it as evidence that office mandates often fall short of their goals, and that how in-office days are planned may matter more than how many there are.\n\nFor remote workers, it is also a useful reminder of something many already know: modern work is distributed by default. A team spread across cities, countries and time zones runs on video calls, chat and shared documents, wherever its members happen to be sitting.\n\n## What it means for you\n\nIf you work remotely, or want to, including in AI training and other online contract work, here is how to use this:\n\n1. **Treat remote skills as core skills.** Clear written updates, good video-call habits and working across time zones are what distributed teams rely on. Mention them on your profile and in applications.\n2. **Don't assume a hybrid job means real teamwork.** If you are weighing an office-based role against remote contract work, ask who your teammates are and where they sit. You may be on calls all day anyway.\n3. **Use the research when negotiating.** If an employer is pushing you back in, it is fair to ask what the office days are actually for and how they will be coordinated.\n4. **Keep your setup professional.** Since so much work happens over video either way, a reliable connection, a decent headset and a quiet space matter wherever you work.\n5. **Stay flexible.** Remote and contract work, including AI training projects, can be stop-start. Building skills that transfer across platforms and teams keeps your options open.\n\nThe office isn't going away, but this study is a good sign that the line between \"remote\" and \"in-office\" work is much blurrier than the debate suggests.",
+      "sources": [
+        {
+          "title": "Federal Reserve Bank of New York (Fed in Print): Remote Work from the Office",
+          "url": "https://fedinprint.org/item/fednsr/103946"
+        },
+        {
+          "title": "Federal Reserve Bank of New York: Staff Report 1211, Remote Work from the Office",
+          "url": "https://www.newyorkfed.org/research/staff_reports/sr1211"
+        },
+        {
+          "title": "Forbes: Why Return-To-Office Mandates Fall Short, According To New Research",
+          "url": "https://www.forbes.com/sites/carolinecastrillon/2026/10/27/why-return-to-office-mandates-fall-short-according-to-new-research/"
+        }
+      ],
+      "affiliate": ""
     }
   ]
 }
