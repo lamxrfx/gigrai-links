@@ -171,6 +171,10 @@ header.top .wrap{height:68px;display:flex;align-items:center;gap:36px}
 .seg button{height:36px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-weight:600;font-size:13.5px;cursor:pointer}
 .seg button[aria-pressed=true]{background:rgba(255,255,255,.14);color:var(--text)}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.gpromo{position:relative;z-index:1;isolation:isolate;grid-column:1/-1;display:flex;gap:18px;align-items:center;flex-wrap:wrap;padding:20px;border-radius:var(--r-lg);border:1px solid rgba(139,61,255,.45);background:linear-gradient(140deg,rgba(34,211,238,.14),rgba(47,107,255,.12) 45%,rgba(139,61,255,.16))}
+.gp-covers{display:flex;gap:8px;flex:none}.gp-covers img{width:58px;height:82px;object-fit:cover;object-position:top;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,.4)}.gp-covers img:first-child{transform:rotate(-4deg)}.gp-covers img+img{transform:rotate(4deg)}
+.gp-t{flex:1;min-width:200px;display:grid;gap:4px}.gp-t b{font-size:17px}.gp-t span{color:var(--muted);font-size:14px;line-height:1.5}
+.gp-go{height:48px;padding:0 22px;border:0;border-radius:999px;font:inherit;font-weight:800;color:#fff;cursor:pointer}
 .card{cursor:pointer;-webkit-tap-highlight-color:transparent;position:relative;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:var(--r-lg);background:var(--glass);border:1px solid var(--line);transition:border-color .2s,transform .2s}
 .card:hover{border-color:var(--line-2);transform:translateY(-2px)}
 .card:active{transform:scale(.99)}
@@ -665,7 +669,13 @@ dialog.role::backdrop{background:rgba(3,4,10,.66);backdrop-filter:blur(4px)}
         $("grid").innerHTML = `<div class="empty"><b>No live roles${S.q ? ` for “${esc(S.q)}”` : ""} yet</b>Try another word, widen your filters, or get new roles sent to you.<br><a class="btn-grad" href="https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u" target="_blank" rel="noopener" data-track="search-empty-whatsapp">Get notified on WhatsApp</a></div>`;
         return;
       }
-      const html = d.items.map((j, i) => card(j, append ? 99 : i)).join("");
+      let html = d.items.map((j, i) => card(j, append ? 99 : i)).join("");
+      // free-guides sign-up card after the 6th role (first page only, hidden once they've signed up)
+      if (!append && d.items.length > 6 && window.ggAlerts && !window.ggAlerts.signedUp()) {
+        const cards = d.items.map((j, i) => card(j, i));
+        cards.splice(6, 0, `<div class="gpromo"><div class="gp-covers" aria-hidden="true"><img src="/free/ai-interview-cheat-sheet-cover.jpg" alt="" loading="lazy"><img src="/free/ai-platforms-and-pay-cover.jpg" alt="" loading="lazy"></div><div class="gp-t"><b>Free: 2 guides to land paid AI work</b><span>The AI Interview Cheat Sheet and Platforms &amp; Pay guide, plus the 5 best new roles every Monday.</span></div><button type="button" class="btn-grad gp-go" data-track="email-alerts" data-src="results-card">Get them free</button></div>`);
+        html = cards.join("");
+      }
       if (append) $("grid").insertAdjacentHTML("beforeend", html); else $("grid").innerHTML = html;
       $("more").hidden = S.page >= S.pages;
     } catch (e) {

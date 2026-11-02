@@ -29,6 +29,7 @@
     ".ga .msg{font-size:14px;min-height:20px}.ga .msg.err{color:#ffb3b3}",
     ".ga .done{text-align:center;display:grid;gap:12px;padding:10px 0}.ga .done b{font-size:21px}",
     ".ga .done .ga-tip{margin:0;padding:12px 14px;border-radius:14px;background:rgba(255,200,80,.1);border:1px solid rgba(255,200,80,.35);color:#ffe9bf;font-size:14px;line-height:1.5}.ga .done .ga-tip b{font-size:inherit;color:#fff}",
+    ".ga-covers{display:flex;gap:12px;justify-content:center;margin:2px 0 4px}.ga-covers img{width:92px;height:130px;object-fit:cover;object-position:top;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.12)}.ga-covers img:first-child{transform:rotate(-3deg)}.ga-covers img+img{transform:rotate(3deg)}",
     ".ga-hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}"
   ].join("\n");
   document.head.appendChild(css);
@@ -40,15 +41,14 @@
     dlg = document.createElement("dialog");
     dlg.className = "ga"; dlg.setAttribute("aria-labelledby", "gaT");
     dlg.innerHTML = '<form class="ga-in" novalidate>' +
-      '<div class="ga-h"><div><h2 id="gaT">Get new roles by email</h2><p>The best new remote AI roles for you, once a week. Free.</p></div>' +
+      '<div class="ga-h"><div><h2 id="gaT">Get 2 free guides + weekly roles</h2><p>The AI Interview Cheat Sheet and our Platforms &amp; Pay guide, then the best new remote AI roles every Monday. Free.</p></div>' +
       '<button type="button" class="ga-x" aria-label="Close" data-x><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>' +
+      '<div class="ga-covers" aria-hidden="true"><img src="/free/ai-interview-cheat-sheet-cover.jpg" alt=""><img src="/free/ai-platforms-and-pay-cover.jpg" alt=""></div>' +
       '<label class="f">Your email<input type="email" name="email" autocomplete="email" required placeholder="you@example.com"></label>' +
       '<label class="f">Where you live<select name="country">' + COUNTRIES.map(function (c) { return '<option value="' + c[0] + '">' + c[1] + "</option>"; }).join("") + "</select></label>" +
-      '<fieldset><legend>What kind of work? <span style="font-weight:500">(optional)</span></legend><div class="chips">' + FIELDS.map(function (f) { return '<label><input type="checkbox" name="interests" value="' + f + '"><span>' + f + "</span></label>"; }).join("") + "</div></fieldset>" +
-      '<label class="f"><span>Minimum pay <span style="font-weight:500">(optional)</span></span><select name="minpay"><option value="0">Any pay</option><option value="25">$25+/hr</option><option value="50">$50+/hr</option><option value="100">$100+/hr</option></select></label>' +
       '<div class="ga-hp" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>' +
       '<label class="consent"><input type="checkbox" name="consent" required><span>' + CONSENT + "</span></label>" +
-      '<button class="go" type="submit">Get job alerts</button>' +
+      '<button class="go" type="submit">Send me the free guides</button>' +
       '<p class="msg" aria-live="polite"></p>' +
       '<p class="small">We\'ll email you to confirm first. Your details are kept by our email provider, MailerLite, and never sold. See our <a href="/privacy">privacy page</a>.</p>' +
       '<a class="wa" href="' + WA + '" target="_blank" rel="noopener" data-track="alerts-modal-whatsapp">Prefer WhatsApp? Join the channel</a>' +
@@ -78,18 +78,17 @@
     btn.disabled = true; btn.textContent = "Signing you up…";
     try {
       var r = await fetch("/api/subscribe", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
-        email: email, country: f.country.value, minpay: +f.minpay.value || 0,
-        interests: [].slice.call(f.querySelectorAll("input[name=interests]:checked")).map(function (x) { return x.value; }),
+        email: email, country: f.country.value,
         consent: true, consentText: CONSENT, source: source, page: location.pathname, website: f.website.value
       }) });
       var d = await r.json();
       if (!d.ok) throw new Error(d.error || "Something went wrong. Please try again.");
       if (d.already) f.innerHTML = '<div class="done"><b>You\'re already subscribed ✅</b><p>' + esc(email) + ' is already getting GigrAI job alerts. Check your inbox (and spam) for our emails.</p><button class="go" type="button" data-x>Done</button></div>';
-      else f.innerHTML = '<div class="done"><b>Check your inbox ✉️</b><p>We\'ve sent a confirmation email to <strong>' + esc(email) + '</strong>. Tap the link inside to start getting roles.</p><p class="ga-tip"><b>Not there in 2 minutes?</b> Check your <b>spam or junk</b> folder and mark it <b>&ldquo;Not spam&rdquo;</b>, then add <b>alerts@remotegigrai.com</b> to your contacts so every week\'s roles reach your inbox.</p><button type="button" class="go" data-x>Done</button></div>';
+      else f.innerHTML = '<div class="done"><b>Check your inbox ✉️</b><p>We\'ve sent a confirmation email to <strong>' + esc(email) + '</strong>. <b style="font-size:inherit">Tap the link inside to get your 2 free guides</b> and start getting roles.</p><p class="ga-tip"><b>Not there in 2 minutes?</b> Check your <b>spam or junk</b> folder and mark it <b>&ldquo;Not spam&rdquo;</b>, then add <b>alerts@remotegigrai.com</b> to your contacts so every week\'s roles reach your inbox.</p><button type="button" class="go" data-x>Done</button></div>';
       f.querySelector("[data-x]").addEventListener("click", function () { dlg.close(); });
       try { localStorage.setItem("gg_alerts", "1"); } catch (_) {}
     } catch (err) {
-      msg.className = "msg err"; msg.textContent = err.message; btn.disabled = false; btn.textContent = "Get job alerts";
+      msg.className = "msg err"; msg.textContent = err.message; btn.disabled = false; btn.textContent = "Send me the free guides";
     }
   }
 
@@ -99,8 +98,8 @@
     source = src || "site";
     opts = opts || {};
     var h = dlg.querySelector("#gaT"), p = h && h.parentElement.querySelector("p");
-    if (h) h.textContent = opts.title || "Get new roles by email";
-    if (p) p.textContent = opts.text || "The best new remote AI roles for you, once a week. Free.";
+    if (h) h.textContent = opts.title || "Get 2 free guides + weekly roles";
+    if (p) p.textContent = opts.text || "The AI Interview Cheat Sheet and our Platforms & Pay guide, then the best new remote AI roles every Monday. Free.";
     var sel = dlg.querySelector("select[name=country]");
     if (sel && opts.country && [].some.call(sel.options, function (o) { return o.value === opts.country; })) sel.value = opts.country;
     if (!dlg.open) dlg.showModal();

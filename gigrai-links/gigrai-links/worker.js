@@ -1,5 +1,5 @@
 import PLATFORM_CONFIG from "./public/platforms.json";
-import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, advertiseTermsPage, AD_TERMS_VERSION, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat, setEmail, alertsConfirmedPage } from "./seo.js";
+import { rolePage, jobsIndex, roleGone, jobPath, guidePage, guidesIndex, advertisePage, advertiseTermsPage, alertsLandingPage, AD_TERMS_VERSION, platformsPage, liveFeatured, allSponsors, featuredHtml, clickCap, setChat, setEmail, alertsConfirmedPage } from "./seo.js";
 import { track, trackUnique, countMany, isHuman, readStats, signKey, keyOk, daysAgo, presence, liveNow, geoReport, countryTotals, botKind, netName, flagged, markOwner, isOwner, roleClick, topRoles, meta, pageHit, topPages } from "./stats.js";
 import { mediaKitPage, sponsorReportPage, adminPage, reportsOff } from "./report.js";
 import MEDIAKIT from "./mediakit.json";
@@ -286,6 +286,11 @@ const app = {
     }
     if (url.pathname === "/sitemap.xml") return sitemap(url, env, ctx);
 
+    if (request.method === "GET" && (url.pathname === "/alerts" || url.pathname === "/alerts/" || url.pathname === "/free" || url.pathname === "/free/")) {
+      view("alerts", "Free guides");
+      let n = 0; try { n = (await loadFeed(env, ctx)).length; } catch {}
+      return decorate(alertsLandingPage(url.origin, Math.floor(n / 50) * 50), url, env, ctx, "/alerts");
+    }
     if (request.method === "GET" && (url.pathname === "/advertise/terms" || url.pathname === "/advertise/terms/")) {
       view("advertise", "Advertising Terms");
       return decorate(advertiseTermsPage(url.origin, MEDIAKIT.contactEmail || undefined), url, env, ctx, "/advertise");
@@ -625,7 +630,7 @@ async function decorate(res, url, env, ctx, page) {
 
   let rw = new HTMLRewriter().on("head", {
     element(el) {
-      if (env.EMAIL_SIGNUP === "on") el.append(`<script src="/alerts.js?v=6" defer></script>`, { html: true });
+      if (env.EMAIL_SIGNUP === "on") el.append(`<script src="/alerts.js?v=7" defer></script>`, { html: true });
       if (env.CHAT !== "off") el.append(`<script src="/chat.js?v=9" defer></script>`, { html: true });
       if (verify) el.append(`<meta name="google-site-verification" content="${verify}">`, { html: true });
       if (client) {
@@ -675,6 +680,7 @@ async function sitemap(url, env, ctx) {
     { loc: `${o}/advertise`, freq: "monthly", pri: "0.4" },
     { loc: `${o}/media-kit`, freq: "weekly", pri: "0.4" },
     { loc: `${o}/advertise/terms`, freq: "yearly", pri: "0.3" },
+    { loc: `${o}/alerts`, freq: "monthly", pri: "0.6" },
     ...GUIDES.map(g => ({ loc: `${o}/guides/${g.slug}`, freq: "monthly", pri: "0.8", mod: g.updated })),
     ...SITEMAP_SEARCHES.map(s => ({ loc: `${o}/?q=${encodeURIComponent(s)}`, freq: "daily", pri: "0.7" })),
   ];

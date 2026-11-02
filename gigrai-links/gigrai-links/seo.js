@@ -183,7 +183,7 @@ ${body}
 ${FOOTER.replace("__YEAR__", String(new Date().getFullYear()))}
 ${drawerHtml()}
 ${chatOn && !/noindex/.test(robots) ? '<script src="/chat.js?v=9" defer></script>' : ""}
-${emailOn ? '<script src="/alerts.js?v=6" defer></script>' : ""}
+${emailOn ? '<script src="/alerts.js?v=7" defer></script>' : ""}
 </body>
 </html>`;
 }
@@ -664,6 +664,40 @@ ${bookingForm(email)}`;
   }), 200, 3600);
 }
 
+// ---------- free guides (lead magnets in /public/free) ----------
+export const FREE_GUIDES = [
+  { file: "ai-interview-cheat-sheet", title: "The AI Interview Cheat Sheet", line: "What to expect, what gets scored, likely questions and 10 tips." },
+  { file: "ai-platforms-and-pay", title: "AI Platforms Hiring Now and What They Pay", line: "Who each platform suits, typical pay and how you get paid." },
+];
+export const FREE_GUIDES_HTML = (heading) => `<style>.fg{margin:26px auto 0;max-width:640px;text-align:left}.fg h2{font-size:20px;margin:0 0 12px;text-align:center}.fg-l{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}.fg-c{display:flex;gap:14px;align-items:center;padding:14px;border-radius:18px;background:var(--glass);border:1px solid var(--line);text-decoration:none;color:var(--text)}.fg-c img{width:62px;height:88px;object-fit:cover;object-position:top;border-radius:6px;flex:none;box-shadow:0 6px 18px rgba(0,0,0,.4)}.fg-c b{display:block;font-size:15px;margin-bottom:3px}.fg-c span{display:block;color:var(--muted);font-size:13px;line-height:1.45}.fg-c i{font-style:normal;display:inline-block;margin-top:6px;font-weight:800;font-size:13.5px;color:#9fdcf0}</style>
+<section class="fg"><h2>${esc(heading)}</h2><div class="fg-l">${FREE_GUIDES.map((g) => `<a class="fg-c" href="/free/${g.file}.pdf" target="_blank" rel="noopener" data-dl="${g.file}"><img src="/free/${g.file}-cover.jpg" alt="" loading="lazy"><div><b>${esc(g.title)}</b><span>${esc(g.line)}</span><i>Download PDF ↓</i></div></a>`).join("")}</div></section>`;
+
+// ---------- /alerts: landing page for the Instagram bio and stories ----------
+export function alertsLandingPage(origin, liveRoles = 0) {
+  const btn = (label, src) => emailOn
+    ? `<button type="button" class="btn btn-grad" data-track="email-alerts" data-src="${src}" style="color:#fff;height:56px;padding:0 28px;font-size:17px">${label} ${ARROW}</button>`
+    : `<a class="btn btn-grad" href="${WA}" target="_blank" rel="noopener" style="color:#fff">Join the WhatsApp channel ${ARROW}</a>`;
+  const body = `<style>
+.al{max-width:760px;margin:0 auto;text-align:center}.al .covers{display:flex;justify-content:center;gap:18px;margin:8px 0 22px}.al .covers img{width:min(40vw,170px);aspect-ratio:210/297;object-fit:cover;object-position:top;border-radius:12px;box-shadow:0 18px 50px rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.12)}.al .covers img:first-child{transform:rotate(-4deg)}.al .covers img+img{transform:rotate(4deg)}
+.al .get{display:grid;gap:10px;text-align:left;margin:26px auto 0;max-width:560px}.al .get div{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:16px;background:var(--glass);border:1px solid var(--line)}.al .get b{display:block}.al .get span{color:var(--muted);font-size:14.5px;line-height:1.5}.al .get em{font-style:normal;font-size:22px;line-height:1}
+.al .trust{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:center;margin-top:16px;color:var(--muted);font-size:13.5px}
+</style><section class="hero sm al"><span class="eyebrow"><i></i>Free · no spam · unsubscribe any time</span>
+<h1>Land paid AI work: <span class="grad-text">2 free guides</span></h1>
+<p>The AI Interview Cheat Sheet and our Platforms &amp; Pay guide, sent to you now. Then the 5 best new remote AI roles${liveRoles ? ` (from ${liveRoles.toLocaleString("en-GB")}+ live)` : ""}, every Monday.</p>
+<div class="covers" aria-hidden="true"><img src="/free/ai-interview-cheat-sheet-cover.jpg" alt=""><img src="/free/ai-platforms-and-pay-cover.jpg" alt=""></div>
+${btn("Get the free guides", "alerts-page")}
+<div class="trust"><span>✓ Free</span><span>✓ 1 email a week</span><span>✓ Never sold</span><span>✓ Unsubscribe in one tap</span></div>
+<div class="get">
+<div><em>🎥</em><p style="margin:0"><b>The AI Interview Cheat Sheet</b><span>How the AI video interviews work, what gets scored, the questions you're likely to get, and 10 tips.</span></p></div>
+<div><em>💷</em><p style="margin:0"><b>AI Platforms Hiring Now and What They Pay</b><span>micro1, Mercor, Handshake AI and more: who each suits, typical pay and how you get paid.</span></p></div>
+<div><em>📬</em><p style="margin:0"><b>The 5 best new roles, every Monday</b><span>Hand-picked from every platform, with the pay shown. Free to apply.</span></p></div>
+</div>
+<p style="margin-top:22px">${btn("Send them to me", "alerts-page-2")}</p>
+<p class="fine" style="margin-top:14px">We'll email you to confirm first. Your details are kept by our email provider, MailerLite, and never sold. See our <a href="/privacy">privacy page</a>.</p>
+</section>`;
+  return html(shell({ title: "2 free guides to land paid AI work · GigrAI", desc: "Free: the AI Interview Cheat Sheet and our guide to the AI platforms hiring now and what they pay, plus the 5 best new remote AI roles every Monday.", canonical: origin + "/alerts", body, image: "" }), 200, 600);
+}
+
 // ---------- /advertise/terms ----------
 export const AD_TERMS_VERSION = "2026-10-25";
 export function advertiseTermsPage(origin, email = "partners@remotegigrai.com") {
@@ -767,6 +801,7 @@ export function alertsConfirmedPage(origin, state = "") {
 <h1>You're in. <span class="grad-text">Welcome to GigrAI.</span></h1>
 <p>Your first email is on its way, with where to start. After that, we'll send the best new remote AI roles once a week, with the pay shown up front.</p>
 <div style="margin:22px auto 0;max-width:520px;padding:16px 18px;border-radius:16px;background:rgba(255,200,80,.1);border:1px solid rgba(255,200,80,.35);color:#ffe9bf;font-size:15.5px;line-height:1.55;text-align:left"><b style="color:#fff">One quick thing so you don't miss a week:</b> add <b style="color:#fff">alerts@remotegigrai.com</b> to your contacts. If our emails land in <b style="color:#fff">spam or junk</b>, mark them <b style="color:#fff">&ldquo;Not spam&rdquo;</b> and they'll go to your inbox from then on.</div>
+${FREE_GUIDES_HTML("Your 2 free guides")}
 <p style="margin-top:22px"><a class="btn btn-grad" href="/?src=email-confirmed">See roles open to you ${ARROW}</a></p>
 </section>
 <section class="block" style="max-width:760px;margin:0 auto"><div class="cards">
