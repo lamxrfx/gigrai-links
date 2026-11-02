@@ -80,6 +80,34 @@
         }
       ],
       "affiliate": ""
+    },
+    {
+      "id": "2026-11-02-outlier-scale-ai-gdpr-surveillance-complaints",
+      "created": "2026-11-02T06:41:41.312Z",
+      "title": "Privacy group accuses Outlier owner Scale AI of tracking AI trainers too closely",
+      "slug": "outlier-scale-ai-gdpr-surveillance-complaints",
+      "cat": "ai-work",
+      "summary": "European privacy group noyb has filed five GDPR complaints alleging Scale AI's Outlier platform unlawfully monitors AI trainers. Scale AI rejects the claims. Here's what's alleged and how to protect yourself.",
+      "body": "If you've ever done tasks on Outlier, this one is worth a few minutes of your time. On 27 October, the European privacy group **noyb** filed five complaints under the EU's data protection law (GDPR) against Scale AI, the company behind Outlier. The group alleges that the platform monitors the people who train AI models far more closely than the law allows.\n\nScale AI has publicly rejected the claims. Nothing has been decided yet, but the case raises questions every AI trainer should be asking about the platforms they work on.\n\n## What noyb is alleging\n\nnoyb, the Vienna-based group founded by privacy campaigner Max Schrems, says Outlier illegally surveils European platform workers. Based on the coverage so far, the main points are:\n\n- **Heavy tracking while you work.** The complaints reportedly focus on extensive monitoring of trainers' activity, including third-party tracking tools running on the platform.\n- **Keystrokes and mouse movements.** Some reports say the tracking covers typing and mouse activity, not just which tasks you submit.\n- **Scale.** According to coverage of the complaints, noyb says around 900,000 trainers are tracked every few seconds.\n- **Biometric data.** Some outlets report that the complaints also raise concerns about how biometric data is handled.\n\nFive separate complaints were filed, which means several European data protection regulators may now look at the case.\n\n## What Scale AI says\n\nScale AI has rejected the accusation that it illegally surveils its AI-training workers. Regulators will now decide whether to investigate, and GDPR cases like this can take months or even years to resolve. For now, these are allegations, not findings.\n\n## Why this matters beyond Outlier\n\nMost AI training work is paid by the task or by the hour, so platforms have a strong reason to check that people are really working and not pasting in AI-generated answers. Activity monitoring is common across the industry. The question noyb is raising is where quality control ends and unlawful surveillance begins, especially for people who are classed as independent contractors rather than employees.\n\nWhatever the outcome, it's a reminder that when you sign up to a training platform, you're often agreeing to a lot more data collection than a typical job application.\n\n## What it means for you\n\n- **Read the privacy policy before you start.** Look for words like \"activity monitoring\", \"screen recording\", \"keystroke\" or \"third-party analytics\". If a platform won't say what it collects, treat that as a warning sign.\n- **Use a separate browser profile for task work.** Keep personal accounts, banking and messages out of the browser you use for training tasks. It limits what any tracker can see.\n- **Be careful with software installs.** If a project asks you to install a desktop app or extension, find out exactly what it records first.\n- **If you're in the UK or EU, you have rights.** Under GDPR you can ask a company for a copy of the personal data it holds on you (a \"subject access request\"). It's free and they generally have a month to reply.\n- **Keep your own records.** Save task IDs, hours and payment confirmations. If an account is suddenly flagged or closed, your own records are your best evidence.\n- **Don't panic-quit.** Outlier is still operating and paying people. Just go in with your eyes open, and spread your work across more than one platform so one decision can't wipe out your income.\n\nWe'll keep an eye on how the regulators respond.",
+      "sources": [
+        {
+          "title": "noyb: AI training platform Outlier illegally surveils European platform workers",
+          "url": "https://noyb.eu/en/ai-training-platform-outlier-illegally-surveils-european-platform-workers"
+        },
+        {
+          "title": "The Register: EU privacy advocates accuse US data annotation firm of snooping on contractors",
+          "url": "https://www.theregister.com/legal/2026/10/27/eu-privacy-advocates-accuse-us-data-annotation-firm-of-snooping-on-contractors/5305757"
+        },
+        {
+          "title": "The Record: European digital rights nonprofit noyb sues Scale AI for 'invasive' worker surveillance",
+          "url": "https://therecord.media/noyb-sues-scale-ai-for-worker-surveillance"
+        },
+        {
+          "title": "Yahoo News: Scale AI rejects claims it illegally surveils AI-training workers",
+          "url": "https://www.yahoo.com/news/world/articles/scale-ai-rejects-claims-illegally-114758771.html"
+        }
+      ],
+      "affiliate": ""
     }
   ]
 }
