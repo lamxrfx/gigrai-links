@@ -108,6 +108,26 @@
         }
       ],
       "affiliate": ""
+    },
+    {
+      "id": "2026-11-04-ftc-imposter-ads-platforms",
+      "created": "2026-11-04T06:41:25.009Z",
+      "title": "Fake brand ads are costing billions, and the FTC wants platforms to do more",
+      "slug": "ftc-imposter-ads-platforms",
+      "cat": "scams",
+      "summary": "The FTC is asking whether social media and search platforms should vet ads that impersonate real companies. Here is what it means if you look for AI training work online.",
+      "body": "Scam adverts that pose as a real company are now a big enough problem that the US Federal Trade Commission (FTC) is asking whether the platforms that run them should be held responsible. On 2 November it published a consumer alert inviting the public to have their say, and the comment window is open until **30 November 2026**.\n\nIt's an American rule-making process, but the ads it targets appear on the same social feeds, search engines and marketplaces used by remote workers everywhere, so it's worth knowing about.\n\n## What the FTC is looking at\n\nThe FTC already has a rule that bans impersonating government agencies and businesses. Now it's asking whether that rule should be updated, or a new one written, to cover the **advertising tools** that social media sites, search engines and online marketplaces sell.\n\nThe concern is that scammers buy ads, target them precisely and pose as well-known brands, much as legitimate advertisers do. Christopher Mufarrige, who heads the FTC's consumer protection bureau, put it this way: \"Today's impersonation scams are no longer the work of isolated con artists.\"\n\nIdeas the FTC has floated for platforms include:\n\n- checking advertisers and their ads before they go live\n- giving people an easy way to flag an ad that looks like an impersonation\n- investigating suspect ads and taking down the ones that turn out to be scams\n- taking action against the advertisers behind them\n\nThe formal notice was published in the Federal Register on 1 October, after a 2-0 vote by the Commission. It's an early-stage consultation, so no new rule exists yet.\n\n## The numbers behind it\n\nAccording to the FTC's own figures for 2025:\n\n- it received **more than 1 million reports** of imposter scams\n- people reported losing **nearly $3.5 billion** to them\n- almost 30% of people who lost money to scammers said the first contact came on social media, with reported losses of **$2.1 billion**\n\nThe FTC itself says the true cost is probably much higher, as many people never report.\n\n## Why this matters for AI training work\n\nThe FTC's alert doesn't single out job scams. But brand impersonation is a familiar tactic in our corner of the internet. Fake recruiters and look-alike pages borrow the names of well-known AI training platforms to collect personal details, ID documents or \"starter fees\" from people keen to get paid work. Paid ads are an easy way for these schemes to reach job seekers quickly, and they can look just as polished as the real thing.\n\n## What it means for you\n\n- **Don't apply through an ad.** If you see a sponsored post for AI training work, go to the platform's official website yourself (type the address or use a trusted directory like GigrAI) rather than clicking the link.\n- **Check the web address carefully.** Look-alike domains often add a word, swap a letter or use an unusual ending.\n- **Never pay to start.** Genuine AI training platforms don't charge sign-up, training or \"activation\" fees, and don't ask you to deposit money to unlock tasks.\n- **Be careful with ID.** Only upload identity documents inside the real platform's verified onboarding, never over chat apps or email.\n- **Report scam ads.** Use the platform's own \"report ad\" option. If you're in the US, you can also report fraud at [ReportFraud.ftc.gov](https://reportfraud.ftc.gov/).\n- **Have your say.** Anyone can comment on the FTC's proposal until 30 November through the [Federal Register notice](https://www.federalregister.gov/documents/2026/10/01/2026-20143/rule-on-impersonation-of-government-and-businesses). If you've been targeted by a fake ad for AI work, your experience is exactly the kind of evidence regulators look for.",
+      "sources": [
+        {
+          "title": "FTC: Tell the FTC about imposter ads online",
+          "url": "https://consumer.ftc.gov/consumer-alerts/2026/11/tell-ftc-about-imposter-ads-online"
+        },
+        {
+          "title": "FTC: FTC Seeks Public Comment on Whether to Update Rule on Impersonation of Government and Businesses to Address Platforms’ Role in Promoting Impersonation Scams",
+          "url": "https://www.ftc.gov/news-events/news/press-releases/2026/09/ftc-seeks-public-comment-whether-update-rule-impersonation-government-businesses-address-platforms"
+        }
+      ],
+      "affiliate": ""
     }
   ]
 }
