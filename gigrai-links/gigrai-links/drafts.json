@@ -128,6 +128,26 @@
         }
       ],
       "affiliate": ""
+    },
+    {
+      "id": "2026-11-06-canva-layoffs-hybrid-office",
+      "created": "2026-11-06T06:41:04Z",
+      "title": "Canva cuts around 1,270 roles and calls hybrid staff back to the office",
+      "slug": "canva-layoffs-hybrid-office",
+      "cat": "remote",
+      "summary": "Canva's first big restructure affects about 22% of staff, blamed on slowing growth and AI costs, and most hybrid workers will be expected in the office 2-3 days a week from January.",
+      "body": "Canva, the Australian design platform used by hundreds of millions of people, has announced its first major restructure. Around 1,271 roles are affected, and the company is also asking most of its hybrid staff back into the office for two to three days a week from January. It is a useful snapshot of how AI costs and slowing growth are reshaping even the best-known remote-friendly tech firms.\n\n## What Canva announced\n\nIn a memo to staff, co-founder and CEO Melanie Perkins said the company had grown fast but now needed to change. Key points from the coverage:\n\n- **About 1,271 roles** are affected, roughly 22% of the company. TechCrunch describes these as layoffs; Forbes Australia notes the memo's 22% figure covers roles that are cut, changed or relocated.\n- The product, growth and platform teams are being merged into one large product organisation, and staff may be asked to take on broader responsibilities.\n- Sydney will become the main product centre, with some roles moved there from Canva's teams around the world.\n- Departing employees get **at least six months' salary**, a year of healthcare cover and their company laptop, according to Forbes Australia.\n\nPerkins was frank about the backdrop, writing that \"this has been our hardest year yet\".\n\n## AI costs are part of the story\n\nCanva rebuilt much of its product around AI, but serving AI features to a largely free user base is expensive. Forbes Australia reports that several product launches were delayed because of that cost, and TechCrunch says Canva lowered its revenue growth forecast from 30% to 20%. The company has been building its own AI model to cut its reliance on outside providers, while facing competition from newer AI design tools and general chatbots.\n\nThe company's valuation has also slipped. Forbes Australia cites SEC filings showing one investor marked its shares down to an implied value of around US$30 billion, against US$40 billion at the start of the year.\n\n## The shift back towards the office\n\nFor remote workers, the policy change may matter as much as the job cuts. Canva previously asked staff to visit their nearest hub only a couple of times a quarter, and later dropped even that. Now the memo says most hybrid employees should expect to spend around two to three days a week in the office, depending on location.\n\nCanva is not alone. Forbes Australia points to large cuts at Atlassian and Block earlier this year, part of a wider pattern of tech firms tightening up after heavy AI spending.\n\n## What it means for you\n\n- **Remote-first is not a permanent promise.** Even companies known for flexibility can change course quickly when growth slows. If fully remote work matters to you, keep more than one income stream going.\n- **AI training work fills some of the gap, but treat it as variable.** Platforms that hire experts to train AI models can be a good option for designers, writers and product people affected by cuts like these, but projects start and stop without much warning.\n- **Broaden your skills.** Canva is explicitly asking staff to cover more ground. Being comfortable across design, writing and reviewing AI output makes you more useful both to employers and on AI training projects.\n- **Check offers carefully.** Big layoff announcements are often followed by a wave of fake \"recruiters\". Apply through official sites, and never pay to start a job or task.\n\nIf you are looking for genuine remote AI training roles, you can search current openings on GigrAI.",
+      "sources": [
+        {
+          "title": "TechCrunch: Canva lays off over 1,200 people amid slowing growth",
+          "url": "https://techcrunch.com/2026/11/04/canva-lays-off-over-1200-people-amid-slowing-growth/"
+        },
+        {
+          "title": "Forbes Australia: Canva layoffs impact 1,200 after design giant's 'hardest year yet'",
+          "url": "https://www.forbes.com.au/news/innovation/canva-layoffs-impact-1200-employees/"
+        }
+      ],
+      "affiliate": ""
     }
   ]
 }
