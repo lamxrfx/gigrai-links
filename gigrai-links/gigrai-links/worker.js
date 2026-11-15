@@ -19,6 +19,21 @@ import CURATED from "./curated.json";
 import { bookingPage, bookingDone, bookingClosed } from "./booking.js";
 import { menuButton, drawerHtml } from "./nav.js";
 import { GUIDES } from "./guides.js";
+
+// ---------- Daily referral rota (micro1 + Mercor, see "rota" in platforms.json) ----------
+// Takes turns by UK calendar day, switching at midnight UK time. Applied at click time (/go, /join).
+function rotaTurn(p, day = ukDay()) {
+  const r = p && Array.isArray(p.rota) && p.rota.length ? p.rota : null;
+  if (!r) return null;
+  return r[Math.floor(Date.parse(day + "T00:00:00Z") / 864e5) % r.length];
+}
+function rotaUrl(job, turn) {
+  try {
+    const u = new URL(job.url);
+    if (u.searchParams.has("referralCode")) { u.searchParams.set("referralCode", turn.code); return u.toString(); }
+  } catch {}
+  return job.url;
+}
 // Serves the static link page from ./public and handles one API route:
 //   POST /api/subscribe  { email, name }  -> adds the person to the MailerLite "GigrAI Jobs" group.
 // Static files are served before this code runs, so only unmatched paths reach it.
@@ -236,7 +251,9 @@ const app = {
       const job = feed.find(j => j.id === id);
       console.log(JSON.stringify({ event: "apply_click", id, platform: job ? job.platform : "?", found: !!job, src: cleanSrc(url.searchParams.get("src")), country: request.cf?.country || "??" }));
       if (job && isHuman(request)) { track(env, ctx, request, "apply", job.platform, cleanSrc(url.searchParams.get("src")) || "site"); roleClick(env, ctx, request, job, jobPath(job), money(job)); }
-      return Response.redirect(job ? job.url : new URL("/", url).toString(), 302);
+      const turn = job && rotaTurn((PLATFORM_CONFIG.platforms || []).find(x => x.id === job.platform));
+      if (turn) console.log(JSON.stringify({ event: "ref_rota", platform: job.platform, who: turn.who }));
+      return Response.redirect(job ? (turn ? rotaUrl(job, turn) : job.url) : new URL("/", url).toString(), 302);
     }
 
     // The redesign was tested at /new: send old links to the homepage
@@ -495,7 +512,9 @@ const app = {
       const src = cleanSrc(url.searchParams.get("src")) || "site";
       console.log(JSON.stringify({ event: "link_click", link: "platform-" + joinM[1], src, country: request.cf?.country || "??" }));
       if (p && isHuman(request)) { track(env, ctx, request, "link", "platform-" + p.id, src); track(env, ctx, request, "join", p.id, src); } // "join" feeds the numbers page
-      return Response.redirect(p ? p.signupUrl : new URL("/platforms", url).toString(), 302);
+      const turn = rotaTurn(p);
+      if (turn) console.log(JSON.stringify({ event: "ref_rota", platform: p.id, who: turn.who }));
+      return Response.redirect(p ? ((turn && turn.signupUrl) || p.signupUrl) : new URL("/platforms", url).toString(), 302);
     }
 
     // ---- Guides: /guides and /guides/<slug> ----

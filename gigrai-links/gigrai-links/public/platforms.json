@@ -14,7 +14,19 @@
         "referralCode": "e9ff2278-2563-4f64-bed8-214a3dfd996c"
       },
       "active": true,
-      "icon": "micro1-icon.png"
+      "icon": "micro1-icon.png",
+      "rota": [
+        {
+          "who": "lamar",
+          "code": "e9ff2278-2563-4f64-bed8-214a3dfd996c",
+          "signupUrl": "https://refer.micro1.ai/referral/jobs?referralCode=e9ff2278-2563-4f64-bed8-214a3dfd996c&utm_source=referral&utm_medium=share&utm_campaign=job_referral"
+        },
+        {
+          "who": "friend",
+          "code": "54270dc6-1664-4705-ac2a-8acb34dd25b5",
+          "signupUrl": "https://refer.micro1.ai/referral/jobs?referralCode=54270dc6-1664-4705-ac2a-8acb34dd25b5&utm_source=referral&utm_medium=share&utm_campaign=job_referral"
+        }
+      ]
     },
     {
       "id": "ethos",
@@ -42,7 +54,19 @@
       },
       "active": true,
       "referralCode": "e2c09b89-7c5c-ebec-8070-b2dacd94c7a3",
-      "icon": "mercor-icon.png"
+      "icon": "mercor-icon.png",
+      "rota": [
+        {
+          "who": "lamar",
+          "code": "e2c09b89-7c5c-ebec-8070-b2dacd94c7a3",
+          "signupUrl": "https://t.mercor.com/icoA3"
+        },
+        {
+          "who": "friend",
+          "code": "029db8da-3b78-97e5-601b-74f0b01a4eba",
+          "signupUrl": "https://t.mercor.com/rHZm0"
+        }
+      ]
     },
     {
       "id": "handshake",
@@ -130,5 +154,6 @@
       "active": false,
       "_todo": "Re-joining in a few days. Paste referral link when available."
     }
-  ]
+  ],
+  "_rota": "Referral rota: micro1 and Mercor links take turns by day, switching at midnight UK time (first in the list on even days, second on odd days). Applied when someone taps Apply or Join, so cached roles don't matter."
 }
