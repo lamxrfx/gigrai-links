@@ -1,0 +1,8 @@
+name: probe
+on: push
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for u in https://t.mercor.com/rHZm0 https://t.mercor.com/icoA3; do echo "== $u"; curl -s -o /dev/null -L -w '%{url_effective}\n' -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36" "$u"; curl -sI -A "Mozilla/5.0" "$u" | grep -i location; done
