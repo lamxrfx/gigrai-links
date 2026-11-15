@@ -100,8 +100,8 @@ function header(active, page = "") {
   <a class="brand" href="/advertise"><img src="/icon.png" alt="" width="36" height="36">GigrAI<span class="co-tag">for companies</span></a>
   <nav class="nav" aria-label="For companies">${CO_NAV.map(([h, t]) => `<a href="${h}"${h === cur ? ' aria-current="page"' : ""}>${t}</a>`).join("")}</nav>
   <a class="nav-co" href="/">For job seekers</a>
-  <a class="alerts btn-grad" href="${DM_LINK}" target="_blank" rel="noopener" data-track="co-header-dm">${CHAT}Message us</a>
-  <a class="icon-btn alerts-icon" href="${DM_LINK}" target="_blank" rel="noopener" aria-label="Message us on Instagram" data-track="co-header-dm">${CHAT.replace(/17/g, "20")}</a>
+  <a class="alerts btn-grad" href="${DM_LINK}" data-track="co-header-email">${CHAT}Message us</a>
+  <a class="icon-btn alerts-icon" href="${DM_LINK}" aria-label="Email us" data-track="co-header-email">${CHAT.replace(/17/g, "20")}</a>
   ${menuButton()}
 </div></header>`;
   }
@@ -114,7 +114,7 @@ function header(active, page = "") {
   ${menuButton()}
 </div></header>`;
 }
-const DM_LINK = "https://ig.me/m/gigr.ai";
+const DM_LINK = "mailto:partners@remotegigrai.com?subject=GigrAI%20advertising";
 
 const FOOTER = `<footer class="foot"><div class="wrap">
   <div class="f-top">
@@ -124,10 +124,6 @@ const FOOTER = `<footer class="foot"><div class="wrap">
     </div>
     <div class="f-social">
       <span class="f-label">Connect with us</span>
-      <a class="ig" href="https://www.instagram.com/gigr.ai/" target="_blank" rel="noopener" data-track="footer-instagram">
-        <span class="ig-ic" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></span>
-        <span class="ig-t"><b>@gigr.ai</b><span>on Instagram</span></span>
-      </a>
       <a class="ig" href="https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u" target="_blank" rel="noopener" data-track="footer-whatsapp">
         <span class="ig-ic wa-c" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.8-1.2.2-.6.2-1.1.1-1.2l-.5-.3z"/></svg></span>
         <span class="ig-t"><b>GigrAI Jobs</b><span>WhatsApp channel</span></span>
@@ -573,7 +569,7 @@ export function bookingForm(email = "") {
 <label class="agree"><input type="checkbox" name="agree" required><span>The role is real and <b>free to apply for</b>, and I'm happy for it to be labelled Sponsored. I agree to the <a href="/advertise/terms" target="_blank">Advertising Terms</a>.</span></label>
 <button type="submit">Send booking request</button>
 <p class="msg" aria-live="polite"></p>
-<p class="note" style="margin:0;font-size:13px">Prefer to talk first? ${email ? `Email <a href="mailto:${esc(email)}">${esc(email)}</a> or ` : ""}message <a href="${DM}" target="_blank" rel="noopener">@gigr.ai</a> on Instagram.</p>
+<p class="note" style="margin:0;font-size:13px">Prefer to talk first? Email <a href="mailto:${esc(email || "partners@remotegigrai.com")}">${esc(email || "partners@remotegigrai.com")}</a>.</p>
 </form>
 <script>
 (function(){
@@ -609,12 +605,11 @@ export const AD_OPTIONS = [
   { name: "Featured role", price: "£49", per: "/ week", text: "Your role pinned at the top of the GigrAI homepage and All roles page, labelled Sponsored, linking straight to your application page." },
   { name: "Featured role, monthly", price: "£149", per: "/ month", text: "The same pinned, Sponsored listing for a full month. Best for ongoing hiring. Save about £47 against weekly." },
   { name: "Pay per click", price: "£1.50", per: "/ click", text: "Only pay for people who click through to your application page, counted once per person per day. Prepay from £100, follow every click in a live report, and it stops automatically when your budget is used." },
-  { name: "Sponsored Instagram post", price: "£99", per: "", text: "A carousel about your role in the GigrAI style on @gigr.ai, shared to our Story. Labelled as an ad." },
   { name: "WhatsApp shout-out", price: "£49", per: "", text: "One post about your role, with your link, to the GigrAI Jobs WhatsApp channel." },
-  { name: "Launch bundle", price: "£179", per: "", text: "All three: a week as a Featured role, a sponsored Instagram post and a WhatsApp shout-out. Save £18.", feat: true },
+  { name: "Launch bundle", price: "£79", per: "", text: "A week as a Featured role plus a WhatsApp shout-out on the day it goes live. Save £19.", feat: true },
 ];
 export const adOption = (o) => `<div class="panel glass opt${o.feat ? " feat" : ""}">${o.feat ? '<span class="badge">Best value</span>' : ""}<h3>${o.name}</h3><div class="price">${o.price}${o.per ? ` <small>${o.per}</small>` : ""}</div><p>${o.text}</p></div>`;
-export const DM = "https://ig.me/m/gigr.ai";
+export const DM = "mailto:partners@remotegigrai.com?subject=GigrAI%20advertising";
 const MAIL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>';
 export const mailLink = (email, label) => email ? `<a class="ghost" href="mailto:${esc(email)}?subject=${encodeURIComponent("Advertising on GigrAI")}">${MAIL}${esc(label || email)}</a>` : "";
 
@@ -632,7 +627,7 @@ export function advertisePage(origin, liveRoles, platformCount, email = "") {
 <section class="block" aria-labelledby="who"><h2 id="who">Who you'll reach</h2><p class="lead">See our latest follower, visitor and click numbers in the <a href="/media-kit">media kit</a>.</p>
 <div class="cards">
   <div class="panel glass"><h3>Ready to apply</h3><p>People searching for paid remote AI work, worldwide, at the moment they're choosing where to apply.</p></div>
-  <div class="panel glass"><h3>Three channels</h3><p>remotegigrai.com, <a href="https://www.instagram.com/gigr.ai/" rel="noopener">@gigr.ai on Instagram</a> and the <a href="${WA}" rel="noopener">GigrAI Jobs WhatsApp channel</a>.</p></div>
+  <div class="panel glass"><h3>Two channels</h3><p>remotegigrai.com and the <a href="${WA}" rel="noopener">GigrAI Jobs WhatsApp channel</a>, plus our weekly jobs email.</p></div>
   <div class="panel glass"><h3>${liveRoles ? liveRoles + " live roles" : "Hundreds of live roles"}</h3><p>${platformCount ? `From ${platformCount} platforms and refreshed` : "Refreshed"} every 30 minutes, so people come back often.</p></div>
 </div></section>
 
@@ -659,7 +654,7 @@ ${AD_OPTIONS.map(adOption).join("\n")}
 ${bookingForm(email)}`;
   return html(shell({
     title: "Advertise with GigrAI: reach people looking for remote AI work",
-    desc: "Put your AI training roles in front of people actively looking for remote AI work. Featured roles from £49 a week, sponsored Instagram posts and WhatsApp shout-outs.",
+    desc: "Put your AI training roles in front of people actively looking for remote AI work. Featured roles from £49 a week, pay per click and WhatsApp shout-outs.",
     canonical: origin + "/advertise", body, active: "/advertise",
   }), 200, 3600);
 }
@@ -672,7 +667,7 @@ export const FREE_GUIDES = [
 export const FREE_GUIDES_HTML = (heading) => `<style>.fg{margin:26px auto 0;max-width:640px;text-align:left}.fg h2{font-size:20px;margin:0 0 12px;text-align:center}.fg-l{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}.fg-c{display:flex;gap:14px;align-items:center;padding:14px;border-radius:18px;background:var(--glass);border:1px solid var(--line);text-decoration:none;color:var(--text)}.fg-c img{width:62px;height:88px;object-fit:cover;object-position:top;border-radius:6px;flex:none;box-shadow:0 6px 18px rgba(0,0,0,.4)}.fg-c b{display:block;font-size:15px;margin-bottom:3px}.fg-c span{display:block;color:var(--muted);font-size:13px;line-height:1.45}.fg-c i{font-style:normal;display:inline-block;margin-top:6px;font-weight:800;font-size:13.5px;color:#9fdcf0}</style>
 <section class="fg"><h2>${esc(heading)}</h2><div class="fg-l">${FREE_GUIDES.map((g) => `<a class="fg-c" href="/free/${g.file}.pdf" target="_blank" rel="noopener" data-dl="${g.file}"><img src="/free/${g.file}-cover.jpg" alt="" loading="lazy"><div><b>${esc(g.title)}</b><span>${esc(g.line)}</span><i>Download PDF ↓</i></div></a>`).join("")}</div></section>`;
 
-// ---------- /alerts: landing page for the Instagram bio and stories ----------
+// ---------- /alerts: landing page for email sign-ups ----------
 export function alertsLandingPage(origin, liveRoles = 0) {
   const btn = (label, src) => emailOn
     ? `<button type="button" class="btn btn-grad" data-track="email-alerts" data-src="${src}" style="color:#fff;height:56px;padding:0 28px;font-size:17px">${label} ${ARROW}</button>`
@@ -699,7 +694,7 @@ ${btn("Get the free guides", "alerts-page")}
 }
 
 // ---------- /advertise/terms ----------
-export const AD_TERMS_VERSION = "2026-10-25";
+export const AD_TERMS_VERSION = "2026-11-15";
 export function advertiseTermsPage(origin, email = "partners@remotegigrai.com") {
   const body = `${crumbs([["/", "GigrAI"], ["/advertise", "Advertise"], ["", "Advertising Terms"]])}
 <article class="read"><header class="hero sm"><span class="eyebrow"><i></i>Last updated 25 October 2026</span><h1>Advertising <span class="grad-text">Terms</span></h1>
@@ -713,7 +708,7 @@ export function advertiseTermsPage(origin, email = "partners@remotegigrai.com") 
 <ul>
 <li><strong>Featured role (weekly or monthly):</strong> your role pinned near the top of the homepage and the All roles page, labelled "Sponsored", linking to your application page, for the dates we agree. It may also appear in our weekly email while it's running.</li>
 <li><strong>Pay per click:</strong> the same Featured listing, charged per unique click (see section 6).</li>
-<li><strong>Sponsored Instagram post and WhatsApp shout-out:</strong> one post about your role on @gigr.ai (shared to our Story) or the GigrAI Jobs WhatsApp channel, labelled as an ad.</li>
+<li><strong>WhatsApp shout-out:</strong> one post about your role on the GigrAI Jobs WhatsApp channel, labelled as an ad.</li>
 <li><strong>Launch bundle:</strong> the items listed for it on the Advertise page.</li>
 </ul>
 <p>We write and design the posts and cards so they fit the site, using the details you give us.</p>
@@ -728,7 +723,7 @@ export function advertiseTermsPage(origin, email = "partners@remotegigrai.com") 
 <h2>4. Dates</h2>
 <ul>
 <li>Featured listings run from the start of the start date to the end of the end date (UK time), then come down automatically.</li>
-<li>Instagram and WhatsApp posts go out on the agreed day. Posts stay up unless you ask us to remove them, but we don't guarantee how long a platform keeps them visible.</li>
+<li>WhatsApp posts go out on the agreed day. Posts stay up unless you ask us to remove them, but we don't guarantee how long a platform keeps them visible.</li>
 <li>If we need to move your start date (for example for a technical problem), we'll agree a new date with you.</li>
 </ul>
 

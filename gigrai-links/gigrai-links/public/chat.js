@@ -73,8 +73,8 @@
   function fmt(t) {
     var h = esc(String(t).replace(/\*\*(.+?)\*\*/g, "$1").replace(/^#+\s*/gm, ""));
     h = h.replace(/(^|[\s(])((?:https?:\/\/)?(?:www\.)?remotegigrai\.com)?(\/(?:jobs|guides|platforms|news|advertise|media-kit|privacy)(?:\/[a-z0-9-]+)*)(?=[\s).,!?:;]|$)/g, function (m, a, host, path) { return a + '<a href="' + path + '">' + (host || "") + path + "</a>"; });
-    // "@gigr.ai" opens an Instagram DM to us
-    h = h.replace(/(^|[\s(])@gigr\.ai(?!\w|\.\w)/g, '$1<a href="https://ig.me/m/gigr.ai" target="_blank" rel="noopener">@gigr.ai</a>');
+    // Our email address opens an email to us (what they asked is filled in on tap)
+    h = h.replace(/(^|[\s(])partners@remotegigrai\.com/g, '$1<a href="mailto:partners@remotegigrai.com" data-mail>partners@remotegigrai.com</a>');
     var lines = h.split("\n"), out = [], inList = false;
     lines.forEach(function (l) {
       var m = l.match(/^\s*(?:[-•*]|\d+\.)\s+(.*)/);
@@ -138,35 +138,14 @@
     try { sessionStorage.setItem(KEY + "-open", "1"); } catch (e) {}
   }
   function close() { p.classList.remove("on"); btn.style.display = ""; btn.focus(); try { sessionStorage.removeItem(KEY + "-open"); } catch (e) {} }
-  // Instagram links can't carry a pre-typed message, so copy what they asked to paste into the DM
-  var toast = document.createElement("div"); toast.className = "ggc-toast"; toast.setAttribute("role", "status"); p.appendChild(toast);
+  // "Talk to a person": fill the email with what they asked in the chat
   var HUMAN = /^(hi|hey|hello)?[\s,!]*(can|could|may) i (speak|talk|chat) (to|with)|^(speak|talk) to (a |someone|somebody|a person|a human|an? (real )?person)|^(a )?(human|person|someone|agent)\??$/i;
   list.addEventListener("click", function (e) {
-    var a = e.target.closest && e.target.closest('a[href^="https://ig.me/"]');
+    var a = e.target.closest && e.target.closest("a[data-mail]");
     if (!a) return;
     var asks = msgs.filter(function (m) { var c = m.content.trim(); return m.role === "user" && !(HUMAN.test(c) && c.split(/\s+/).length <= 6); }).map(function (m) { return m.content.trim(); }).slice(-3);
-    var text = "Hi GigrAI, I've come from the chat on your website." + (asks.length ? "\n\n" + asks.join("\n") : "");
-    try {
-      navigator.clipboard.writeText(text).then(function () {
-        toast.textContent = "Your message is copied. Paste it into the Instagram chat.";
-        toast.classList.add("on"); setTimeout(function () { toast.classList.remove("on"); }, 4000);
-      }).catch(function () {});
-    } catch (err) {}
-  });
-  // Instagram links can't carry a pre-typed message, so copy what they asked to paste into the DM
-  var toast = document.createElement("div"); toast.className = "ggc-toast"; toast.setAttribute("role", "status"); p.appendChild(toast);
-  var HUMAN = /^(hi|hey|hello)?[\s,!]*(can|could|may) i (speak|talk|chat) (to|with)|^(speak|talk) to (a |someone|somebody|a person|a human|an? (real )?person)|^(a )?(human|person|someone|agent)\??$/i;
-  list.addEventListener("click", function (e) {
-    var a = e.target.closest && e.target.closest('a[href^="https://ig.me/"]');
-    if (!a) return;
-    var asks = msgs.filter(function (m) { return m.role === "user" && !HUMAN.test(m.content.trim()); }).map(function (m) { return m.content.trim(); }).slice(-3);
-    var text = "Hi GigrAI, I've come from the chat on your website." + (asks.length ? "\n\n" + asks.join("\n") : "");
-    try {
-      navigator.clipboard.writeText(text).then(function () {
-        toast.textContent = "Your message is copied. Paste it into the Instagram chat.";
-        toast.classList.add("on"); setTimeout(function () { toast.classList.remove("on"); }, 4000);
-      }).catch(function () {});
-    } catch (err) {}
+    var body = "Hi GigrAI, I've come from the chat on your website." + (asks.length ? "\n\n" + asks.join("\n") : "");
+    a.href = "mailto:partners@remotegigrai.com?subject=" + encodeURIComponent("Question from the GigrAI chat") + "&body=" + encodeURIComponent(body);
   });
   btn.addEventListener("click", open);
   p.querySelector(".ggc-x").addEventListener("click", close);

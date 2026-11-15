@@ -62,7 +62,7 @@ textarea{width:100%;min-height:340px;border-radius:16px;border:1px solid var(--l
   <p class="msg" id="msg" aria-live="polite"></p>
 
   <ul class="tips">
-    <li>Post on WhatsApp first, then schedule the Instagram post an hour or two later.</li>
+    <li>Post once or twice a day, at the same times, so followers know when to look.</li>
     <li>Topic posts work well: try "medical" or "coding" with "Anywhere".</li>
     <li>Each link opens the role's details on your site first. Applies show in Cloudflare › Observability as <b>apply_click</b> with <b>src: wa</b>.</li>
   </ul>
@@ -99,7 +99,7 @@ textarea{width:100%;min-height:340px;border-radius:16px;border:1px solid var(--l
         return `${i + 1}. *${j.title}* (${j.via})\n${bits ? "💸 " + bits + "\n" : ""}👉 ${ORIGIN}/?role=${encodeURIComponent(j.id)}&src=wa`;
       });
       const search = q ? `${ORIGIN}/?q=${encodeURIComponent(q)}&src=wa` : `${ORIGIN}/?src=wa`;
-      $("out").value = `${head}\n\n${lines.join("\n\n")}\n\n🔎 Search all ${Math.floor((d.all || 0) / 10) * 10}+ live roles: ${search}\n\nFree to apply. You're seeing these before Instagram 👀\n_Some links are referral links._`;
+      $("out").value = `${head}\n\n${lines.join("\n\n")}\n\n🔎 Search all ${Math.floor((d.all || 0) / 10) * 10}+ live roles: ${search}\n\nFree to apply. You're seeing these first 👀\n_Some links are referral links._`;
       $("msg").textContent = `${list.length} roles picked from ${d.total} matches.`;
     } catch (err) {
       $("msg").textContent = "Couldn't load live roles. Try again in a minute.";

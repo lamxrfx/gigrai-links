@@ -3,7 +3,6 @@
 // To add a link: add a row to MENU below.
 
 const WA = "https://whatsapp.com/channel/0029VbDkhLPKgsO0zsOZ080u";
-const IG = "https://www.instagram.com/gigr.ai/";
 
 // Lucide-style 24px line icons, 1.8 stroke
 const I = {
@@ -34,7 +33,6 @@ const MENU = [
     { href: "/#faq", text: "FAQ", icon: "help" },
   ] },
   { label: "More", items: [
-    { href: IG, text: "@gigr.ai on Instagram", icon: "ig", ext: true },
     { href: "/advertise", text: "Advertise with us", icon: "mega" },
     { href: "/media-kit", text: "Media kit", icon: "kit" },
   ] },

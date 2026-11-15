@@ -165,7 +165,7 @@ const pageOf = (opts) => html(shell({ ...opts, body: STYLE + opts.body }), opts.
 
 // ---------- /media-kit ----------
 export function mediaKitPage({ origin, kit, liveRoles, platforms, views, applies, days = 30 }) {
-  const ig = kit.instagram || {}, waf = (kit.whatsapp || {}).followers;
+  const waf = (kit.whatsapp || {}).followers;
   // thresholds are per 30 days, scaled to the chosen period
   const scale = days / 30;
   const showViews = views && views.total >= SHOW_VIEWS * scale;
@@ -173,7 +173,6 @@ export function mediaKitPage({ origin, kit, liveRoles, platforms, views, applies
   const showCountries = views && views.total >= SHOW_COUNTRIES * scale && views.byCountry.length;
   const period = `Last ${days} days`;
   const kpis = [
-    ig.followers ? [ig.followers >= 1000 ? `<b>${round(ig.followers)}</b>` : countUp(ig.followers), `Instagram followers`, `@${esc(ig.handle || "gigr.ai")}`] : null,
     waf ? [waf >= 1000 ? `<b>${round(waf)}</b>` : countUp(waf), "WhatsApp channel followers", "GigrAI Jobs"] : null,
     liveRoles ? [countUp(liveRoles, "+"), "Live remote AI roles", `From ${platforms} platforms, refreshed every 30 minutes`] : null,
     showViews ? [countUp(views.total), "Website page views", period] : null,
@@ -199,10 +198,10 @@ ${showViews ? `<section class="block" aria-labelledby="pv"><h2 id="pv">Website p
 ${showCountries ? `<section class="block" aria-labelledby="where"><h2 id="where">Where our visitors are</h2><p class="lead">Website page views by country, ${period.toLowerCase()}. Hover or tap a country for details.</p>
 <div class="panel glass">${barList(views.byCountry.slice(0, 6), (r) => country(r.cc), views.total, "page views")}</div></section>` : ""}
 
-<section class="block" aria-labelledby="ch"><h2 id="ch">Three ways to reach them</h2>
+<section class="block" aria-labelledby="ch"><h2 id="ch">Ways to reach them</h2>
 <div class="cards">
   <div class="panel glass"><h3>remotegigrai.com</h3><p>A live search of remote AI roles. People arrive ready to apply and come back for new roles.</p></div>
-  <div class="panel glass"><h3>Instagram</h3><p><a href="https://www.instagram.com/gigr.ai/" rel="noopener">@gigr.ai</a>: role spotlights as carousels and Stories, with links sent by DM.</p></div>
+  <div class="panel glass"><h3>Weekly email</h3><p>The best new roles, every Monday, to people who asked for job alerts. Featured roles can be included.</p></div>
   <div class="panel glass"><h3>WhatsApp channel</h3><p><a href="${WA}" rel="noopener">GigrAI Jobs</a>: new roles posted before anywhere else.</p></div>
 </div></section>
 
@@ -219,7 +218,7 @@ ${showCountries ? `<section class="block" aria-labelledby="where"><h2 id="where"
 <div class="cta-panel"><h2>Let's talk</h2><p>Book online in two minutes and we'll confirm within one working day.</p><div class="jump"><a class="btn btn-grad" href="/advertise#book">Book your spot ${ARROW}</a>${mailLink(kit.contactEmail)}</div></div>`;
   return pageOf({
     title: "GigrAI media kit: audience, numbers and prices",
-    desc: "Reach people looking for remote AI training work through remotegigrai.com, @gigr.ai on Instagram and the GigrAI Jobs WhatsApp channel.",
+    desc: "Reach people looking for remote AI training work through remotegigrai.com, the weekly jobs email and the GigrAI Jobs WhatsApp channel.",
     canonical: origin + "/media-kit", body, maxAge: 900, active: "/advertise", page: "/media-kit",
   });
 }

@@ -67,7 +67,7 @@ ${join}
 You're getting this because you signed up for job alerts at <a href="${S}/?src=email" style="color:#6b7290;text-decoration:none">remotegigrai.com</a>. Pay and details come from each platform's listing, so check them before you apply.<br><br>
 Some links are referral links: we may get a reward if you join a platform, at no cost to you. It never changes your pay.<br><br>
 <span class="addr">GigrAI<br>Suite RA01, 195-197 Wood Street<br>London E17 3NU, United Kingdom</span><br><br>
-<a href="https://www.instagram.com/gigr.ai" style="color:#0b0e1d;font-weight:700;text-decoration:none">Instagram</a> &nbsp;|&nbsp; <a href="{$unsubscribe}" style="color:#0b0e1d;font-weight:700;text-decoration:none">Unsubscribe</a>
+<a href="${S}/?src=email" style="color:#0b0e1d;font-weight:700;text-decoration:none">Website</a> &nbsp;|&nbsp; <a href="{$unsubscribe}" style="color:#0b0e1d;font-weight:700;text-decoration:none">Unsubscribe</a>
 <div style="${F};font-size:96px;line-height:.9;font-weight:900;letter-spacing:-.04em;color:#e3e5f6;padding-top:22px;overflow:hidden;white-space:nowrap">GigrAI</div>
 </td></tr></table></td></tr>
 </table></td></tr></table></body></html>`;
