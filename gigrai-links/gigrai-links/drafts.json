@@ -148,6 +148,30 @@
         }
       ],
       "affiliate": ""
+    },
+    {
+      "id": "2026-11-16-mercor-750m-funding-20bn-valuation",
+      "created": "2026-11-16T06:36:04.271Z",
+      "title": "Mercor raises $750m at a $20bn valuation: what it means for AI trainers",
+      "slug": "mercor-750m-funding-20bn-valuation",
+      "cat": "ai-work",
+      "summary": "Mercor has doubled its valuation to $20bn with a $750m round and plans to sell expert-led AI training to ordinary businesses. Here is what that could mean for the experts who do the work.",
+      "body": "Mercor, one of the biggest names in paid AI training work, has raised $750 million in fresh funding. The deal values the company at $20 billion, double the $10 billion it was worth after its last round in October 2025. If you do expert work on Mercor, or you're thinking of applying, here's what the news tells us and what it might mean for the projects on offer.\n\n## The deal in brief\n\nMercor announced its Series D on 10 November. Here are the key points from the coverage:\n\n- **$750 million raised** at a **$20 billion valuation**. No lead investor was named.\n- **Who's in:** Nvidia, Salesforce and Zoom put money in, alongside returning backers Benchmark, Felicis and General Catalyst, plus several other funds.\n- **Employee shares:** part of the round was a tender offer, which lets staff sell some of their shares. Mercor hasn't said how much of the $750 million went on that rather than new cash for the business.\n- **Revenue:** co-founder Brendan Foody wrote on LinkedIn that Mercor has reached a $3 billion revenue run rate, up from $1 million in 27 months. That's his own claim, and the company's figures aren't independently audited.\n\nCoverage describes Mercor's network as more than five million domain experts, the people who write, test and grade the material used to train and evaluate AI models.\n\n## Where Mercor wants to go next\n\nUntil now, Mercor's main customers have been the big AI labs. This money is meant to sell the same kind of service to ordinary businesses.\n\nThe plan is to build a custom test for each company, based on how that business actually works: its own systems, rules and awkward edge cases. Mercor would then use that test to train AI models to do the company's real work. Part of this runs on software from Deeptune, a startup Mercor bought in July, which recreates hundreds of business applications for AI agents to practise on.\n\nFoody summed up the ambition bluntly: \"Every job in the economy will need its own AI agents.\"\n\n## The other side of the story\n\nRapid growth hasn't been smooth. Earlier this year Mercor disclosed a data breach and later announced extra security measures. The Next Web reports that the breach led Meta to pause its AI data work with Mercor. Neither the funding announcement nor Foody's post mentioned it.\n\nIt's also worth remembering that a company's valuation doesn't decide what an individual contractor earns or how steady their work is. Projects on these platforms can still start and stop at short notice.\n\n## What it means for you\n\n- **Expect more variety in projects.** If Mercor wins business customers, tasks may move beyond general model training towards specific industries and workflows. People with real-world experience in fields like finance, law, healthcare, software or operations could be in demand.\n- **Keep your profile current.** Platforms match experts to projects by skills and background. Make sure yours clearly lists your specialist knowledge, languages and qualifications.\n- **Don't rely on one platform.** Big funding rounds don't guarantee steady hours. Spread your effort across a few reputable platforms so one paused project doesn't wipe out your income.\n- **Protect your data.** Given the breach, share only what a platform actually needs, use a unique password and turn on two-factor authentication wherever it's offered.\n- **Watch for fakes.** High-profile news tends to bring out scammers posing as recruiters. Real Mercor work comes through the official platform, and no genuine platform asks you to pay to get started.\n\nYou can search current Mercor and other AI training roles on GigrAI, all in one place.",
+      "sources": [
+        {
+          "title": "SiliconANGLE: Mercor raises $750M at $20B valuation to take AI agent evaluation to enterprises",
+          "url": "https://siliconangle.com/2026/11/10/mercor-raises-750m-at-20b-valuation-to-take-ai-agent-evaluation-to-enterprises/"
+        },
+        {
+          "title": "The Next Web: Mercor raises $750m at a $20bn valuation to train AI on every job",
+          "url": "https://thenextweb.com/news/mercor-750m-series-d-20bn-valuation"
+        },
+        {
+          "title": "Staffing Industry Analysts: Mercor lands $750M funding round, valuing staffing platform at $20B",
+          "url": "https://www.staffingindustry.com/news/global-daily-news/mercor-lands-750m-funding-round-valuing-staffing-platform-at-20b"
+        }
+      ],
+      "affiliate": "mercor"
     }
   ]
 }
