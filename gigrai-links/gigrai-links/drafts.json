@@ -196,6 +196,26 @@
         }
       ],
       "affiliate": ""
+    },
+    {
+      "id": "2026-11-20-fake-amazon-remote-jobs-reshipping-scam",
+      "created": "2026-11-20T06:36:50.539Z",
+      "title": "Fake Amazon remote jobs promise $5,000 a month, but the real work is moving stolen parcels",
+      "slug": "fake-amazon-remote-jobs-reshipping-scam",
+      "cat": "scams",
+      "summary": "Malwarebytes has found lookalike Amazon sites offering remote assistant jobs that appear to be parcel-reshipping scams. Here are the warning signs and how to check any job offer.",
+      "body": "A remote \"assistant\" role at Amazon paying up to $5,000 a month, no CV needed and no interview to book. It sounds like a lucky break during the busiest hiring season of the year. According to security firm Malwarebytes, it is a scam, and one that could leave applicants handling stolen goods.\n\n## What Malwarebytes found\n\nIn a report published on 17 November, Malwarebytes researchers described a cluster of lookalike websites using Amazon branding to advertise remote jobs. **None of them is run by Amazon.** The researchers say the offers are separate from Amazon's real holiday hiring push, in which the company announced plans to take on more than 300,000 people in the US.\n\nThe details give the game away:\n\n- The careers page calls the job fully remote, yet the application form asks whether you have a vehicle and whether someone at home can take in parcels.\n- No CV is required. Instead, \"HR\" promises to ring you without a scheduled time.\n- The form asks for your name, phone number, email, home address, education and work history, plus questions about any criminal record.\n- A small-print footer admits the site is not affiliated with Amazon.com.\n- Leftover template text was still visible in the page code, and the pages ask search engines not to list them.\n\nMalwarebytes traced around 16 related recruitment domains, registered through the same registrar between July and October. It notes the shared features \"suggest a connection\" but says it could not confirm who runs the sites or who receives the data people submit.\n\n## Why parcels are the real job\n\nMalwarebytes describes this as a reshipping, or parcel-mule, scheme. The US Federal Trade Commission has warned about the same pattern. In its version, a work-from-home offer with an official-sounding title asks you to receive packages, repack them and post them on to a new address, often overseas.\n\nAccording to the FTC, scammers buy expensive items such as electronics with stolen card or bank details and use you as the middle step so the goods are harder to trace. The FTC is blunt: reshipping goods \"is never a real job.\" The usual ending is that payday comes, no money arrives and the \"employer\" goes quiet. If you handed over bank details or a copy of your ID along the way, you may also face identity theft.\n\n## Not just an Amazon problem\n\nThe trick here is borrowing a famous name. The same approach works with any brand people trust and search for, which includes the platforms that hire AI trainers and remote freelancers. A logo on a page proves nothing. The web address does.\n\n## What it means for you\n\nWhether you are looking for AI training work, remote admin roles or seasonal cash, these checks will catch most fake offers:\n\n1. **Check the domain, not the branding.** Real Amazon roles are listed on amazon.jobs, and hourly warehouse roles on hiring.amazon.com. For AI training platforms, go to the company's main website yourself rather than following a link from a message.\n2. **Be wary of big pay for little effort**, especially with no CV, no test and no scheduled interview. Legitimate AI training platforms normally assess you before paying you.\n3. **Never receive or forward parcels** for an employer you cannot verify. A remote job should not need your front door.\n4. **Hold back sensitive details.** Do not send ID photos, national insurance or social security numbers, bank details or money to anyone who has not proved who they are.\n5. **Search before you apply.** Type the company or recruiter name with \"scam\" or \"complaint\" and see what comes up.\n\nIf you have already applied, do not give bank details or ID to anyone who calls unannounced. In the US you can report it at [ReportFraud.ftc.gov](https://reportfraud.ftc.gov/) and follow the steps at [IdentityTheft.gov](https://www.identitytheft.gov/steps); elsewhere, contact your national fraud reporting service and your bank.",
+      "sources": [
+        {
+          "title": "Malwarebytes: \"Amazon\" job offer promises $5,000 a month, but it's got all the signs of a scam",
+          "url": "https://www.malwarebytes.com/blog/threat-intel/2026/11/amazon-job-offer-promises-5000-a-month-but-its-got-all-the-signs-of-a-scam"
+        },
+        {
+          "title": "FTC Consumer Advice: Can you unbox the signs of a reshipping scam?",
+          "url": "https://consumer.ftc.gov/consumer-alerts/2025/12/can-you-unbox-signs-reshipping-scam"
+        }
+      ],
+      "affiliate": ""
     }
   ]
 }
