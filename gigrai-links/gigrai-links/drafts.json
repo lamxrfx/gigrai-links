@@ -216,6 +216,30 @@
         }
       ],
       "affiliate": ""
+    },
+    {
+      "id": "2026-11-25-ethos-renamed-begun",
+      "created": "2026-11-25T06:37:15.165Z",
+      "title": "Ethos is now Begun: what the name change means for AI trainers",
+      "slug": "ethos-renamed-begun",
+      "cat": "ai-work",
+      "summary": "AI training platform Ethos became Begun on 24 November. Your account and pay reportedly carry over, but the portal and emails have moved, so watch out for scams.",
+      "body": "If you do AI training work through Ethos, you may have noticed some unfamiliar emails in your inbox over the past week. That's because Ethos has changed its name to **Begun**, with the switch taking effect on Tuesday 24 November. The company's founders describe it as \"Same team, same mission, new name\", but there are a few practical things to check, and one real risk to watch out for.\n\n## What has changed\n\nThe headline change is the name and the web addresses. Based on Begun's own announcement and reporting from AI training news sites, here is what's moving:\n\n- **Website:** askethos.com is now **begun.com**.\n- **Expert portal:** the old agent.askethos.com portal has moved to **app.begun.com**. Old links and bookmarks reportedly redirect to the new address, and referral links are said to keep working.\n- **Emails:** messages now come from begun.com addresses, starting from 19 November. Experts have been asked to add the new update sender to their safe-sender list so nothing important ends up in spam.\n- **Contractor ID:** when you're onboarded to a new project, you'll reportedly be given a new \"Begun contractor ID\" that replaces any older ID. This is separate from the email you log in with.\n\n## What stays the same\n\nFor most people, day-to-day work shouldn't change much. According to the company's FAQ, as reported by aitrainer.work, existing agreements stay in place and only the name is changing. Your account, profile, current projects, earnings history and payout details are reportedly carried over automatically, and payout dates are not changing. You sign in to the new address with the same email and password, or the same Google account.\n\nConfidentiality rules are also unchanged, so you still shouldn't name clients or describe client work in public. Begun has asked experts to update \"Ethos\" to \"Begun\" on LinkedIn, CVs and forum profiles.\n\n## A bigger ambition than AI training\n\nThe new name also comes with a wider pitch. In a post signed by co-founders James Lo and Daniel Mankowitz, Begun says it wants to go beyond AI training into market research, advising companies, and part-time and full-time roles, all from a single expert profile. The company says it has more than 550,000 experts, pays out over $1m a day worldwide and has annualised revenue above $500m. Those are the company's own figures.\n\nIt's worth keeping expectations realistic. None of the coverage gives details on how much of this new work exists yet, what it pays or how people will be selected for it.\n\n## What it means for you\n\n- **Use the new address, but type it yourself.** Go to app.begun.com directly rather than clicking links in unexpected messages, and update your bookmarks.\n- **Be extra careful with emails for the next few weeks.** Rebrands are a favourite moment for scammers, because people expect messages from a new address. Begun has said it will never ask for your password, login codes, bank details or ID documents by email or chat, will never ask you to pay anything, and will never ask you to install software. Always check the actual sender address, not just the display name, and report anything odd to support@begun.com.\n- **Note your new contractor ID** when you join your next project, and keep a record of it alongside your earnings.\n- **Keep your own records.** Screenshot your earnings and payout history now. If something doesn't carry over properly, you'll have proof.\n- **Update your CV and LinkedIn** so your experience is listed under the right name, without revealing confidential client details.\n- **Keep your options open.** If Begun's new work types appeal to you, make sure your profile is up to date. But don't rely on a single platform; it's still sensible to have profiles on a few reputable AI training sites.\n\nNew to AI training? Begun is one of several expert platforms hiring remotely, and you can search open roles across many of them on GigrAI.",
+      "sources": [
+        {
+          "title": "Begun: A new chapter has Begun",
+          "url": "https://begun.com/blog/new-chapter"
+        },
+        {
+          "title": "HumanData.News: Ethos to Become Begun on 24 November, Targeting Work Beyond AI Training",
+          "url": "https://humandata.news/stories/ethos-rebrands-begun-november-24"
+        },
+        {
+          "title": "aitrainer.work: Ethos Becomes Begun on November 24, and Its Emails Change First",
+          "url": "https://aitrainer.work/news/ethos-renamed-begun-2026"
+        }
+      ],
+      "affiliate": "ethos"
     }
   ]
 }
