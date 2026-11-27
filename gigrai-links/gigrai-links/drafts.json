@@ -240,6 +240,26 @@
         }
       ],
       "affiliate": "ethos"
+    },
+    {
+      "id": "2026-11-27-anthropic-study-ai-hiring-offshore-contractors",
+      "created": "2026-11-27T06:41:53.790Z",
+      "title": "AI is slowing hiring, and offshore contractors are first to feel it, Anthropic study finds",
+      "slug": "anthropic-study-ai-hiring-offshore-contractors",
+      "cat": "ai",
+      "summary": "Anthropic interviewed 58 US firms using AI. Two-thirds said they now hire less, few have laid staff off, and several have cut offshore contractors.",
+      "body": "Anthropic, the company behind Claude, has published a study on what actually happens inside businesses once they start using AI at work. The headline finding is not mass sackings. It is quieter than that: firms are hiring fewer people, and the first workers to feel it are often contractors, many of them overseas and working remotely.\n\nIf you earn a living from remote contracts, whether in AI training, development, customer support or back-office work, this one is worth five minutes of your time.\n\n## What the study looked at\n\nThe report, called *Working with AI*, came out on 23 November from Anthropic's economics team. The researchers carried out 66 interviews at 58 US companies that are Anthropic customers and already in the middle of adopting AI.\n\nIt is worth being clear about the limits. The companies were picked to cover a range of industries and sizes, and the authors say plainly that they are not a random or representative sample. Most of the evidence is what managers and staff described, rather than hard measurement. So treat it as an early signal, not a final verdict.\n\n## The main findings\n\n- **Less hiring, few layoffs.** People at two-thirds of the companies said AI had reduced their hiring. Most of that came from roles never being opened, and some from not replacing people who left. Only two companies had seen AI fully eliminate a job and cost someone their position.\n- **Some firms are hiring more.** Ten companies said AI had led them to hire more, mainly people to roll out AI tools and to strengthen IT support.\n- **Pressure to adopt.** At five companies, people described pushing out employees who would not use AI.\n- **Big productivity claims at startups.** Six startups estimated that, without AI, they would need on average four times as many staff.\n\n## Contractors are first in line\n\nThe part that matters most for GigrAI readers is about outside workers. Nine of the companies said they had cut back on contracted developers, customer service, legal help and back-office work, much of which had already been sent offshore. As the report puts it, \"Many also reported reducing their use of contractors, particularly offshore ones.\"\n\nA few examples from the interviews:\n\n- A finance company let go of well over 100 offshore data and developer contractors.\n- A fintech firm ended offshore customer service contracts after bringing in AI customer service agents.\n- A document review company built an AI agent to check submissions against its policies, and cut the number of reviewers it planned to hire next year by more than 90%.\n\nThe authors suggest these cuts could be an early warning for the international business services industry, the outsourcing sector that employs huge numbers of remote workers around the world.\n\n## What it means for you\n\nThis is a small, qualitative study, so do not panic. But the direction is clear enough to plan around.\n\n1. **Expect fewer new openings, not sudden cuts.** The squeeze shows up as roles that never get posted. Keep applying widely and keep profiles on more than one platform.\n2. **Move up from routine tasks.** Repetitive review, basic support and simple data work are the easiest to hand to AI. Specialist knowledge, careful judgement and the ability to check AI output are harder to replace, and that is exactly what expert AI training work pays for.\n3. **Learn the tools.** Several firms are pushing out people who refuse to use AI. Being comfortable with AI assistants is quickly becoming a baseline skill for remote contractors.\n4. **Do not rely on one client.** Contracts can be the first thing trimmed when budgets tighten. Spread your income across a few sources where you can.\n5. **Look where hiring is growing.** Some companies are adding staff to implement AI and support it. If you have technical or domain skills, that is a gap worth aiming for.\n\nYou can read the full report on [Anthropic's website](https://www.anthropic.com/research/working-with-ai).",
+      "sources": [
+        {
+          "title": "Anthropic: Working with AI",
+          "url": "https://www.anthropic.com/research/working-with-ai"
+        },
+        {
+          "title": "Beri: AI Slows Hiring at Two-Thirds of 58 Firms, Anthropic Finds",
+          "url": "https://www.beri.net/article/anthropic-working-with-ai-study-58-companies-hiring-freeze-offshore-contractor-cuts-few-layoffs-2027-headcount-plan"
+        }
+      ],
+      "affiliate": ""
     }
   ]
 }
